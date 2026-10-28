@@ -30,7 +30,8 @@ class ReportService
         // 1. Sales query
         $salesQuery = Sale::where('business_id', $businessId)
             ->where('invoice_status', 'finalized')
-            ->whereBetween('invoice_date', [$startDate, $endDate]);
+            ->whereDate('invoice_date', '>=', $startDate)
+            ->whereDate('invoice_date', '<=', $endDate);
 
         if ($branchId) {
             $salesQuery->where('branch_id', $branchId);
@@ -46,7 +47,8 @@ class ReportService
 
         // 2. Sales Returns query
         $returnsQuery = SaleReturn::where('business_id', $businessId)
-            ->whereBetween('return_date', [$startDate, $endDate]);
+            ->whereDate('return_date', '>=', $startDate)
+            ->whereDate('return_date', '<=', $endDate);
 
         if ($branchId) {
             $returnsQuery->where('branch_id', $branchId);
@@ -68,7 +70,8 @@ class ReportService
 
         // 3. Operating Expenses query
         $expenseQuery = Expense::where('business_id', $businessId)
-            ->whereBetween('expense_date', [$startDate, $endDate]);
+            ->whereDate('expense_date', '>=', $startDate)
+            ->whereDate('expense_date', '<=', $endDate);
 
         if ($branchId) {
             $expenseQuery->where('branch_id', $branchId);
@@ -161,12 +164,20 @@ class ReportService
 
         $sales = Sale::where('business_id', $businessId)
             ->where('invoice_status', 'finalized')
-            ->whereBetween('invoice_date', [$startDate, $endDate])
+            ->whereDate('invoice_date', '>=', $startDate)
+            ->whereDate('invoice_date', '<=', $endDate)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->groupBy('invoice_date')
-            ->selectRaw('invoice_date, SUM(final_amount) as total_sales, SUM(cost_of_goods_sold) as total_cogs')
-            ->get()
-            ->keyBy('invoice_date');
+            ->get();
+
+        $salesByDate = [];
+        foreach ($sales as $sale) {
+            $d = Carbon::parse($sale->invoice_date)->toDateString();
+            if (! isset($salesByDate[$d])) {
+                $salesByDate[$d] = ['total_sales' => 0.0, 'total_cogs' => 0.0];
+            }
+            $salesByDate[$d]['total_sales'] += (float) $sale->final_amount;
+            $salesByDate[$d]['total_cogs'] += (float) $sale->cost_of_goods_sold;
+        }
 
         $labels = [];
         $salesData = [];
@@ -177,9 +188,9 @@ class ReportService
             $dStr = $dt->toDateString();
             $labels[] = $dt->format('d M');
 
-            $saleRow = $sales->get($dStr);
-            $daySale = $saleRow ? (float) $saleRow->total_sales : 0.0;
-            $dayCogs = $saleRow ? (float) $saleRow->total_cogs : 0.0;
+            $dayStats = $salesByDate[$dStr] ?? null;
+            $daySale = $dayStats ? (float) $dayStats['total_sales'] : 0.0;
+            $dayCogs = $dayStats ? (float) $dayStats['total_cogs'] : 0.0;
             $dayProfit = max(0.0, round($daySale - $dayCogs, 2));
 
             $salesData[] = $daySale;
@@ -202,7 +213,8 @@ class ReportService
         $end = $end ?: now()->toDateString();
 
         $rows = Expense::where('expenses.business_id', $businessId)
-            ->whereBetween('expenses.expense_date', [$start, $end])
+            ->whereDate('expenses.expense_date', '>=', $start)
+            ->whereDate('expenses.expense_date', '<=', $end)
             ->when($branchId, fn ($q) => $q->where('expenses.branch_id', $branchId))
             ->join('expense_categories', 'expenses.expense_category_id', '=', 'expense_categories.id')
             ->groupBy('expense_categories.name')
@@ -226,7 +238,8 @@ class ReportService
 
         $rows = Sale::where('business_id', $businessId)
             ->where('invoice_status', 'finalized')
-            ->whereBetween('invoice_date', [$start, $end])
+            ->whereDate('invoice_date', '>=', $start)
+            ->whereDate('invoice_date', '<=', $end)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->groupBy('pricing_type')
             ->selectRaw('pricing_type, SUM(final_amount) as total')
