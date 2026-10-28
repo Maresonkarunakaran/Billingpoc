@@ -46,10 +46,32 @@
             padding-bottom: 6px;
             margin-bottom: 14px;
         }
+
+        /* Google Translate Styling */
+        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
+        body { top: 0px !important; }
+        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        .lang-btn { font-size: 0.8rem; border-radius: 6px; padding: 3px 10px; font-weight: 600; }
+        .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
     </style>
 </head>
 <body>
 <div class="register-container">
+    <!-- Language Switcher Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-xs text-white opacity-75">
+            <i class="fas fa-globe mr-1"></i> Language / மொழி:
+        </span>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-light lang-btn lang-btn-en active" onclick="switchLanguage('en')">
+                English
+            </button>
+            <button type="button" class="btn btn-outline-light lang-btn lang-btn-ta" onclick="switchLanguage('ta')">
+                தமிழ்
+            </button>
+        </div>
+    </div>
     <div class="text-center mb-4">
         <div class="d-inline-flex p-3 rounded-circle bg-primary text-white mb-2 shadow">
             <i class="fas fa-cubes fa-2x"></i>
@@ -259,6 +281,57 @@
             icon.classList.add('fa-eye');
         }
     }
+
+    // Language switcher logic
+    function switchLanguage(lang) {
+        localStorage.setItem('billingpoc_lang', lang);
+        var domain = window.location.hostname;
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/";
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/; domain=" + domain;
+        
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+            select.value = lang;
+            select.dispatchEvent(new Event('change'));
+        } else {
+            window.location.reload();
+        }
+        updateLangButtons(lang);
+    }
+
+    function updateLangButtons(lang) {
+        document.querySelectorAll('.lang-btn-en').forEach(function(el) {
+            if (lang === 'en') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.lang-btn-ta').forEach(function(el) {
+            if (lang === 'ta') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+    }
+
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,ta',
+            autoDisplay: false
+        }, 'google_translate_element');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
+        var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
+        updateLangButtons(saved);
+    });
 </script>
+<!-- Hidden Google Translate Element -->
+<div id="google_translate_element" style="display:none;"></div>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

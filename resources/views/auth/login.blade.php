@@ -9,34 +9,42 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; background: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { width: 100%; max-width: 460px; }
+        .login-box { width: 100%; max-width: 440px; }
         .card-custom { border-radius: 14px; border: 1px solid #1e293b; background: #ffffff; box-shadow: 0 20px 30px -10px rgba(0,0,0,0.5); }
         .btn-brand { background: #2563eb; color: #fff; font-weight: 600; }
         .btn-brand:hover { background: #1d4ed8; color: #fff; }
-        .quick-login-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px 14px;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            text-align: left;
-            width: 100%;
-        }
-        .quick-login-card:hover {
-            background: #eff6ff;
-            border-color: #3b82f6;
-            transform: translateY(-1px);
-        }
+
+        /* Google Translate Styling */
+        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
+        body { top: 0px !important; }
+        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        .lang-btn { font-size: 0.8rem; border-radius: 6px; padding: 3px 10px; font-weight: 600; }
+        .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
     </style>
 </head>
 <body>
 <div class="login-box">
+    <!-- Language Switcher Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-xs text-white opacity-75">
+            <i class="fas fa-globe mr-1"></i> Language / மொழி:
+        </span>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-light lang-btn lang-btn-en active" onclick="switchLanguage('en')">
+                English
+            </button>
+            <button type="button" class="btn btn-outline-light lang-btn lang-btn-ta" onclick="switchLanguage('ta')">
+                தமிழ்
+            </button>
+        </div>
+    </div>
+
     <div class="text-center mb-4">
         <div class="d-inline-flex p-3 rounded-circle bg-primary text-white mb-2 shadow">
             <i class="fas fa-cubes fa-2x"></i>
         </div>
-        <h2 class="text-white font-weight-bold mb-0">BILLINGPOC</h2>
+        <h2 class="text-white font-weight-bold mb-0 notranslate">BILLINGPOC</h2>
         <span class="text-light opacity-75 text-sm">Multi-Branch GST Retail & Wholesale ERP</span>
     </div>
 
@@ -66,20 +74,17 @@
                         <div class="input-group-prepend">
                             <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
                         </div>
-                        <input type="email" name="email" id="emailInput" class="form-control" value="{{ old('email', 'admin@pos.com') }}" required autofocus autocomplete="email">
+                        <input type="email" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="name@store.com" required autofocus autocomplete="email">
                     </div>
                 </div>
 
                 <div class="form-group mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="text-xs font-weight-bold text-uppercase text-muted mb-0">Password</label>
-                        <span class="text-xs text-muted">Default: <code>password</code></span>
-                    </div>
+                    <label class="text-xs font-weight-bold text-uppercase text-muted mb-1 d-block">Password</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
                         </div>
-                        <input type="password" name="password" id="passwordInput" class="form-control" value="password" required autocomplete="current-password">
+                        <input type="password" name="password" id="passwordInput" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
                         <div class="input-group-append">
                             <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()" title="Show/Hide Password">
                                 <i class="fas fa-eye" id="toggleIcon"></i>
@@ -98,56 +103,18 @@
                 </button>
             </form>
 
-            <div class="text-center my-3">
+            <div class="text-center my-2">
                 <span class="text-xs text-muted">Need a new business POS setup?</span>
                 <a href="{{ route('register') }}" class="text-xs font-weight-bold ml-1 text-primary">
                     <i class="fas fa-user-plus mr-1"></i> Register New Business
                 </a>
             </div>
-
-            <div class="border-top pt-3 mt-2">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-xs font-weight-bold text-uppercase text-muted">1-Click Instant Demo Login:</span>
-                    <span class="badge badge-success text-xs">Click to Sign In</span>
-                </div>
-                
-                <div class="d-flex flex-column" style="gap: 8px;">
-                    <button type="button" class="quick-login-card d-flex align-items-center justify-content-between" onclick="quickLogin('admin@pos.com')">
-                        <div>
-                            <span class="font-weight-bold text-dark d-block text-sm"><i class="fas fa-user-shield text-primary mr-1"></i> Super Admin (Owner)</span>
-                            <small class="text-muted">admin@pos.com (Full multi-branch access)</small>
-                        </div>
-                        <i class="fas fa-arrow-right text-muted"></i>
-                    </button>
-
-                    <button type="button" class="quick-login-card d-flex align-items-center justify-content-between" onclick="quickLogin('cashier@pos.com')">
-                        <div>
-                            <span class="font-weight-bold text-dark d-block text-sm"><i class="fas fa-cash-register text-success mr-1"></i> POS Cashier</span>
-                            <small class="text-muted">cashier@pos.com (Barcode POS billing & shift drawer)</small>
-                        </div>
-                        <i class="fas fa-arrow-right text-muted"></i>
-                    </button>
-
-                    <button type="button" class="quick-login-card d-flex align-items-center justify-content-between" onclick="quickLogin('manager@pos.com')">
-                        <div>
-                            <span class="font-weight-bold text-dark d-block text-sm"><i class="fas fa-store text-info mr-1"></i> Branch Store Manager</span>
-                            <small class="text-muted">manager@pos.com (Sales, returns, expenses, reports)</small>
-                        </div>
-                        <i class="fas fa-arrow-right text-muted"></i>
-                    </button>
-
-                    <button type="button" class="quick-login-card d-flex align-items-center justify-content-between" onclick="quickLogin('inventory@pos.com')">
-                        <div>
-                            <span class="font-weight-bold text-dark d-block text-sm"><i class="fas fa-warehouse text-warning mr-1"></i> Warehouse & Stock Head</span>
-                            <small class="text-muted">inventory@pos.com (Purchase receipts & stock transfers)</small>
-                        </div>
-                        <i class="fas fa-arrow-right text-muted"></i>
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 </div>
+
+<!-- Hidden Google Translate Element -->
+<div id="google_translate_element" style="display:none;"></div>
 
 <script>
     function togglePasswordVisibility() {
@@ -164,11 +131,54 @@
         }
     }
 
-    function quickLogin(email) {
-        document.getElementById('emailInput').value = email;
-        document.getElementById('passwordInput').value = 'password';
-        document.getElementById('loginForm').submit();
+    // Language switcher logic
+    function switchLanguage(lang) {
+        localStorage.setItem('billingpoc_lang', lang);
+        var domain = window.location.hostname;
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/";
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/; domain=" + domain;
+        
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+            select.value = lang;
+            select.dispatchEvent(new Event('change'));
+        } else {
+            window.location.reload();
+        }
+        updateLangButtons(lang);
     }
+
+    function updateLangButtons(lang) {
+        document.querySelectorAll('.lang-btn-en').forEach(function(el) {
+            if (lang === 'en') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.lang-btn-ta').forEach(function(el) {
+            if (lang === 'ta') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+    }
+
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,ta',
+            autoDisplay: false
+        }, 'google_translate_element');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
+        var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
+        updateLangButtons(saved);
+    });
 </script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

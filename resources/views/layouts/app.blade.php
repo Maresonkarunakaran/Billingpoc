@@ -30,6 +30,15 @@
         .btn-pos-launch:hover { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
         .table-custom th { background-color: #f8fafc; color: #475569; font-weight: 600; border-top: none; text-transform: uppercase; font-size: 0.76rem; letter-spacing: 0.5px; }
         .rupee::before { content: '₹ '; }
+
+        /* Google Translate Clean Styling */
+        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
+        body { top: 0px !important; }
+        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        .lang-btn { font-size: 0.78rem; border-radius: 6px; padding: 2px 8px; font-weight: 700; transition: all 0.15s ease; }
+        .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+
         @media (max-width: 767.98px) {
             body { padding-bottom: 60px; }
             .mobile-bottom-nav {
@@ -110,6 +119,18 @@
                 <a href="{{ route('pos.index') }}" class="btn btn-pos-launch btn-sm px-2 px-sm-3 py-1 font-weight-bold">
                     <i class="fas fa-cash-register mr-1"></i> <span class="d-none d-sm-inline">Open POS Terminal</span><span class="d-inline d-sm-none">POS</span>
                 </a>
+            </li>
+
+            <!-- Language Switcher: English / தமிழ் -->
+            <li class="nav-item mr-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Language Switcher">
+                    <button type="button" class="btn btn-outline-secondary lang-btn lang-btn-en active" onclick="switchLanguage('en')" title="Switch to English">
+                        EN
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary lang-btn lang-btn-ta" onclick="switchLanguage('ta')" title="தமிழுக்கு மாறவும்">
+                        தமிழ்
+                    </button>
+                </div>
             </li>
 
             <!-- User Menu -->
@@ -292,8 +313,76 @@
             <i class="fas fa-file-invoice d-block"></i>
             <span>Sales</span>
         </a>
+        <a href="javascript:void(0)" onclick="toggleMobileLanguage()" class="nav-item text-center">
+            <i class="fas fa-language d-block"></i>
+            <span id="mobileLangLabel">தமிழ்</span>
+        </a>
     </div>
 </nav>
+
+<!-- Hidden Google Translate Element -->
+<div id="google_translate_element" style="display:none;"></div>
+
+<script>
+    // Language switcher logic
+    function switchLanguage(lang) {
+        localStorage.setItem('billingpoc_lang', lang);
+        var domain = window.location.hostname;
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/";
+        document.cookie = "googtrans=/en/" + lang + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/; domain=" + domain;
+        
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+            select.value = lang;
+            select.dispatchEvent(new Event('change'));
+        } else {
+            window.location.reload();
+        }
+        updateLangButtons(lang);
+    }
+
+    function toggleMobileLanguage() {
+        var current = localStorage.getItem('billingpoc_lang') || 'en';
+        var next = (current === 'ta') ? 'en' : 'ta';
+        switchLanguage(next);
+    }
+
+    function updateLangButtons(lang) {
+        document.querySelectorAll('.lang-btn-en').forEach(function(el) {
+            if (lang === 'en') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.lang-btn-ta').forEach(function(el) {
+            if (lang === 'ta') {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+        var mobileLabel = document.getElementById('mobileLangLabel');
+        if (mobileLabel) {
+            mobileLabel.innerText = (lang === 'ta' ? 'English' : 'தமிழ்');
+        }
+    }
+
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,ta',
+            autoDisplay: false
+        }, 'google_translate_element');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
+        var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
+        updateLangButtons(saved);
+    });
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 @stack('scripts')
 </body>
