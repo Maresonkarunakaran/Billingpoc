@@ -31,11 +31,44 @@
         .table-custom th { background-color: #f8fafc; color: #475569; font-weight: 600; border-top: none; text-transform: uppercase; font-size: 0.76rem; letter-spacing: 0.5px; }
         .rupee::before { content: '₹ '; }
 
-        /* Google Translate Clean Styling */
-        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
-        body { top: 0px !important; }
-        #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
-        .goog-text-highlight { background: none !important; box-shadow: none !important; }
+        /* Completely Hide Google Translate Top Banner Bar & Injected Frames */
+        .goog-te-banner-frame,
+        .goog-te-banner-frame.skiptranslate,
+        iframe.goog-te-banner-frame,
+        iframe.skiptranslate,
+        .VIpgJd-ZVi9od-ORHb-OEVmcd,
+        .VIpgJd-ZVi9od-ORHb-OEVmcd-ti6hGc,
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+        .VIpgJd-ZVi9od-aZ2wEe-OiiCO,
+        .VIpgJd-yAWdhb-hvhGLS-mrxup,
+        #goog-gt-tt,
+        .goog-te-balloon-frame,
+        .goog-tooltip,
+        div[id*=":1.container"],
+        div[id*=":2.container"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0px !important;
+            width: 0px !important;
+            max-height: 0px !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            z-index: -9999 !important;
+        }
+
+        body {
+            top: 0px !important;
+            position: static !important;
+        }
+
+        .goog-text-highlight {
+            background: none !important;
+            box-shadow: none !important;
+        }
+
         .lang-btn { font-size: 0.78rem; border-radius: 6px; padding: 2px 8px; font-weight: 700; transition: all 0.15s ease; }
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
@@ -380,6 +413,25 @@
         var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
         var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
         updateLangButtons(saved);
+
+        // Permanently suppress and eradicate any Google Translate top banner or body shifting
+        var removeGoogleBanner = function() {
+            if (document.body && document.body.style.top && document.body.style.top !== '0px') {
+                document.body.style.top = '0px';
+            }
+            var banners = document.querySelectorAll('iframe.skiptranslate, .VIpgJd-ZVi9od-ORHb-OEVmcd, .goog-te-banner-frame');
+            banners.forEach(function(b) {
+                b.style.setProperty('display', 'none', 'important');
+                b.style.setProperty('visibility', 'hidden', 'important');
+                b.style.setProperty('height', '0px', 'important');
+                b.style.setProperty('opacity', '0', 'important');
+                b.style.setProperty('pointer-events', 'none', 'important');
+            });
+        };
+
+        var observer = new MutationObserver(removeGoogleBanner);
+        observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+        setInterval(removeGoogleBanner, 300);
     });
 </script>
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
