@@ -26,6 +26,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (User::where('email', 'admin@pos.com')->exists()) {
+            return;
+        }
+
         // 1. Business
         $business = Business::create([
             'name' => 'Bharat Retail & Wholesale Hub',
