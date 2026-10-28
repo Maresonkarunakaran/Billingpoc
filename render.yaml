@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: billingpoc
+    runtime: docker
+    plan: free
+    region: singapore
+    envVars:
+      - key: APP_NAME
+        value: BILLINGPOC
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: sqlite

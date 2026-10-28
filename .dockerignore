@@ -1,0 +1,10 @@
+node_modules
+vendor
+mariadb_data
+.env
+.git
+.github
+*.log
+storage/*.key
+storage/logs/*
+bootstrap/cache/*.php
