@@ -317,9 +317,22 @@
                     </h6>
                     <small class="text-muted">Formula applied across all item categories using actual sold volume and moving average COGS</small>
                 </div>
-                <span class="badge badge-light border">{{ count($categorySalesMargins) }} Categories</span>
+                <div class="d-flex align-items-center" style="gap: 10px;">
+                    <span class="badge badge-light border">{{ count($categorySalesMargins) }} Categories</span>
+                    <!-- ON / OFF Toggle Button -->
+                    <button type="button" 
+                            id="btnCategoryBreakdownToggle" 
+                            class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-1 shadow-sm d-flex align-items-center" 
+                            onclick="toggleCategoryBreakdown()" 
+                            title="Toggle Category Breakdown Table ON / OFF"
+                            style="border-radius: 20px; transition: all 0.2s ease; cursor: pointer;">
+                        <i class="fas fa-toggle-off mr-1 fa-lg text-secondary" id="iconCategoryToggle"></i>
+                        <span id="labelCategoryToggle">OFF</span>
+                    </button>
+                </div>
             </div>
-            <div class="card-body p-0">
+            <!-- Collapsible Table Content (Hidden by default) -->
+            <div class="card-body p-0 d-none" id="categoryBreakdownContent" style="transition: all 0.25s ease;">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 table-custom">
                         <thead>
@@ -825,6 +838,41 @@
 
 @push('scripts')
 <script>
+    // Toggle Category-Wise Sales Margin Breakdown Table ON / OFF
+    function toggleCategoryBreakdown() {
+        var content = document.getElementById('categoryBreakdownContent');
+        var btn = document.getElementById('btnCategoryBreakdownToggle');
+        var icon = document.getElementById('iconCategoryToggle');
+        var label = document.getElementById('labelCategoryToggle');
+        if (!content || !btn || !icon || !label) return;
+
+        var isHidden = content.classList.contains('d-none');
+        if (isHidden) {
+            content.classList.remove('d-none');
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success', 'text-white');
+            icon.className = 'fas fa-toggle-on mr-1 fa-lg text-white';
+            label.innerText = 'ON';
+            try { localStorage.setItem('cat_breakdown_toggle', 'on'); } catch(e){}
+        } else {
+            content.classList.add('d-none');
+            btn.classList.remove('btn-success', 'text-white');
+            btn.classList.add('btn-outline-secondary');
+            icon.className = 'fas fa-toggle-off mr-1 fa-lg text-secondary';
+            label.innerText = 'OFF';
+            try { localStorage.setItem('cat_breakdown_toggle', 'off'); } catch(e){}
+        }
+    }
+
+    // Restore user toggle state if previously saved as 'on'
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            if (localStorage.getItem('cat_breakdown_toggle') === 'on') {
+                toggleCategoryBreakdown();
+            }
+        } catch(e){}
+    });
+
     // Keep tab state synchronized in URL without full page reload
     document.querySelectorAll('.report-tab-btn').forEach(function(tab) {
         tab.addEventListener('shown.bs.tab', function(e) {
