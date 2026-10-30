@@ -58,8 +58,54 @@
         max-height: 240px;
     }
     .cart-table th { background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; }
+    .cart-table td { vertical-align: middle !important; }
     .cart-row:hover { background-color: #f8fafc; }
     .tender-btn { min-width: 75px; font-weight: 600; }
+
+    /* Clean Cart Quantity Input & Stepper (No overlapping browser spinners) */
+    .cart-qty-input::-webkit-outer-spin-button,
+    .cart-qty-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .cart-qty-input[type=number] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+        width: 60px;
+        min-width: 55px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+        background-color: #ffffff;
+        border-color: #cbd5e1;
+        text-align: center;
+        padding: 0 4px;
+        height: 32px;
+    }
+    .cart-qty-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        outline: none;
+    }
+    .cart-qty-btn {
+        width: 32px;
+        height: 32px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+    }
+    .cart-qty-btn:hover {
+        background-color: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
 </style>
 @endpush
 
@@ -202,7 +248,7 @@
                     <thead>
                         <tr>
                             <th style="width: 44%;">Item Description</th>
-                            <th class="text-center" style="width: 140px;">Quantity</th>
+                            <th class="text-center" style="width: 145px;">Quantity</th>
                             <th class="text-right" style="width: 18%;">Unit Price</th>
                             <th class="text-right" style="width: 22%;">Line Total</th>
                             <th class="text-center" style="width: 40px;"></th>
@@ -1097,25 +1143,25 @@
             rowsHtml += `
                 <tr class="cart-row">
                     <td>
-                        <div class="font-weight-bold text-dark text-sm">${item.name}</div>
+                        <div class="font-weight-bold text-dark text-sm">${escapeHtml(item.name)}</div>
                         <span class="text-xs text-muted">₹${price.toFixed(2)} &bull; GST ${item.gst_rate}%</span>
                     </td>
                     <td class="text-center">
-                        <div class="input-group input-group-sm justify-content-center">
+                        <div class="input-group input-group-sm justify-content-center mx-auto" style="width: 124px;">
                             <div class="input-group-prepend">
-                                <button class="btn btn-outline-secondary px-1" type="button" onclick="updateQty(${idx}, -1)">-</button>
+                                <button class="btn cart-qty-btn" type="button" onclick="updateQty(${idx}, -1)" title="Decrease Quantity" aria-label="Decrease Quantity">&minus;</button>
                             </div>
-                            <input type="number" class="form-control text-center px-1 font-weight-bold" style="max-width:48px;" min="1" max="${item.stock}" step="1"
-                                   value="${item.quantity}" onchange="setQtyDirect(${idx}, this.value)">
+                            <input type="number" class="form-control text-center font-weight-bold cart-qty-input" min="1" max="${item.stock}" step="1"
+                                   value="${item.quantity}" onchange="setQtyDirect(${idx}, this.value)" aria-label="Item Quantity">
                             <div class="input-group-append">
-                                <button class="btn btn-outline-secondary px-1" type="button" onclick="updateQty(${idx}, 1)">+</button>
+                                <button class="btn cart-qty-btn" type="button" onclick="updateQty(${idx}, 1)" title="Increase Quantity" aria-label="Increase Quantity">&plus;</button>
                             </div>
                         </div>
                     </td>
                     <td class="text-right font-weight-semibold text-sm">₹${price.toFixed(2)}</td>
                     <td class="text-right font-weight-bold text-dark text-sm">₹${lineTotal.toFixed(2)}</td>
                     <td class="text-center">
-                        <button class="btn btn-xs text-danger" onclick="removeFromCart(${idx})"><i class="fas fa-times"></i></button>
+                        <button class="btn btn-sm text-danger p-1" onclick="removeFromCart(${idx})" title="Remove Item"><i class="fas fa-times fa-lg"></i></button>
                     </td>
                 </tr>
             `;
