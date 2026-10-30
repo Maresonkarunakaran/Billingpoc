@@ -126,7 +126,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">No sales invoices found matching your criteria.</td>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="fas fa-calendar-times fa-3x mb-3 text-secondary d-block"></i>
+                                <h5 class="font-weight-bold text-dark mb-1">THERE IS NO RECORD IN THIS DATE</h5>
+                                <p class="text-muted text-sm mb-0">No sales invoices found for the specified date filter.</p>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

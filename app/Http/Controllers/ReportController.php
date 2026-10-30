@@ -19,8 +19,20 @@ class ReportController extends Controller
         $user = Auth::user();
         $businessId = $user->business_id;
 
-        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->get('end_date', now()->toDateString());
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+
+        if ($startDate && ! $endDate) {
+            $endDate = $startDate;
+        } elseif ($endDate && ! $startDate) {
+            $startDate = $endDate;
+        } elseif ($startDate && $endDate && $startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        } else {
+            $startDate = $startDate ?: now()->startOfMonth()->toDateString();
+            $endDate = $endDate ?: now()->toDateString();
+        }
+
         $isSuperAdmin = $user->role?->slug === 'super-admin';
         if ($request->has('branch_id')) {
             $b = $request->get('branch_id');
@@ -59,8 +71,21 @@ class ReportController extends Controller
     {
         $user = Auth::user();
         $businessId = $user->business_id;
-        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->get('end_date', now()->toDateString());
+
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+
+        if ($startDate && ! $endDate) {
+            $endDate = $startDate;
+        } elseif ($endDate && ! $startDate) {
+            $startDate = $endDate;
+        } elseif ($startDate && $endDate && $startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        } else {
+            $startDate = $startDate ?: now()->startOfMonth()->toDateString();
+            $endDate = $endDate ?: now()->toDateString();
+        }
+
         $branchId = session('active_branch_id');
 
         // B2B Sales (customers with valid 15-char GSTIN)

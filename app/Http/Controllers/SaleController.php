@@ -40,13 +40,28 @@ class SaleController extends Controller
                 'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
                 default => null,
             };
+        } else {
+            // Strict single-date clamp: if only one date is provided, filter ONLY for that exact single date
+            if ($startDate && ! $endDate) {
+                $endDate = $startDate;
+            } elseif ($endDate && ! $startDate) {
+                $startDate = $endDate;
+            } elseif ($startDate && $endDate && $startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
         }
 
         $query = Sale::where('business_id', $user->business_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($request->filled('status'), fn ($q) => $q->where('payment_status', $request->status))
-            ->when($startDate, fn ($q) => $q->whereDate('invoice_date', '>=', $startDate))
-            ->when($endDate, fn ($q) => $q->whereDate('invoice_date', '<=', $endDate))
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('invoice_date', '=', $startDate);
+                } else {
+                    $q->whereDate('invoice_date', '>=', $startDate)
+                        ->whereDate('invoice_date', '<=', $endDate);
+                }
+            })
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
                 $q->where(function ($sub) use ($s) {

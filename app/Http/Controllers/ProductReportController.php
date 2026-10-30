@@ -39,8 +39,15 @@ class ProductReportController extends Controller
                 default => null,
             };
         } else {
-            // Default to this month for sold items if neither start_date nor preset is specified
-            if (!$startDate && !$endDate && !$request->has('preset')) {
+            // Strict single-date clamp: if only one date is provided, filter ONLY for that exact single date
+            if ($startDate && ! $endDate) {
+                $endDate = $startDate;
+            } elseif ($endDate && ! $startDate) {
+                $startDate = $endDate;
+            } elseif ($startDate && $endDate && $startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            } elseif (! $startDate && ! $endDate && ! $request->has('preset')) {
+                // Default to this month for sold items if neither start_date nor preset is specified
                 $startDate = now()->startOfMonth()->toDateString();
                 $endDate = now()->toDateString();
             }
@@ -183,8 +190,14 @@ class ProductReportController extends Controller
             ->where('sales.business_id', $businessId)
             ->where('sales.invoice_status', 'finalized')
             ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
-            ->when($startDate, fn ($q) => $q->whereDate('sales.invoice_date', '>=', $startDate))
-            ->when($endDate, fn ($q) => $q->whereDate('sales.invoice_date', '<=', $endDate))
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('sales.invoice_date', '=', $startDate);
+                } else {
+                    $q->whereDate('sales.invoice_date', '>=', $startDate)
+                        ->whereDate('sales.invoice_date', '<=', $endDate);
+                }
+            })
             ->groupBy(
                 'products.id',
                 'products.name',

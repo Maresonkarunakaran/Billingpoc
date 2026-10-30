@@ -563,7 +563,9 @@
                             @empty
                                 <tr>
                                     <td colspan="8" class="text-center py-5 text-muted">
-                                        No sales recorded for the selected date range. Try widening your From & To dates.
+                                        <i class="fas fa-calendar-times fa-3x mb-3 text-secondary d-block"></i>
+                                        <h5 class="font-weight-bold text-dark mb-1">THERE IS NO RECORD IN THIS DATE</h5>
+                                        <p class="text-muted text-sm mb-0">No product sales found for the specified date filter.</p>
                                     </td>
                                 </tr>
                             @endforelse

@@ -493,11 +493,36 @@
     let productsList = [];
     let cart = [];
     let selectedPricingType = 'retail';
+    let currentCategoryId = '';
     let activePaymentMethod = 'cash';
     let orderProductSearchTimer = null;
     let orderProductSearchController = null;
     let currentIdempotencyKey = 'pos-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     const branchStateCode = "{{ $branch->state_code }}";
+
+    function getFilteredProducts() {
+        const searchTerm = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+        return productsList.filter(p => {
+            // Strict category check: if a category is selected, ONLY match products in that category
+            if (currentCategoryId !== '' && currentCategoryId !== null && currentCategoryId !== undefined) {
+                if (String(p.category_id) !== String(currentCategoryId)) {
+                    return false;
+                }
+            }
+
+            // Search term check: matches name, sku, or barcode
+            if (searchTerm) {
+                const name = (p.name || '').toLowerCase();
+                const sku = (p.sku || '').toLowerCase();
+                const barcode = (p.barcode || '').toLowerCase();
+                if (!name.includes(searchTerm) && !sku.includes(searchTerm) && !barcode.includes(searchTerm)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
 
     document.addEventListener("DOMContentLoaded", function () {
         loadProducts();
@@ -512,8 +537,7 @@
         });
 
         document.getElementById('searchInput').addEventListener('input', function() {
-            const query = this.value.trim().toLowerCase();
-            renderProducts(filterProductsBySearch(productsList, query));
+            renderProducts(getFilteredProducts());
         });
 
         document.getElementById('refreshProductsBtn').addEventListener('click', refreshPosProducts);
@@ -534,20 +558,18 @@
             }
         });
 
-        // Category filter buttons
+        // Category filter buttons - strictly show items in the selected category
         document.querySelectorAll('.category-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
-                document.querySelectorAll('.category-btn').forEach(b => b.classList.add('btn-outline-secondary'));
+                document.querySelectorAll('.category-btn').forEach(b => {
+                    b.classList.remove('active', 'btn-primary');
+                    b.classList.add('btn-outline-secondary');
+                });
                 this.classList.remove('btn-outline-secondary');
                 this.classList.add('active', 'btn-primary');
 
-                const catId = this.dataset.catId;
-                if (!catId) {
-                    renderProducts(productsList);
-                } else {
-                    renderProducts(productsList.filter(p => p.category_id == catId || p.conversions));
-                }
+                currentCategoryId = this.dataset.catId || '';
+                renderProducts(getFilteredProducts());
             });
         });
 
@@ -556,7 +578,7 @@
             radio.addEventListener('change', function() {
                 selectedPricingType = this.value;
                 recalculateCart();
-                renderProducts(productsList);
+                renderProducts(getFilteredProducts());
             });
         });
 
@@ -604,31 +626,18 @@
     });
 
     // 1. Fetch products from API
-    function loadProducts(catId = '') {
-        fetch("{{ route('pos.search') }}?category_id=" + catId)
+    function loadProducts() {
+        fetch("{{ route('pos.search') }}")
             .then(res => res.json())
             .then(data => {
                 productsList = data;
                 syncCartStock(productsList);
-                const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-                renderProducts(filterProductsBySearch(productsList, searchTerm));
+                renderProducts(getFilteredProducts());
             })
             .catch(err => {
                 console.error("Error loading products:", err);
                 Swal.fire('Stock Refresh Failed', 'Could not load the latest product stock. Please try again.', 'error');
             });
-    }
-
-    function filterProductsBySearch(products, query) {
-        if (!query) {
-            return products;
-        }
-
-        return products.filter(product =>
-            product.name.toLowerCase().includes(query) ||
-            product.sku.toLowerCase().includes(query) ||
-            (product.barcode && product.barcode.toLowerCase().includes(query))
-        );
     }
 
     function refreshPosProducts() {
@@ -647,8 +656,7 @@
             .then(products => {
                 productsList = products;
                 syncCartStock(productsList);
-                const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-                renderProducts(filterProductsBySearch(productsList, searchTerm));
+                renderProducts(getFilteredProducts());
                 recalculateCart();
             })
             .catch(error => {
@@ -682,7 +690,7 @@
     function renderProducts(items) {
         const grid = document.getElementById('productGrid');
         if (!items || items.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center py-5 text-muted"><p>No products match your search.</p></div>';
+            grid.innerHTML = '<div class="col-12 text-center py-5 text-muted"><i class="fas fa-box-open fa-2x mb-2 text-secondary d-block"></i><p class="font-weight-bold mb-0">No products found in this category.</p></div>';
             return;
         }
 

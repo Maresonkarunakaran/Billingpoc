@@ -22,19 +22,60 @@ class ExpenseController extends Controller
         $user = Auth::user();
         $branchId = session('active_branch_id');
 
-        $expenses = Expense::where('business_id', $user->business_id)
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+
+        if ($request->filled('preset')) {
+            match ($request->preset) {
+                'today' => [$startDate = now()->toDateString(), $endDate = now()->toDateString()],
+                'yesterday' => [$startDate = now()->subDay()->toDateString(), $endDate = now()->subDay()->toDateString()],
+                'this_month' => [$startDate = now()->startOfMonth()->toDateString(), $endDate = now()->toDateString()],
+                'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
+                default => null,
+            };
+        } else {
+            // Strict single-date clamp: if only one date is provided, filter ONLY for that exact single date
+            if ($startDate && ! $endDate) {
+                $endDate = $startDate;
+            } elseif ($endDate && ! $startDate) {
+                $startDate = $endDate;
+            } elseif ($startDate && $endDate && $startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+        }
+
+        $query = Expense::where('business_id', $user->business_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($request->filled('category_id'), fn ($q) => $q->where('expense_category_id', $request->category_id))
-            ->with(['category', 'branch', 'user'])
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('expense_date', '=', $startDate);
+                } else {
+                    $q->whereDate('expense_date', '>=', $startDate)
+                        ->whereDate('expense_date', '<=', $endDate);
+                }
+            })
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $s = $request->search;
+                $q->where(function ($sub) use ($s) {
+                    $sub->where('expense_number', 'like', "%{$s}%")
+                        ->orWhere('description', 'like', "%{$s}%")
+                        ->orWhere('reference_no', 'like', "%{$s}%");
+                });
+            });
+
+        $totalExpense = (float) (clone $query)->sum('amount');
+        $totalCount = (int) (clone $query)->count();
+
+        $expenses = $query->with(['category', 'branch', 'user'])
             ->latest('expense_date')
-            ->paginate(15);
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
 
         $categories = ExpenseCategory::where('business_id', $user->business_id)->get();
-        $totalExpense = Expense::where('business_id', $user->business_id)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->sum('amount');
 
-        return view('expenses.index', compact('expenses', 'categories', 'totalExpense'));
+        return view('expenses.index', compact('expenses', 'categories', 'totalExpense', 'totalCount', 'startDate', 'endDate'));
     }
 
     public function create()

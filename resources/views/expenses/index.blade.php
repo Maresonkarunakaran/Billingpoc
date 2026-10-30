@@ -30,18 +30,56 @@
 
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3">
-        <form action="{{ route('expenses.index') }}" method="GET" class="row">
-            <div class="col-md-5 mb-2 mb-md-0">
-                <select name="category_id" class="form-control form-control-sm">
-                    <option value="">All Expense Categories</option>
-                    @foreach($categories as $c)
-                        <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-                    @endforeach
-                </select>
+        <form action="{{ route('expenses.index') }}" method="GET">
+            <!-- Row 1: Presets -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Date Presets">
+                    <a href="{{ route('expenses.index', ['preset' => 'today', 'category_id' => request('category_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
+                    <a href="{{ route('expenses.index', ['preset' => 'yesterday', 'category_id' => request('category_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
+                    <a href="{{ route('expenses.index', ['preset' => 'this_month', 'category_id' => request('category_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'this_month' ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                    <a href="{{ route('expenses.index') }}" 
+                       class="btn {{ !request('start_date') && !request('end_date') && !request('preset') ? 'btn-primary' : 'btn-outline-secondary' }}">All Expenses</a>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="badge badge-light border text-sm py-2 px-3">
+                        Total Filtered: <strong class="text-danger font-weight-bold">₹ {{ number_format($totalExpense, 2) }}</strong> 
+                        ({{ $totalCount }} entries)
+                    </span>
+                </div>
             </div>
-            <div class="col-md-4 text-right">
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter mr-1"></i> Filter</button>
-                <a href="{{ route('expenses.index') }}" class="btn btn-outline-secondary btn-sm ml-1">Reset</a>
+
+            <!-- Row 2: Date Pickers & Inputs -->
+            <div class="row align-items-center">
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-alt text-muted"></i></span></div>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}" placeholder="From Date">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-check text-muted"></i></span></div>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}" placeholder="To Date">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <select name="category_id" class="form-control form-control-sm">
+                        <option value="">All Expense Categories</option>
+                        @foreach($categories as $c)
+                            <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2 mb-md-0">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search Expense #, Ref..." value="{{ request('search') }}">
+                </div>
+                <div class="col-md-1 text-right">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-filter"></i></button>
+                </div>
             </div>
         </form>
     </div>
@@ -94,7 +132,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">No operating expenses recorded yet.</td>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fas fa-calendar-times fa-3x mb-3 text-secondary d-block"></i>
+                                <h5 class="font-weight-bold text-dark mb-1">THERE IS NO RECORD IN THIS DATE</h5>
+                                <p class="text-muted text-sm mb-0">No operating expenses found for the specified date filter.</p>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

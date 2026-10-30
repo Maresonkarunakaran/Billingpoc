@@ -41,13 +41,28 @@ class PurchaseController extends Controller
                 'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
                 default => null,
             };
+        } else {
+            // Strict single-date clamp: if only one date is provided, filter ONLY for that exact single date
+            if ($startDate && ! $endDate) {
+                $endDate = $startDate;
+            } elseif ($endDate && ! $startDate) {
+                $startDate = $endDate;
+            } elseif ($startDate && $endDate && $startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
         }
 
         $query = Purchase::where('business_id', $user->business_id)
             ->when($request->filled('supplier_id'), fn ($q) => $q->where('supplier_id', $request->supplier_id))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->when($startDate, fn ($q) => $q->whereDate('purchase_date', '>=', $startDate))
-            ->when($endDate, fn ($q) => $q->whereDate('purchase_date', '<=', $endDate))
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('purchase_date', '=', $startDate);
+                } else {
+                    $q->whereDate('purchase_date', '>=', $startDate)
+                        ->whereDate('purchase_date', '<=', $endDate);
+                }
+            })
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
                 $q->where(function ($sub) use ($s) {

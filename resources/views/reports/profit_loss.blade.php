@@ -117,7 +117,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td class="pl-4 text-muted font-italic">No operating expenses recorded during this period</td>
+                        <td class="pl-4 text-muted font-italic">THERE IS NO RECORD IN THIS DATE</td>
                         <td class="text-right text-muted">₹ 0.00</td>
                     </tr>
                 @endforelse

@@ -67,12 +67,14 @@ class PosController extends Controller
             $productsQuery->where('category_id', $categoryId);
         }
 
-        $products = $productsQuery->limit(24)->get()->map(function ($p) use ($branchId) {
+        $limit = ($barcode || $query) ? 50 : 500;
+        $products = $productsQuery->limit($limit)->get()->map(function ($p) use ($branchId) {
             $stock = $p->getStockInBranch($branchId);
 
             return [
                 'id' => $p->id,
                 'name' => $p->name,
+                'category_id' => $p->category_id,
                 'image_url' => $p->image_path ? Storage::disk('public')->url($p->image_path) : null,
                 'sku' => $p->sku,
                 'barcode' => $p->barcode,

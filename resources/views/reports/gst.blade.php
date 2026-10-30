@@ -69,7 +69,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-muted">No B2B invoices recorded in this period.</td>
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="fas fa-calendar-times fa-2x mb-2 text-secondary d-block"></i>
+                                <h6 class="font-weight-bold text-dark mb-1">THERE IS NO RECORD IN THIS DATE</h6>
+                                <p class="text-muted text-sm mb-0">No B2B invoices recorded in this date filter.</p>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

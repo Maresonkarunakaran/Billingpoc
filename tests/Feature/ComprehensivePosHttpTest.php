@@ -628,4 +628,41 @@ class ComprehensivePosHttpTest extends TestCase
         $response->assertSee('Table 4');
         $response->assertSee('Table 12');
     }
+
+    public function test_pos_search_products_returns_category_id_for_category_filtering(): void
+    {
+        $response = $this->actingAs($this->cashier)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->getJson('/pos/search');
+
+        $response->assertOk();
+        $products = $response->json();
+        $this->assertNotEmpty($products);
+        $this->assertArrayHasKey('category_id', $products[0]);
+    }
+
+    public function test_sales_and_purchases_date_filter_strictly_matches_single_date_and_shows_empty_message(): void
+    {
+        // When filtered by a future date with no records, should display the exact empty state message
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/sales?start_date=2099-01-01');
+
+        $response->assertOk();
+        $response->assertSee('THERE IS NO RECORD IN THIS DATE');
+
+        $purchaseResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/purchases?start_date=2099-01-01');
+
+        $purchaseResponse->assertOk();
+        $purchaseResponse->assertSee('THERE IS NO RECORD IN THIS DATE');
+
+        $expenseResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/expenses?start_date=2099-01-01');
+
+        $expenseResponse->assertOk();
+        $expenseResponse->assertSee('THERE IS NO RECORD IN THIS DATE');
+    }
 }
