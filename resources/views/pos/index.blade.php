@@ -19,28 +19,6 @@
         cursor: not-allowed;
         background: #f8fafc;
     }
-    .pos-product-image {
-        position: relative;
-        height: 112px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        border-radius: 6px;
-        background: #f8fafc;
-    }
-    .pos-product-image img {
-        position: relative;
-        z-index: 1;
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-    }
-    .pos-product-image-placeholder {
-        position: absolute;
-        color: #94a3b8;
-        font-size: 2rem;
-    }
     .pos-order-product-search,
     .pos-customer-search {
         position: relative;
@@ -100,46 +78,45 @@
 @endif
 
 <div class="row">
-    <!-- LEFT PANEL: BARCODE, SEARCH & PRODUCT CATALOG (7 COLS) -->
-    <div class="col-lg-7 mb-3">
+    <!-- LEFT PANEL: BARCODE, SEARCH & COMPACT PRODUCT CATALOG (5 COLS) -->
+    <div class="col-lg-5 mb-3">
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body p-3">
-                <div class="row">
-                    <!-- Barcode Input with Auto-Add -->
-                    <div class="col-md-7 mb-2 mb-md-0">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-primary text-white"><i class="fas fa-barcode"></i></span>
-                            </div>
-                            <input type="text" id="barcodeInput" class="form-control" placeholder="Scan Barcode / Type SKU and press Enter..." autofocus>
+                <!-- Barcode Input with Auto-Add -->
+                <div class="mb-2">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text bg-primary text-white"><i class="fas fa-barcode"></i></span>
                         </div>
-                    </div>
-                    <!-- Live Search -->
-                    <div class="col-md-5 d-flex">
-                        <div class="input-group">
-                            <input type="text" id="searchInput" class="form-control" placeholder="Search product name...">
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" id="searchBtn"><i class="fas fa-search"></i></button>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-secondary btn-sm ml-1" type="button" id="refreshProductsBtn" title="Refresh product stock" aria-label="Refresh product stock">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
+                        <input type="text" id="barcodeInput" class="form-control font-weight-bold" placeholder="Scan Barcode / SKU and hit Enter..." autofocus>
                     </div>
                 </div>
 
+                <!-- Live Search -->
+                <div class="d-flex">
+                    <div class="input-group">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search product name...">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" id="searchBtn"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm ml-1" type="button" id="refreshProductsBtn" title="Refresh product stock" aria-label="Refresh product stock">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+
                 <!-- Category Pills -->
-                <div class="d-flex overflow-auto mt-3 py-1" style="gap: 6px; white-space: nowrap;" id="categoryFilterContainer">
-                    <button class="btn btn-sm btn-primary category-btn active" data-cat-id="">All Categories</button>
+                <div class="d-flex overflow-auto mt-2 py-1" style="gap: 5px; white-space: nowrap;" id="categoryFilterContainer">
+                    <button class="btn btn-xs btn-primary category-btn active" data-cat-id="">All Categories</button>
                     @foreach($categories as $cat)
-                        <button class="btn btn-sm btn-outline-secondary category-btn" data-cat-id="{{ $cat->id }}">{{ $cat->name }}</button>
+                        <button class="btn btn-xs btn-outline-secondary category-btn" data-cat-id="{{ $cat->id }}">{{ $cat->name }}</button>
                     @endforeach
                 </div>
             </div>
         </div>
 
-        <!-- Product Grid -->
-        <div class="row" id="productGrid" style="max-height: 600px; overflow-y: auto;">
+        <!-- Compact Product Grid -->
+        <div class="row" id="productGrid" style="max-height: 640px; overflow-y: auto;">
             <!-- Rendered dynamically by JavaScript -->
             <div class="col-12 text-center py-5 text-muted">
                 <i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
@@ -148,21 +125,21 @@
         </div>
     </div>
 
-    <!-- RIGHT PANEL: CART, TAXES & CHECKOUT (5 COLS) -->
-    <div class="col-lg-5">
+    <!-- RIGHT PANEL: CURRENT ORDER BILLING & CHECKOUT (7 COLS - INCREASED SPACE) -->
+    <div class="col-lg-7">
         <div class="card shadow-sm border-0">
             <!-- Header: Pricing Mode & Customer Selection -->
             <div class="card-header bg-white py-3 border-bottom">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="font-weight-bold text-dark"><i class="fas fa-shopping-basket text-success mr-1"></i> Current Order</span>
+                    <span class="font-weight-bold text-dark text-lg"><i class="fas fa-shopping-basket text-success mr-2"></i> Current Order Billing</span>
                     
                     <!-- Retail / Wholesale Switcher -->
                     <div class="btn-group btn-group-sm btn-group-toggle" data-toggle="buttons">
-                        <label class="btn btn-outline-primary active" id="pricingRetailLabel">
-                            <input type="radio" name="pricing_type_radio" id="pricingRetail" value="retail" checked> Retail
+                        <label class="btn btn-outline-primary active font-weight-bold" id="pricingRetailLabel">
+                            <input type="radio" name="pricing_type_radio" id="pricingRetail" value="retail" checked> Retail Rate
                         </label>
-                        <label class="btn btn-outline-primary" id="pricingWholesaleLabel">
-                            <input type="radio" name="pricing_type_radio" id="pricingWholesale" value="wholesale"> Wholesale
+                        <label class="btn btn-outline-primary font-weight-bold" id="pricingWholesaleLabel">
+                            <input type="radio" name="pricing_type_radio" id="pricingWholesale" value="wholesale"> Wholesale Rate
                         </label>
                     </div>
                 </div>
@@ -219,23 +196,24 @@
                 </div>
             </div>
 
-            <!-- Cart Items Table -->
-            <div class="card-body p-0" style="max-height: 360px; overflow-y: auto;">
-                <table class="table table-sm mb-0 cart-table">
+            <!-- Cart Items Table (Spacious with Generous Columns) -->
+            <div class="card-body p-0" style="max-height: 480px; overflow-y: auto;">
+                <table class="table table-hover mb-0 cart-table">
                     <thead>
                         <tr>
-                            <th>Item</th>
-                            <th class="text-center" style="width: 110px;">Qty</th>
-                            <th class="text-right">Price</th>
-                            <th class="text-right">Total</th>
-                            <th class="text-center" style="width: 35px;"></th>
+                            <th style="width: 44%;">Item Description</th>
+                            <th class="text-center" style="width: 140px;">Quantity</th>
+                            <th class="text-right" style="width: 18%;">Unit Price</th>
+                            <th class="text-right" style="width: 22%;">Line Total</th>
+                            <th class="text-center" style="width: 40px;"></th>
                         </tr>
                     </thead>
                     <tbody id="cartItemsList">
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="fas fa-shopping-cart fa-2x mb-2 text-secondary"></i>
-                                <p class="mb-0">Cart is empty. Scan barcodes or click items on the left.</p>
+                                <i class="fas fa-shopping-cart fa-3x mb-2 text-secondary"></i>
+                                <h6 class="font-weight-bold text-dark">Current Order is Empty</h6>
+                                <p class="text-muted text-sm mb-0">Scan barcodes with your scanner, search above, or select products from the left.</p>
                             </td>
                         </tr>
                     </tbody>
@@ -668,32 +646,26 @@
             const availableStock = Math.floor(Number(p.stock));
             const isOutOfStock = availableStock < 1;
             const stockColor = availableStock > 10 ? 'text-success' : (availableStock > 0 ? 'text-warning' : 'text-danger');
-            const image = p.image_url
-                ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.remove()">`
-                : '';
 
             html += `
-                <div class="col-md-4 col-sm-6 mb-3">
-                    <div class="pos-product-card p-3 h-100 d-flex flex-column justify-content-between ${isOutOfStock ? 'out-of-stock' : ''}" 
+                <div class="col-6 mb-2">
+                    <div class="pos-product-card p-2 h-100 d-flex flex-column justify-content-between ${isOutOfStock ? 'out-of-stock' : ''}" 
                          onclick="${isOutOfStock ? '' : `addToCart(${p.id})`}">
                         <div>
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <span class="badge badge-light border text-xs">${escapeHtml(p.sku)}</span>
-                                <span class="badge badge-gst">GST ${p.gst_rate}%</span>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge badge-light border text-xs text-truncate" style="max-width: 90px;" title="${escapeHtml(p.sku)}">${escapeHtml(p.sku)}</span>
+                                <span class="badge badge-gst text-xs">GST ${p.gst_rate}%</span>
                             </div>
-                            <div class="pos-product-image mb-2">
-                                <i class="fas fa-box-open pos-product-image-placeholder" aria-hidden="true"></i>
-                                ${image}
-                            </div>
-                            <h6 class="font-weight-bold text-dark mb-1" style="font-size:0.88rem; line-height: 1.3;">${escapeHtml(p.name)}</h6>
+                            <h6 class="font-weight-bold text-dark mb-1" style="font-size:0.85rem; line-height: 1.25;" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h6>
+                            ${p.barcode ? `<div class="text-xs text-muted mb-1"><i class="fas fa-barcode mr-1"></i>${escapeHtml(p.barcode)}</div>` : ''}
                         </div>
-                        <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                        <div class="mt-1 pt-1 border-top d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="font-weight-bold text-primary rupee" style="font-size: 1.05rem;">${price.toFixed(2)}</span>
-                                <small class="text-muted d-block" style="font-size: 0.72rem;">/${escapeHtml(p.base_unit)}</small>
+                                <span class="font-weight-bold text-primary rupee" style="font-size: 0.98rem;">${price.toFixed(2)}</span>
+                                <small class="text-muted" style="font-size: 0.7rem;">/${escapeHtml(p.base_unit)}</small>
                             </div>
                             <div class="text-right">
-                                <small class="font-weight-bold ${stockColor} d-block" style="font-size: 0.75rem;">
+                                <small class="font-weight-bold ${stockColor}" style="font-size: 0.72rem;">
                                     ${availableStock > 0 ? `${availableStock} in stock` : 'Out of Stock'}
                                 </small>
                             </div>

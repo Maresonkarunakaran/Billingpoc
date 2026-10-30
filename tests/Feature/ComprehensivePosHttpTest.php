@@ -302,6 +302,9 @@ class ComprehensivePosHttpTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Current Order')
+            ->assertSee('col-lg-7')
+            ->assertSee('col-lg-5')
+            ->assertDontSee('.pos-product-image', false)
             ->assertSee('cartProductSearch')
             ->assertSee('Type to search and add a product...')
             ->assertSee('cartProductSearchResults')
@@ -421,7 +424,8 @@ class ComprehensivePosHttpTest extends TestCase
         $createResponse->assertOk()
             ->assertSee('name="barcode"', false)
             ->assertSee('id="btn-generate-barcode"', false)
-            ->assertDontSee('name="hsn_code"', false);
+            ->assertDontSee('name="hsn_code"', false)
+            ->assertDontSee('name="image"', false);
 
         $editResponse = $this->actingAs($this->admin)
             ->withSession(['active_branch_id' => $this->shop->id])
@@ -430,7 +434,8 @@ class ComprehensivePosHttpTest extends TestCase
         $editResponse->assertOk()
             ->assertSee('name="barcode"', false)
             ->assertSee('id="btn-generate-barcode"', false)
-            ->assertDontSee('name="hsn_code"', false);
+            ->assertDontSee('name="hsn_code"', false)
+            ->assertDontSee('name="image"', false);
     }
 
     public function test_admin_can_replace_a_product_image_without_leaving_the_old_file(): void

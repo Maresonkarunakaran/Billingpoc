@@ -66,14 +66,6 @@
                 <label class="text-sm font-weight-bold">Product Description</label>
                 <textarea name="description" class="form-control" rows="2" placeholder="Specifications, pack details, supplier references...">{{ old('description') }}</textarea>
             </div>
-            <div class="form-group mt-3 mb-0">
-                <label class="text-sm font-weight-bold" for="image">Product Image (Optional)</label>
-                <input type="file" id="image" name="image" class="form-control-file d-block" accept=".jpg,.jpeg,.png,.webp">
-                <small class="form-text text-muted">JPG, PNG, or WebP; maximum 2 MB. Images appear on POS product cards.</small>
-                @error('image')
-                    <span class="text-danger text-sm">{{ $message }}</span>
-                @enderror
-            </div>
         </div>
     </div>
 

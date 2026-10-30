@@ -68,19 +68,6 @@
                 <label class="text-sm font-weight-bold">Product Description</label>
                 <textarea name="description" class="form-control" rows="2">{{ old('description', $product->description) }}</textarea>
             </div>
-            <div class="form-group mt-3 mb-0">
-                <label class="text-sm font-weight-bold" for="image">Product Image</label>
-                @if($imageUrl)
-                    <div class="mb-2">
-                        <img src="{{ $imageUrl }}" alt="{{ $product->name }}" style="width: 120px; height: 100px; object-fit: contain;" class="border rounded p-1">
-                    </div>
-                @endif
-                <input type="file" id="image" name="image" class="form-control-file d-block" accept=".jpg,.jpeg,.png,.webp">
-                <small class="form-text text-muted">Choose a new JPG, PNG, or WebP image (maximum 2 MB) to replace the current one.</small>
-                @error('image')
-                    <span class="text-danger text-sm">{{ $message }}</span>
-                @enderror
-            </div>
         </div>
     </div>
 
