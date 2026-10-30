@@ -16,11 +16,30 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-    <!-- Preconnect to Google Translate for fast translation initialization -->
+    <!-- Preconnect & Early Load for Google Translate -->
     <link rel="preconnect" href="https://translate.googleapis.com">
     <link rel="preconnect" href="https://translate.google.com">
     <link rel="dns-prefetch" href="https://translate.googleapis.com">
     <link rel="dns-prefetch" href="https://translate.google.com">
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+
+    <!-- Immediate Language Detection Script (Prevents English text flash on page navigation) -->
+    <script>
+        (function() {
+            var isTamil = false;
+            try {
+                var saved = localStorage.getItem('billingpoc_lang');
+                var match = document.cookie.match(/(?:^|;)\s*googtrans=([^;]+)/);
+                if (saved === 'ta' || (match && match[1].indexOf('/ta') !== -1)) {
+                    isTamil = true;
+                }
+            } catch(e) {}
+            if (isTamil) {
+                document.documentElement.classList.add('translating-tamil');
+                document.documentElement.setAttribute('lang', 'ta');
+            }
+        })();
+    </script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -106,9 +125,49 @@
         .lang-btn { font-size: 0.8rem; border-radius: 6px; padding: 3px 10px; font-weight: 600; }
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
+        /* Smooth anti-flash: when user has chosen Tamil, hide untranslated English text until translated */
+        html.translating-tamil:not(.translated-ltr):not(.translation-ready) body {
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        html.translating-tamil.translated-ltr body,
+        html.translating-tamil.translation-ready body {
+            visibility: visible !important;
+            opacity: 1 !important;
+            transition: opacity 0.15s ease-in;
+        }
+
+        #tamil-translate-loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f172a;
+            color: #ffffff;
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        html.translating-tamil:not(.translated-ltr):not(.translation-ready) #tamil-translate-loader {
+            display: flex !important;
+        }
+
     </style>
 </head>
 <body>
+    <!-- Tamil Translation Loading Screen -->
+    <div id="tamil-translate-loader" aria-live="polite">
+        <div class="spinner-border text-primary mb-3" style="width: 2.2rem; height: 2.2rem;" role="status"></div>
+        <div class="font-weight-bold text-white text-base mb-1">தமிழ் மொழிபெயர்ப்பு ஏற்றப்படுகிறது...</div>
+        <small class="text-muted">Loading Tamil Translation...</small>
+    </div>
+
+    <!-- Hidden Google Translate Element -->
+    <div id="google_translate_element" style="display:none;"></div>
+
 <div class="register-container">
     <!-- Language Switcher Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -334,39 +393,32 @@
         }
     }
 
-    // Robust Cookie Helper for Google Translate across host / domain
+    // Clean Cookie Helper for Google Translate across host / domain
     function setGoogtransCookie(val) {
         var host = window.location.hostname;
-        var isIpOrLocal = (host === 'localhost' || host === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(host));
-        if (!val) {
-            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            if (!isIpOrLocal) {
-                document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + host + "; path=/;";
-                document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=." + host + "; path=/;";
-            }
-        } else {
-            document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/;";
-            if (!isIpOrLocal) {
-                document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; domain=" + host + "; path=/;";
-                document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; domain=." + host + "; path=/;";
-            }
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + host + ";";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=." + host + ";";
+
+        if (val) {
+            document.cookie = "googtrans=" + val + "; path=/; SameSite=Lax; max-age=31536000";
         }
     }
 
-    // Language switcher logic - Immediate on first click & zero English flash
+    // Language switcher logic - Instant on 1st click & zero page reload kill
     function switchLanguage(lang) {
         localStorage.setItem('billingpoc_lang', lang);
 
         if (lang === 'en') {
             setGoogtransCookie(null);
             document.documentElement.classList.remove('translating-tamil');
+            document.documentElement.lang = 'en';
             updateLangButtons('en');
 
-            var select = document.querySelector('.goog-te-combo');
-            if (select) {
-                select.selectedIndex = 0;
-                select.value = '';
-                select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+            var combo = document.querySelector('.goog-te-combo');
+            if (combo) {
+                combo.value = '';
+                combo.dispatchEvent(new Event('change', { bubbles: true }));
             }
             window.location.reload();
             return;
@@ -375,10 +427,10 @@
         // Switching to Tamil ('ta')
         setGoogtransCookie('/en/ta');
         document.documentElement.classList.add('translating-tamil');
+        document.documentElement.lang = 'ta';
         updateLangButtons('ta');
 
-        var select = document.querySelector('.goog-te-combo');
-        if (select) {
+        function triggerTamilCombo(select) {
             for (var i = 0; i < select.options.length; i++) {
                 if (select.options[i].value === 'ta') {
                     select.selectedIndex = i;
@@ -386,23 +438,36 @@
                 }
             }
             select.value = 'ta';
-
-            select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-            select.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
             if (window.jQuery) {
                 window.jQuery(select).val('ta').trigger('change');
             }
-            if (typeof select.onchange === 'function') {
-                select.onchange();
-            }
+        }
 
-            setTimeout(function() {
-                if (!document.documentElement.classList.contains('translated-ltr')) {
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+            triggerTamilCombo(select);
+            var checkCount = 0;
+            var pollReady = setInterval(function() {
+                checkCount++;
+                if (document.documentElement.classList.contains('translated-ltr') || checkCount > 30) {
+                    clearInterval(pollReady);
+                    document.documentElement.classList.add('translation-ready');
+                }
+            }, 50);
+        } else {
+            var waitCount = 0;
+            var waitCombo = setInterval(function() {
+                waitCount++;
+                var s = document.querySelector('.goog-te-combo');
+                if (s) {
+                    clearInterval(waitCombo);
+                    triggerTamilCombo(s);
+                } else if (waitCount >= 20) {
+                    clearInterval(waitCombo);
                     window.location.reload();
                 }
-            }, 200);
-        } else {
-            window.location.reload();
+            }, 100);
         }
     }
 
@@ -441,17 +506,28 @@
                         select.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
-            }, 40);
+            }, 30);
             setTimeout(function() { clearInterval(checkTimer); }, 1500);
         }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
-        var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
+        var saved = (localStorage.getItem('billingpoc_lang') === 'ta' || (match && match[1] === 'ta')) ? 'ta' : 'en';
         updateLangButtons(saved);
 
-        // Permanently suppress and eradicate any Google Translate top banner or body shifting
+        var observer = new MutationObserver(function() {
+            if (document.documentElement.classList.contains('translated-ltr') ||
+                document.documentElement.classList.contains('translated-rtl')) {
+                document.documentElement.classList.add('translation-ready');
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        setTimeout(function() {
+            document.documentElement.classList.add('translation-ready');
+        }, 1400);
+
         var removeGoogleBanner = function() {
             if (document.body && document.body.style.top && document.body.style.top !== '0px') {
                 document.body.style.top = '0px';
@@ -466,8 +542,8 @@
             });
         };
 
-        var observer = new MutationObserver(removeGoogleBanner);
-        observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+        var bannerObserver = new MutationObserver(removeGoogleBanner);
+        bannerObserver.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
         setInterval(removeGoogleBanner, 300);
     });
 
@@ -479,8 +555,5 @@
         });
     }
 </script>
-<!-- Hidden Google Translate Element -->
-<div id="google_translate_element" style="display:none;"></div>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

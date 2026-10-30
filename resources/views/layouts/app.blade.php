@@ -6,6 +6,24 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Dashboard' }} | {{ config('app.name', 'BILLINGPOC') }}</title>
 
+    <!-- Immediate Language Detection Script (Prevents English text flash on page navigation) -->
+    <script>
+        (function() {
+            var isTamil = false;
+            try {
+                var saved = localStorage.getItem('billingpoc_lang');
+                var match = document.cookie.match(/(?:^|;)\s*googtrans=([^;]+)/);
+                if (saved === 'ta' || (match && match[1].indexOf('/ta') !== -1)) {
+                    isTamil = true;
+                }
+            } catch(e) {}
+            if (isTamil) {
+                document.documentElement.classList.add('translating-tamil');
+                document.documentElement.setAttribute('lang', 'ta');
+            }
+        })();
+    </script>
+
     <!-- PWA Desktop & Mobile App Manifest -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
@@ -17,11 +35,12 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-    <!-- Preconnect to Google Translate for fast translation initialization -->
+    <!-- Preconnect & Early Load for Google Translate -->
     <link rel="preconnect" href="https://translate.googleapis.com">
     <link rel="preconnect" href="https://translate.google.com">
     <link rel="dns-prefetch" href="https://translate.googleapis.com">
     <link rel="dns-prefetch" href="https://translate.google.com">
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 
     <!-- Google Font: Source Sans Pro & Inter -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
@@ -89,6 +108,35 @@
         .lang-btn { font-size: 0.78rem; border-radius: 6px; padding: 2px 8px; font-weight: 700; transition: all 0.15s ease; }
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
+        /* Smooth anti-flash: when user has chosen Tamil, hide untranslated English text until translated */
+        html.translating-tamil:not(.translated-ltr):not(.translation-ready) body {
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        html.translating-tamil.translated-ltr body,
+        html.translating-tamil.translation-ready body {
+            visibility: visible !important;
+            opacity: 1 !important;
+            transition: opacity 0.15s ease-in;
+        }
+
+        #tamil-translate-loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #f8fafc;
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        html.translating-tamil:not(.translated-ltr):not(.translation-ready) #tamil-translate-loader {
+            display: flex !important;
+        }
+
         @media (max-width: 767.98px) {
             body { padding-bottom: 60px; }
             .mobile-bottom-nav {
@@ -121,6 +169,16 @@
     @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
+    <!-- Tamil Translation Loading Screen (Smooth anti-flash on page change) -->
+    <div id="tamil-translate-loader" aria-live="polite">
+        <div class="spinner-border text-primary mb-3" style="width: 2.2rem; height: 2.2rem;" role="status"></div>
+        <div class="font-weight-bold text-dark text-base mb-1">தமிழ் மொழிபெயர்ப்பு ஏற்றப்படுகிறது...</div>
+        <small class="text-muted">Loading Tamil Translation...</small>
+    </div>
+
+    <!-- Hidden Google Translate Element -->
+    <div id="google_translate_element" style="display:none;"></div>
+
 <div class="wrapper">
 
     <!-- Navbar -->
@@ -383,46 +441,35 @@
     </div>
 </nav>
 
-<!-- Hidden Google Translate Element -->
-<div id="google_translate_element" style="display:none;"></div>
-
 <script>
-    // Robust Cookie Helper for Google Translate across host / domain
+    // Clean Cookie Helper for Google Translate across host / domain
     function setGoogtransCookie(val) {
         var host = window.location.hostname;
-        var isIpOrLocal = (host === 'localhost' || host === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(host));
-        if (!val) {
-            // Delete cookie completely so Google Translate reverts cleanly to original English
-            document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            if (!isIpOrLocal) {
-                document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + host + "; path=/;";
-                document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=." + host + "; path=/;";
-            }
-        } else {
-            document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/;";
-            if (!isIpOrLocal) {
-                document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; domain=" + host + "; path=/;";
-                document.cookie = "googtrans=" + val + "; expires=Thu, 31 Dec 2099 23:59:59 UTC; domain=." + host + "; path=/;";
-            }
+        // Expire all previous cookie variations to prevent duplicate domain conflicts
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + host + ";";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=." + host + ";";
+
+        if (val) {
+            document.cookie = "googtrans=" + val + "; path=/; SameSite=Lax; max-age=31536000";
         }
     }
 
-    // Language switcher logic - Immediate on first click & zero English flash
+    // Language switcher logic - Instant on 1st click & zero page reload kill
     function switchLanguage(lang) {
         localStorage.setItem('billingpoc_lang', lang);
 
         if (lang === 'en') {
             setGoogtransCookie(null);
             document.documentElement.classList.remove('translating-tamil');
+            document.documentElement.lang = 'en';
             updateLangButtons('en');
 
-            var select = document.querySelector('.goog-te-combo');
-            if (select) {
-                select.selectedIndex = 0;
-                select.value = '';
-                select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+            var combo = document.querySelector('.goog-te-combo');
+            if (combo) {
+                combo.value = '';
+                combo.dispatchEvent(new Event('change', { bubbles: true }));
             }
-            // Clean reload to restore unmodified English DOM
             window.location.reload();
             return;
         }
@@ -430,39 +477,49 @@
         // Switching to Tamil ('ta')
         setGoogtransCookie('/en/ta');
         document.documentElement.classList.add('translating-tamil');
+        document.documentElement.lang = 'ta';
         updateLangButtons('ta');
 
-        var select = document.querySelector('.goog-te-combo');
-        if (select) {
-            var found = false;
+        function triggerTamilCombo(select) {
             for (var i = 0; i < select.options.length; i++) {
                 if (select.options[i].value === 'ta') {
                     select.selectedIndex = i;
-                    found = true;
                     break;
                 }
             }
             select.value = 'ta';
-
-            // Trigger all listeners: native change, input, jQuery change, and onchange
-            select.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-            select.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
             if (window.jQuery) {
                 window.jQuery(select).val('ta').trigger('change');
             }
-            if (typeof select.onchange === 'function') {
-                select.onchange();
-            }
+        }
 
-            // If translation hasn't taken effect immediately, reload so it boots directly into Tamil
-            setTimeout(function() {
-                if (!document.documentElement.classList.contains('translated-ltr')) {
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+            triggerTamilCombo(select);
+            // Translation executes in-place dynamically without aborting with reload!
+            var checkCount = 0;
+            var pollReady = setInterval(function() {
+                checkCount++;
+                if (document.documentElement.classList.contains('translated-ltr') || checkCount > 30) {
+                    clearInterval(pollReady);
+                    document.documentElement.classList.add('translation-ready');
+                }
+            }, 50);
+        } else {
+            // Widget element not ready yet; wait for it to initialize
+            var waitCount = 0;
+            var waitCombo = setInterval(function() {
+                waitCount++;
+                var s = document.querySelector('.goog-te-combo');
+                if (s) {
+                    clearInterval(waitCombo);
+                    triggerTamilCombo(s);
+                } else if (waitCount >= 20) {
+                    clearInterval(waitCombo);
                     window.location.reload();
                 }
-            }, 200);
-        } else {
-            // Widget element not ready yet; reload so cookie translates on boot
-            window.location.reload();
+            }, 100);
         }
     }
 
@@ -500,7 +557,6 @@
             autoDisplay: false
         }, 'google_translate_element');
 
-        // If Tamil is active, ensure the combo triggers if not already translated
         var saved = localStorage.getItem('billingpoc_lang') || 'en';
         if (saved === 'ta') {
             var checkTimer = setInterval(function() {
@@ -512,15 +568,29 @@
                         select.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
-            }, 40);
+            }, 30);
             setTimeout(function() { clearInterval(checkTimer); }, 1500);
         }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
-        var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
+        var saved = (localStorage.getItem('billingpoc_lang') === 'ta' || (match && match[1] === 'ta')) ? 'ta' : 'en';
         updateLangButtons(saved);
+
+        // Smooth anti-flash: watch for translation completion to hide the loading overlay
+        var observer = new MutationObserver(function() {
+            if (document.documentElement.classList.contains('translated-ltr') ||
+                document.documentElement.classList.contains('translated-rtl')) {
+                document.documentElement.classList.add('translation-ready');
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        // Safety fallback: reveal page after 1.4s max even if offline or translation delayed
+        setTimeout(function() {
+            document.documentElement.classList.add('translation-ready');
+        }, 1400);
 
         // Permanently suppress and eradicate any Google Translate top banner or body shifting
         var removeGoogleBanner = function() {
@@ -537,8 +607,8 @@
             });
         };
 
-        var observer = new MutationObserver(removeGoogleBanner);
-        observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+        var bannerObserver = new MutationObserver(removeGoogleBanner);
+        bannerObserver.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
         setInterval(removeGoogleBanner, 300);
     });
 
@@ -597,7 +667,6 @@
         }
     });
 </script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 @stack('scripts')
 </body>
