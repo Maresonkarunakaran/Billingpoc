@@ -1,0 +1,64 @@
+{
+  "name": "BILLINGPOC - Retail & Wholesale Hub",
+  "short_name": "BILLINGPOC",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "description": "High-Speed Retail & Wholesale POS, GST Invoicing, Barcode Scanning, and Inventory Management Software.",
+  "categories": ["business", "finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "POS Billing Counter",
+      "short_name": "POS",
+      "description": "Launch Fast Retail & Wholesale Checkout Terminal",
+      "url": "/pos?source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Executive Dashboard",
+      "short_name": "Dashboard",
+      "description": "Monitor Real-time Sales, Profits, and Overheads",
+      "url": "/dashboard?source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Profit & Loss Report",
+      "short_name": "P&L Statement",
+      "description": "View Financial Gross & Net Margin Analysis",
+      "url": "/reports/profit-loss?source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Add Product",
+      "short_name": "New Product",
+      "description": "Create New Inventory Item or Barcode",
+      "url": "/products/create?source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

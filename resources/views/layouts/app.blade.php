@@ -6,6 +6,17 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Dashboard' }} | {{ config('app.name', 'BILLINGPOC') }}</title>
 
+    <!-- PWA Desktop & Mobile App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BILLINGPOC">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
     <!-- Preconnect to Google Translate for fast translation initialization -->
     <link rel="preconnect" href="https://translate.googleapis.com">
     <link rel="preconnect" href="https://translate.google.com">
@@ -170,6 +181,13 @@
                         தமிழ்
                     </button>
                 </div>
+            </li>
+
+            <!-- Install Desktop App Button (PWA) -->
+            <li class="nav-item mr-2" id="pwa-install-nav" style="display: none;">
+                <button type="button" class="btn btn-outline-primary btn-sm px-2 font-weight-bold" id="btn-pwa-install" title="Install BILLINGPOC as standalone Desktop Software">
+                    <i class="fas fa-desktop mr-1"></i> <span class="d-none d-md-inline">Install App</span>
+                </button>
             </li>
 
             <!-- User Menu -->
@@ -516,6 +534,61 @@
         var observer = new MutationObserver(removeGoogleBanner);
         observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
         setInterval(removeGoogleBanner, 300);
+    });
+
+    // PWA Service Worker Registration & Installation Prompt
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
+            }).catch(function(err) {
+                console.warn('[PWA] ServiceWorker registration failed:', err);
+            });
+        });
+    }
+
+    let deferredPrompt = null;
+    const pwaInstallNav = document.getElementById('pwa-install-nav');
+    const btnPwaInstall = document.getElementById('btn-pwa-install');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (pwaInstallNav) {
+            pwaInstallNav.style.display = 'block';
+        }
+    });
+
+    if (btnPwaInstall) {
+        btnPwaInstall.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Install Desktop App',
+                        html: 'To install <strong>BILLINGPOC</strong> to your desktop:<br><br>Click the <strong>Install icon <i class="fas fa-download"></i></strong> in your Chrome or Edge address bar (top-right), or select <strong>Menu &rarr; Install BILLINGPOC</strong>.',
+                        confirmButtonText: 'Got it'
+                    });
+                } else {
+                    alert('To install BILLINGPOC, click the Install App icon in your browser address bar.');
+                }
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[PWA] User choice:', outcome);
+            deferredPrompt = null;
+            if (pwaInstallNav) {
+                pwaInstallNav.style.display = 'none';
+            }
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        console.log('[PWA] Installed successfully!');
+        if (pwaInstallNav) {
+            pwaInstallNav.style.display = 'none';
+        }
     });
 </script>
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
