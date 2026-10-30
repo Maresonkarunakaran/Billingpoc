@@ -15,6 +15,7 @@ use App\Models\Supplier;
 use App\Services\GstTaxService;
 use App\Services\InventoryService;
 use App\Services\SequenceService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -26,15 +27,48 @@ class PurchaseController extends Controller
         protected GstTaxService $gstTaxService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        $purchases = Purchase::where('business_id', $user->business_id)
-            ->with(['supplier', 'branch', 'user'])
-            ->latest()
-            ->paginate(15);
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
-        return view('purchases.index', compact('purchases'));
+        if ($request->filled('preset')) {
+            match ($request->preset) {
+                'today' => [$startDate = now()->toDateString(), $endDate = now()->toDateString()],
+                'yesterday' => [$startDate = now()->subDay()->toDateString(), $endDate = now()->subDay()->toDateString()],
+                'this_month' => [$startDate = now()->startOfMonth()->toDateString(), $endDate = now()->toDateString()],
+                'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
+                default => null,
+            };
+        }
+
+        $query = Purchase::where('business_id', $user->business_id)
+            ->when($request->filled('supplier_id'), fn ($q) => $q->where('supplier_id', $request->supplier_id))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when($startDate, fn ($q) => $q->whereDate('purchase_date', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->whereDate('purchase_date', '<=', $endDate))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $s = $request->search;
+                $q->where(function ($sub) use ($s) {
+                    $sub->where('po_number', 'like', "%{$s}%")
+                        ->orWhere('supplier_invoice_number', 'like', "%{$s}%")
+                        ->orWhereHas('supplier', fn ($sup) => $sup->where('name', 'like', "%{$s}%"));
+                });
+            });
+
+        $totalFilteredAmount = (float) (clone $query)->sum('total_amount');
+        $totalFilteredCount = (int) (clone $query)->count();
+
+        $purchases = $query->with(['supplier', 'branch', 'user'])
+            ->latest('purchase_date')
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        $suppliers = Supplier::where('business_id', $user->business_id)->get();
+
+        return view('purchases.index', compact('purchases', 'suppliers', 'startDate', 'endDate', 'totalFilteredAmount', 'totalFilteredCount'));
     }
 
     public function create()

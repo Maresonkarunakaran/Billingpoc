@@ -11,23 +11,58 @@
     </a>
 </div>
 
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3">
-        <form action="{{ route('sales.index') }}" method="GET" class="row">
-            <div class="col-md-5 mb-2 mb-md-0">
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search Invoice Number, Customer Name or Phone..." value="{{ request('search') }}">
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-header bg-white py-3 border-bottom">
+        <form action="{{ route('sales.index') }}" method="GET">
+            <!-- Row 1: Presets & Date Filters -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Date Presets">
+                    <a href="{{ route('sales.index', ['preset' => 'today', 'status' => request('status'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
+                    <a href="{{ route('sales.index', ['preset' => 'yesterday', 'status' => request('status'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
+                    <a href="{{ route('sales.index', ['preset' => 'this_month', 'status' => request('status'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'this_month' ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                    <a href="{{ route('sales.index') }}" 
+                       class="btn {{ !request('start_date') && !request('end_date') && !request('preset') ? 'btn-primary' : 'btn-outline-secondary' }}">All Invoices</a>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="badge badge-light border text-sm py-2 px-3">
+                        Total Invoiced: <strong class="text-primary font-weight-bold">₹ {{ number_format($totalFilteredAmount, 2) }}</strong> 
+                        ({{ $totalFilteredInvoices }} bills)
+                    </span>
+                </div>
             </div>
-            <div class="col-md-3 mb-2 mb-md-0">
-                <select name="status" class="form-control form-control-sm">
-                    <option value="">All Payment Statuses</option>
-                    <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Paid</option>
-                    <option value="partial" {{ request('status') === 'partial' ? 'selected' : '' }}>Partially Paid</option>
-                    <option value="unpaid" {{ request('status') === 'unpaid' ? 'selected' : '' }}>Unpaid / Credit</option>
-                </select>
-            </div>
-            <div class="col-md-4 text-right">
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter mr-1"></i> Filter</button>
-                <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary btn-sm ml-1">Reset</a>
+
+            <!-- Row 2: Inputs -->
+            <div class="row align-items-center">
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-alt text-muted"></i></span></div>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}" placeholder="From Date">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-check text-muted"></i></span></div>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}" placeholder="To Date">
+                    </div>
+                </div>
+                <div class="col-md-2 mb-2 mb-md-0">
+                    <select name="status" class="form-control form-control-sm">
+                        <option value="">All Payment Statuses</option>
+                        <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Paid</option>
+                        <option value="partial" {{ request('status') === 'partial' ? 'selected' : '' }}>Partially Paid</option>
+                        <option value="unpaid" {{ request('status') === 'unpaid' ? 'selected' : '' }}>Unpaid / Credit</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search Invoice #, Customer, Phone..." value="{{ request('search') }}">
+                </div>
+                <div class="col-md-1 text-right">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-filter"></i></button>
+                </div>
             </div>
         </form>
     </div>

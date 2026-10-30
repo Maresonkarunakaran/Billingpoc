@@ -15,7 +15,7 @@
     <div class="card-header bg-white py-3">
         <form action="{{ route('products.index') }}" method="GET" class="row">
             <div class="col-md-6 mb-2 mb-md-0">
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by Product Name, SKU..." value="{{ request('search') }}">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by Product Name, SKU, Barcode..." value="{{ request('search') }}">
             </div>
             <div class="col-md-3 mb-2 mb-md-0">
                 <select name="category_id" class="form-control form-control-sm">
@@ -59,7 +59,16 @@
                                 <small class="text-muted">Base Unit: {{ $p->baseUnit->name }} ({{ $p->baseUnit->code }})</small>
                             </td>
                             <td>
-                                <code>{{ $p->sku }}</code>
+                                <div class="font-weight-bold"><code>{{ $p->sku }}</code></div>
+                                @if($p->barcode)
+                                    <div class="text-xs text-muted mt-1">
+                                        <i class="fas fa-barcode text-primary mr-1"></i><span class="font-weight-bold text-dark">{{ $p->barcode }}</span>
+                                    </div>
+                                @else
+                                    <div class="text-xs text-muted mt-1">
+                                        <span class="badge badge-light border text-muted">No Barcode</span>
+                                    </div>
+                                @endif
                             </td>
                             <td>{{ $p->category?->name ?? 'General' }}</td>
                             <td class="text-right text-muted">₹ {{ number_format($p->purchase_price, 2) }}</td>

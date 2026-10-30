@@ -80,6 +80,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('products', ProductController::class);
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::put('categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::get('units', [UnitController::class, 'index'])->name('units.index');
     Route::post('units', [UnitController::class, 'store'])->name('units.store');
 
@@ -94,7 +96,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::get('/create', [ExpenseController::class, 'create'])->name('create');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [ExpenseController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ExpenseController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ExpenseController::class, 'destroy'])->name('destroy');
         Route::post('/categories', [ExpenseController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{id}', [ExpenseController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{id}', [ExpenseController::class, 'destroyCategory'])->name('categories.destroy');
     });
 
     // Payments & Collections

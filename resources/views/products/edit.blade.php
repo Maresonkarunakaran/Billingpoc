@@ -17,13 +17,25 @@
         <div class="card-header bg-white py-2 font-weight-bold text-sm">Basic Information</div>
         <div class="card-body p-4">
             <div class="row">
-                <div class="col-md-8 mb-3">
+                <div class="col-md-5 mb-3">
                     <label class="font-weight-bold text-sm">Product Name *</label>
                     <input type="text" name="name" class="form-control" value="{{ old('name', $product->name) }}" required>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                     <label class="font-weight-bold text-sm">SKU *</label>
-                    <input type="text" name="sku" class="form-control" value="{{ old('sku', $product->sku) }}" required>
+                    <input type="text" name="sku" id="sku" class="form-control" value="{{ old('sku', $product->sku) }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="font-weight-bold text-sm">Barcode / EAN (Optional)</label>
+                    <div class="input-group">
+                        <input type="text" name="barcode" id="barcode" class="form-control font-weight-bold" value="{{ old('barcode', $product->barcode) }}" placeholder="Scan or type barcode">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-primary" id="btn-generate-barcode" title="Click to auto-generate unique barcode">
+                                <i class="fas fa-barcode mr-1"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">Scan with USB barcode scanner or click <strong>Generate</strong>.</small>
                 </div>
             </div>
 
@@ -157,4 +169,18 @@
         <i class="fas fa-save mr-1"></i> Update Product Details
     </button>
 </form>
+
+@push('scripts')
+<script>
+    document.getElementById('btn-generate-barcode')?.addEventListener('click', function() {
+        const prefix = '890';
+        const randomPart = Math.floor(100000000 + Math.random() * 900000000).toString();
+        const fullBarcode = prefix + randomPart;
+        const input = document.getElementById('barcode');
+        input.value = fullBarcode;
+        input.classList.add('is-valid');
+        setTimeout(() => input.classList.remove('is-valid'), 1200);
+    });
+</script>
+@endpush
 @endsection

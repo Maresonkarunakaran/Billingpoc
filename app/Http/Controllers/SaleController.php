@@ -29,21 +29,42 @@ class SaleController extends Controller
         $user = Auth::user();
         $branchId = session('active_branch_id');
 
-        $sales = Sale::where('business_id', $user->business_id)
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+
+        if ($request->filled('preset')) {
+            match ($request->preset) {
+                'today' => [$startDate = now()->toDateString(), $endDate = now()->toDateString()],
+                'yesterday' => [$startDate = now()->subDay()->toDateString(), $endDate = now()->subDay()->toDateString()],
+                'this_month' => [$startDate = now()->startOfMonth()->toDateString(), $endDate = now()->toDateString()],
+                'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
+                default => null,
+            };
+        }
+
+        $query = Sale::where('business_id', $user->business_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($request->filled('status'), fn ($q) => $q->where('payment_status', $request->status))
+            ->when($startDate, fn ($q) => $q->whereDate('invoice_date', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->whereDate('invoice_date', '<=', $endDate))
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
                 $q->where(function ($sub) use ($s) {
                     $sub->where('invoice_number', 'like', "%{$s}%")
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"));
                 });
-            })
-            ->with(['customer', 'branch', 'user'])
-            ->latest()
-            ->paginate(15);
+            });
 
-        return view('sales.index', compact('sales'));
+        $totalFilteredAmount = (float) (clone $query)->sum('final_amount');
+        $totalFilteredInvoices = (int) (clone $query)->count();
+
+        $sales = $query->with(['customer', 'branch', 'user'])
+            ->latest('invoice_date')
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('sales.index', compact('sales', 'startDate', 'endDate', 'totalFilteredAmount', 'totalFilteredInvoices'));
     }
 
     public function show(int $id)

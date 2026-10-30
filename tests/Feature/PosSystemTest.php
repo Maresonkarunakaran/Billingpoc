@@ -262,4 +262,89 @@ class PosSystemTest extends TestCase
         $this->assertArrayHasKey('inventory_value_at_cost', $summary);
         $this->assertGreaterThan(0, $summary['inventory_value_at_cost']);
     }
+
+    public function test_category_update_and_delete(): void
+    {
+        $admin = User::where('email', 'admin@pos.com')->first();
+        $category = \App\Models\Category::create([
+            'business_id' => $admin->business_id,
+            'name' => 'Stationery Items',
+            'code' => 'STAT',
+            'description' => 'Pens, books and paper',
+            'is_active' => true,
+        ]);
+
+        // Update
+        $response = $this->actingAs($admin)->put(route('categories.update', $category->id), [
+            'name' => 'Office Stationery',
+            'code' => 'OFF-STAT',
+            'description' => 'Updated stationery notes',
+        ]);
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => 'Office Stationery', 'code' => 'OFF-STAT']);
+
+        // Delete when no products
+        $delResponse = $this->actingAs($admin)->delete(route('categories.destroy', $category->id));
+        $delResponse->assertSessionHas('success');
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
+    }
+
+    public function test_expense_edit_update_and_delete(): void
+    {
+        $admin = User::where('email', 'admin@pos.com')->first();
+        $cat = \App\Models\ExpenseCategory::first();
+
+        $expense = \App\Models\Expense::create([
+            'business_id' => $admin->business_id,
+            'branch_id' => $this->shopBranch->id,
+            'expense_category_id' => $cat->id,
+            'user_id' => $admin->id,
+            'expense_number' => 'EXP-TEST-001',
+            'expense_date' => now()->toDateString(),
+            'amount' => 500.0,
+            'payment_method' => 'cash',
+            'description' => 'Original description',
+        ]);
+
+        // Edit screen loads
+        $this->actingAs($admin)->get(route('expenses.edit', $expense->id))->assertOk()->assertSee('EXP-TEST-001');
+
+        // Update
+        $updateResp = $this->actingAs($admin)->put(route('expenses.update', $expense->id), [
+            'branch_id' => $this->shopBranch->id,
+            'expense_category_id' => $cat->id,
+            'expense_date' => now()->toDateString(),
+            'amount' => 750.0,
+            'payment_method' => 'upi',
+            'description' => 'Updated electricity bill',
+        ]);
+        $updateResp->assertRedirect(route('expenses.index'));
+        $this->assertDatabaseHas('expenses', ['id' => $expense->id, 'amount' => 750.0, 'payment_method' => 'upi']);
+
+        // Delete
+        $delResp = $this->actingAs($admin)->delete(route('expenses.destroy', $expense->id));
+        $delResp->assertRedirect(route('expenses.index'));
+        $this->assertDatabaseMissing('expenses', ['id' => $expense->id]);
+    }
+
+    public function test_sales_and_purchases_date_filters(): void
+    {
+        $admin = User::where('email', 'admin@pos.com')->first();
+
+        // Test sales date filter
+        $salesResp = $this->actingAs($admin)->get(route('sales.index', [
+            'preset' => 'today',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ]));
+        $salesResp->assertOk()->assertViewHas('startDate');
+
+        // Test purchases date filter
+        $purchResp = $this->actingAs($admin)->get(route('purchases.index', [
+            'preset' => 'this_month',
+            'start_date' => now()->startOfMonth()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ]));
+        $purchResp->assertOk()->assertViewHas('suppliers');
+    }
 }

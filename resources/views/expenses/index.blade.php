@@ -58,6 +58,7 @@
                         <th>Payment Mode</th>
                         <th>Description / Reference</th>
                         <th class="text-right">Amount (₹)</th>
+                        <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,10 +76,25 @@
                                 @endif
                             </td>
                             <td class="text-right font-weight-bold text-danger" style="font-size: 1rem;">₹ {{ number_format($e->amount, 2) }}</td>
+                            <td class="text-right">
+                                <a href="{{ route('expenses.edit', $e->id) }}" class="btn btn-xs btn-outline-primary" title="Edit Expense">
+                                    <i class="fas fa-edit mr-1"></i> Edit
+                                </a>
+                                <form action="{{ route('expenses.destroy', $e->id) }}" 
+                                      method="POST" 
+                                      class="d-inline"
+                                      onsubmit="return confirm('Are you sure you want to delete expense {{ $e->expense_number }} (₹ {{ number_format($e->amount, 2) }})?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Expense">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">No operating expenses recorded yet.</td>
+                            <td colspan="8" class="text-center py-5 text-muted">No operating expenses recorded yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -92,31 +108,62 @@
     @endif
 </div>
 
-<!-- ADD CATEGORY MODAL -->
+<!-- ADD & MANAGE CATEGORY MODAL -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
-        <form action="{{ route('expenses.categories.store') }}" method="POST">
-            @csrf
-            <div class="modal-content">
-                <div class="modal-header bg-light py-2">
-                    <h5 class="modal-title font-weight-bold">Add Expense Category</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group mb-3">
-                        <label class="font-weight-bold text-sm">Category Name *</label>
-                        <input type="text" name="name" class="form-control" required placeholder="E.g. Freight & Logistics">
+        <div class="modal-content">
+            <div class="modal-header bg-light py-2">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-folder-open text-primary mr-1"></i> Manage Expense Categories</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body p-3">
+                <form action="{{ route('expenses.categories.store') }}" method="POST" class="mb-3 p-3 bg-light rounded border">
+                    @csrf
+                    <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">Create New Category</label>
+                    <div class="row">
+                        <div class="col-7">
+                            <input type="text" name="name" class="form-control form-control-sm" required placeholder="Category Name *">
+                        </div>
+                        <div class="col-3">
+                            <input type="text" name="code" class="form-control form-control-sm" placeholder="Code">
+                        </div>
+                        <div class="col-2">
+                            <button type="submit" class="btn btn-primary btn-sm btn-block font-weight-bold"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
-                    <div class="form-group mb-0">
-                        <label class="font-weight-bold text-sm">Code (Optional)</label>
-                        <input type="text" name="code" class="form-control" placeholder="E.g. FREIGHT">
-                    </div>
-                </div>
-                <div class="modal-footer py-2">
-                    <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-save mr-1"></i> Save Category</button>
+                </form>
+
+                <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">Existing Categories ({{ count($categories) }})</label>
+                <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0">
+                        <tbody>
+                            @forelse($categories as $cat)
+                                <tr>
+                                    <td class="font-weight-medium text-dark">{{ $cat->name }}</td>
+                                    <td><small class="text-muted">{{ $cat->code ?: '---' }}</small></td>
+                                    <td class="text-right">
+                                        <form action="{{ route('expenses.categories.destroy', $cat->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete category {{ addslashes($cat->name) }}?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Category">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-2">No categories found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </form>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 @endsection

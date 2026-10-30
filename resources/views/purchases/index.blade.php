@@ -11,6 +11,63 @@
     </a>
 </div>
 
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-header bg-white py-3 border-bottom">
+        <form action="{{ route('purchases.index') }}" method="GET">
+            <!-- Row 1: Presets & Date Filters -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Date Presets">
+                    <a href="{{ route('purchases.index', ['preset' => 'today', 'supplier_id' => request('supplier_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
+                    <a href="{{ route('purchases.index', ['preset' => 'yesterday', 'supplier_id' => request('supplier_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
+                    <a href="{{ route('purchases.index', ['preset' => 'this_month', 'supplier_id' => request('supplier_id'), 'search' => request('search')]) }}" 
+                       class="btn {{ request('preset') === 'this_month' ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                    <a href="{{ route('purchases.index') }}" 
+                       class="btn {{ !request('start_date') && !request('end_date') && !request('preset') ? 'btn-primary' : 'btn-outline-secondary' }}">All Purchases</a>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="badge badge-light border text-sm py-2 px-3">
+                        Total Procurement: <strong class="text-info font-weight-bold">₹ {{ number_format($totalFilteredAmount, 2) }}</strong> 
+                        ({{ $totalFilteredCount }} orders)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Row 2: Date Pickers & Inputs -->
+            <div class="row align-items-center">
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-alt text-muted"></i></span></div>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}" placeholder="From Date">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-check text-muted"></i></span></div>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}" placeholder="To Date">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2 mb-md-0">
+                    <select name="supplier_id" class="form-control form-control-sm">
+                        <option value="">All Suppliers</option>
+                        @foreach($suppliers as $s)
+                            <option value="{{ $s->id }}" {{ request('supplier_id') == $s->id ? 'selected' : '' }}>{{ $s->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2 mb-md-0">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search PO #, Invoice #..." value="{{ request('search') }}">
+                </div>
+                <div class="col-md-1 text-right">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-filter"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">

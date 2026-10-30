@@ -411,14 +411,15 @@ class ComprehensivePosHttpTest extends TestCase
         $this->assertSame([], Storage::disk('public')->allFiles());
     }
 
-    public function test_product_create_and_edit_forms_do_not_render_barcode_or_hsn_fields(): void
+    public function test_product_create_and_edit_forms_render_barcode_field(): void
     {
         $createResponse = $this->actingAs($this->admin)
             ->withSession(['active_branch_id' => $this->shop->id])
             ->get('/products/create');
 
         $createResponse->assertOk()
-            ->assertDontSee('name="barcode"', false)
+            ->assertSee('name="barcode"', false)
+            ->assertSee('id="btn-generate-barcode"', false)
             ->assertDontSee('name="hsn_code"', false);
 
         $editResponse = $this->actingAs($this->admin)
@@ -426,7 +427,8 @@ class ComprehensivePosHttpTest extends TestCase
             ->get('/products/'.$this->product->id.'/edit');
 
         $editResponse->assertOk()
-            ->assertDontSee('name="barcode"', false)
+            ->assertSee('name="barcode"', false)
+            ->assertSee('id="btn-generate-barcode"', false)
             ->assertDontSee('name="hsn_code"', false);
     }
 
