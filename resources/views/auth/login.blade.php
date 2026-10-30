@@ -11,18 +11,6 @@
     <link rel="dns-prefetch" href="https://translate.googleapis.com">
     <link rel="dns-prefetch" href="https://translate.google.com">
 
-    <!-- Instant Language Check to eliminate English flicker on page navigation -->
-    <script>
-        (function() {
-            try {
-                var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
-                var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
-                if (saved === 'ta') {
-                    document.documentElement.classList.add('translating-tamil');
-                }
-            } catch(e) {}
-        })();
-    </script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
@@ -74,57 +62,9 @@
         .lang-btn { font-size: 0.8rem; border-radius: 6px; padding: 3px 10px; font-weight: 600; }
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
-        /* Prevent Flash of English Content (FOUC) when Tamil language is active */
-        html.translating-tamil body {
-            opacity: 0 !important;
-            visibility: hidden !important;
-        }
-        html.translating-tamil.tamil-ready body,
-        html.translated-ltr body,
-        html.translated-rtl body {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transition: opacity 0.15s ease-in !important;
-        }
-
-        #lang-loading-screen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #0f172a;
-            color: #ffffff;
-            z-index: 9999999;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-        html.translating-tamil:not(.tamil-ready):not(.translated-ltr) #lang-loading-screen {
-            display: flex !important;
-        }
-        .lang-loader-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3.5px solid #334155;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: langSpin 0.7s linear infinite;
-        }
-        @keyframes langSpin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
-<!-- Screen Mask to Eliminate English Flash during Tamil Translation -->
-<div id="lang-loading-screen" aria-hidden="true">
-    <div class="lang-loader-spinner mb-3"></div>
-    <div style="font-weight: 600; color: #ffffff; font-size: 0.95rem;">தமிழுக்கு ஏற்றுகிறது...</div>
-    <div style="color: #94a3b8; font-size: 0.78rem; margin-top: 4px;">Loading Tamil...</div>
-</div>
 <div class="login-box">
     <!-- Language Switcher Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -348,26 +288,6 @@
         var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
         var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
         updateLangButtons(saved);
-
-        function checkTranslationCompletion() {
-            if (document.documentElement.classList.contains('translated-ltr') ||
-                document.documentElement.classList.contains('translated-rtl')) {
-                document.documentElement.classList.remove('translating-tamil');
-                document.documentElement.classList.add('tamil-ready');
-                return true;
-            }
-            return false;
-        }
-
-        var readyObserver = new MutationObserver(function() {
-            checkTranslationCompletion();
-        });
-        readyObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-        setTimeout(function() {
-            document.documentElement.classList.remove('translating-tamil');
-            document.documentElement.classList.add('tamil-ready');
-        }, 1800);
 
         // Permanently suppress and eradicate any Google Translate top banner or body shifting
         var removeGoogleBanner = function() {

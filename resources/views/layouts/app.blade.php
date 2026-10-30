@@ -12,19 +12,6 @@
     <link rel="dns-prefetch" href="https://translate.googleapis.com">
     <link rel="dns-prefetch" href="https://translate.google.com">
 
-    <!-- Instant Language Check to eliminate English flicker on page navigation -->
-    <script>
-        (function() {
-            try {
-                var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
-                var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
-                if (saved === 'ta') {
-                    document.documentElement.classList.add('translating-tamil');
-                }
-            } catch(e) {}
-        })();
-    </script>
-
     <!-- Google Font: Source Sans Pro & Inter -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <!-- Font Awesome Icons -->
@@ -91,48 +78,6 @@
         .lang-btn { font-size: 0.78rem; border-radius: 6px; padding: 2px 8px; font-weight: 700; transition: all 0.15s ease; }
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
-        /* Prevent Flash of English Content (FOUC) when Tamil language is active */
-        html.translating-tamil body {
-            opacity: 0 !important;
-            visibility: hidden !important;
-        }
-        html.translating-tamil.tamil-ready body,
-        html.translated-ltr body,
-        html.translated-rtl body {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transition: opacity 0.15s ease-in !important;
-        }
-
-        #lang-loading-screen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #ffffff;
-            z-index: 9999999;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-        html.translating-tamil:not(.tamil-ready):not(.translated-ltr) #lang-loading-screen {
-            display: flex !important;
-        }
-        .lang-loader-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3.5px solid #e2e8f0;
-            border-top-color: #2563eb;
-            border-radius: 50%;
-            animation: langSpin 0.7s linear infinite;
-        }
-        @keyframes langSpin {
-            to { transform: rotate(360deg); }
-        }
-
         @media (max-width: 767.98px) {
             body { padding-bottom: 60px; }
             .mobile-bottom-nav {
@@ -165,12 +110,6 @@
     @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
-<!-- Screen Mask to Eliminate English Flash during Tamil Translation -->
-<div id="lang-loading-screen" aria-hidden="true">
-    <div class="lang-loader-spinner mb-3"></div>
-    <div style="font-weight: 600; color: #1e293b; font-size: 0.95rem;">தமிழுக்கு ஏற்றுகிறது...</div>
-    <div style="color: #64748b; font-size: 0.78rem; margin-top: 4px;">Loading Tamil...</div>
-</div>
 <div class="wrapper">
 
     <!-- Navbar -->
@@ -558,44 +497,6 @@
         var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
         var saved = match ? match[1] : (localStorage.getItem('billingpoc_lang') || 'en');
         updateLangButtons(saved);
-
-        // Check if Tamil is already rendered to uncover the masked page
-        function checkTranslationCompletion() {
-            if (document.documentElement.classList.contains('translated-ltr') ||
-                document.documentElement.classList.contains('translated-rtl')) {
-                document.documentElement.classList.remove('translating-tamil');
-                document.documentElement.classList.add('tamil-ready');
-                return true;
-            }
-            return false;
-        }
-
-        // Watch root element attributes for Google Translate's translated-ltr class
-        var readyObserver = new MutationObserver(function() {
-            checkTranslationCompletion();
-        });
-        readyObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-        // Safety timeout: Never keep the screen masked longer than 1.8s
-        setTimeout(function() {
-            document.documentElement.classList.remove('translating-tamil');
-            document.documentElement.classList.add('tamil-ready');
-        }, 1800);
-
-        // Pre-mask transitions when clicking internal application links while in Tamil
-        document.addEventListener('click', function(e) {
-            var a = e.target.closest('a');
-            if (a && a.href && a.href.indexOf(window.location.origin) === 0) {
-                var href = a.getAttribute('href') || '';
-                if (!a.target && !a.getAttribute('download') && href !== '#' && !href.startsWith('javascript:')) {
-                    var currentLang = localStorage.getItem('billingpoc_lang') || 'en';
-                    if (currentLang === 'ta') {
-                        document.documentElement.classList.add('translating-tamil');
-                        document.documentElement.classList.remove('tamil-ready');
-                    }
-                }
-            }
-        });
 
         // Permanently suppress and eradicate any Google Translate top banner or body shifting
         var removeGoogleBanner = function() {
