@@ -84,94 +84,290 @@
 <div class="tab-content" id="reportTabContent">
 
     <!-- ========================================================================= -->
-    <!-- 1. PURCHASE VS SALES MARGIN ANALYSIS -->
+    <!-- 1. SALES MARGIN REPORT -->
     <!-- ========================================================================= -->
     <div class="tab-pane fade {{ $activeTab === 'margin' ? 'show active' : '' }}" id="pane-margin" role="tabpanel">
-        
-        <!-- Margin KPI Overview -->
+
+        <!-- Filter Card: Date Range, Presets & Category Filter -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+            <div class="card-header bg-white py-3 border-bottom">
+                <form action="{{ route('products.reports') }}" method="GET">
+                    <input type="hidden" name="tab" value="margin">
+
+                    <!-- Presets -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'today', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'yesterday', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'this_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'this_month' || (!request('preset') && !request('start_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'last_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'last_month' ? 'btn-primary' : 'btn-outline-secondary' }}">Last Month</a>
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'all', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
+                        </div>
+
+                        <span class="text-xs text-muted">
+                            Active Scope: <strong>{{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : 'Beginning' }}</strong> &rarr; <strong>{{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d M Y') : 'Present' }}</strong>
+                            @if($categoryFilter && $categoryFilter !== 'all')
+                                &bull; Group: <strong class="text-primary">{{ $categories->firstWhere('id', $categoryFilter)?->name }}</strong>
+                            @endif
+                        </span>
+                    </div>
+
+                    <!-- Date Pickers, Category & Branch Inputs -->
+                    <div class="row align-items-center">
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-alt text-muted"></i> From:</span></div>
+                                <input type="date" name="start_date" class="form-control" value="{{ $startDate }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-check text-muted"></i> To:</span></div>
+                                <input type="date" name="end_date" class="form-control" value="{{ $endDate }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <select name="category_id" class="form-control form-control-sm font-weight-bold">
+                                <option value="all" {{ $categoryFilter === 'all' || !$categoryFilter ? 'selected' : '' }}>📁 All Categories</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}" {{ $categoryFilter == $cat->id ? 'selected' : '' }}>📂 {{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0 d-flex align-items-center" style="gap: 6px;">
+                            <select name="branch_id" class="form-control form-control-sm font-weight-bold">
+                                <option value="all" {{ $branchFilter === 'all' ? 'selected' : '' }}>🏢 All Branches</option>
+                                @foreach($branches as $b)
+                                    <option value="{{ $b->id }}" {{ $branchFilter == $b->id ? 'selected' : '' }}>🏬 {{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm px-3 font-weight-bold text-nowrap">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'this_month']) }}" class="btn btn-outline-secondary btn-sm" title="Reset Filters">
+                                <i class="fas fa-undo"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4 KPI Highlight Summary Cards -->
         <div class="row mb-3">
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card">
-                    <span class="text-xs font-weight-bold text-muted text-uppercase">Average Catalog Margin</span>
-                    <h3 class="font-weight-bold text-primary mb-0 mt-1">{{ $overallAvgMarginPct }}%</h3>
-                    <small class="text-muted">Retail markup over cost</small>
+                <div class="kpi-stat-card" style="border-left: 4px solid #3b82f6;">
+                    <span class="text-xs font-weight-bold text-muted text-uppercase">Total Sales Revenue</span>
+                    <h3 class="font-weight-bold text-primary mb-0 mt-1">₹ {{ number_format($totalDailySales, 2) }}</h3>
+                    <small class="text-muted">Total billing in date range</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card">
-                    <span class="text-xs font-weight-bold text-muted text-uppercase">Total Monitored Items</span>
-                    <h3 class="font-weight-bold text-dark mb-0 mt-1">{{ count($productsMargin) }}</h3>
-                    <small class="text-muted">Active sellable products</small>
+                <div class="kpi-stat-card" style="border-left: 4px solid #64748b;">
+                    <span class="text-xs font-weight-bold text-muted text-uppercase">Total COGS</span>
+                    <h3 class="font-weight-bold text-dark mb-0 mt-1">₹ {{ number_format($totalDailyCogs, 2) }}</h3>
+                    <small class="text-muted">Cost of Goods Sold (Moving Avg)</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card" style="border-left: 4px solid #10b981;">
-                    <span class="text-xs font-weight-bold text-success text-uppercase">Highest Margin Product</span>
-                    <div class="font-weight-bold text-truncate text-dark mt-1" style="font-size: 1.05rem;" title="{{ $highestMarginProduct?->name }}">
-                        {{ $highestMarginProduct?->name ?? '---' }}
-                    </div>
-                    <span class="badge badge-success mt-1">+{{ $highestMarginProduct?->retail_margin_pct ?? 0 }}% Margin</span>
+                <div class="kpi-stat-card" style="border-left: 4px solid {{ $totalDailyGrossProfit >= 0 ? '#10b981' : '#ef4444' }};">
+                    <span class="text-xs font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} text-uppercase">Total Gross Profit</span>
+                    <h3 class="font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1">
+                        {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
+                    </h3>
+                    <small class="text-muted">Sales Revenue − COGS</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card" style="border-left: 4px solid #f59e0b;">
-                    <span class="text-xs font-weight-bold text-warning text-uppercase">Lowest Margin Product</span>
-                    <div class="font-weight-bold text-truncate text-dark mt-1" style="font-size: 1.05rem;" title="{{ $lowestMarginProduct?->name }}">
-                        {{ $lowestMarginProduct?->name ?? '---' }}
-                    </div>
-                    <span class="badge badge-warning mt-1">{{ $lowestMarginProduct?->retail_margin_pct ?? 0 }}% Margin</span>
+                <div class="kpi-stat-card" style="border-left: 4px solid {{ $overallDailyMarginPct >= 0 ? '#10b981' : '#ef4444' }};">
+                    <span class="text-xs font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} text-uppercase">Overall Gross Margin</span>
+                    <h3 class="font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1">
+                        {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
+                    </h3>
+                    <small class="text-muted">(Gross Profit / Sales) × 100</small>
                 </div>
             </div>
         </div>
 
-        <!-- Part A: Margin Audit by Item Group (Category) -->
+        <!-- 1. THE EXACT SALES MARGIN LIST / TIMELINE TABLE (Requested by User) -->
         <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
             <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="font-weight-bold text-dark mb-0">
-                        <i class="fas fa-tags text-primary mr-1"></i> Item Group (Category) Margin Comparison
+                        <i class="fas fa-calendar-alt text-primary mr-1"></i> Sales Margin List & Daily Audit
                     </h6>
-                    <small class="text-muted">Aggregated landed purchase costs vs retail prices per product department</small>
+                    <small class="text-muted">Daily breakdown of Sold Qty, Sales, COGS, Gross Profit/Loss, and Margin %</small>
                 </div>
-                <span class="badge badge-light border">{{ count($categoryMarginSummary) }} Groups</span>
+                <div class="d-flex align-items-center" style="gap: 8px;">
+                    <span class="badge badge-light border">{{ count($dailySalesMargins) }} Active Dates</span>
+                    <button class="btn btn-xs btn-outline-info" type="button" data-toggle="collapse" data-target="#formulaBox" aria-expanded="false">
+                        <i class="fas fa-calculator mr-1"></i> View Formulas
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 table-custom">
                         <thead>
                             <tr>
-                                <th>Item Group / Department</th>
-                                <th class="text-center">Products</th>
-                                <th class="text-right">Avg Landed Cost (₹)</th>
-                                <th class="text-right">Avg POS Retail (₹)</th>
-                                <th class="text-right">Avg Profit Margin (₹)</th>
-                                <th class="text-center">Avg Margin %</th>
-                                <th class="text-center">Margin Health</th>
+                                <th>Date</th>
+                                <th class="text-right">Sold Qty</th>
+                                <th class="text-right">Sales</th>
+                                <th class="text-right">COGS</th>
+                                <th class="text-right">Gross P/L</th>
+                                <th class="text-right">Margin %</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($categoryMarginSummary as $catSummary)
+                            @forelse($dailySalesMargins as $row)
                                 <tr>
                                     <td class="font-weight-bold text-dark">
-                                        <i class="fas fa-folder text-muted mr-1"></i> {{ $catSummary->category }}
+                                        {{ \Carbon\Carbon::parse($row->date)->format('d-M') }}
+                                        <small class="text-muted font-weight-normal">({{ \Carbon\Carbon::parse($row->date)->format('Y') }})</small>
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        {{ number_format($row->sold_qty, 2) }} {{ $row->unit }}
+                                    </td>
+                                    <td class="text-right font-weight-bold text-dark">
+                                        ₹ {{ number_format($row->sales, 2) }}
+                                    </td>
+                                    <td class="text-right text-muted font-weight-medium">
+                                        ₹ {{ number_format($row->cogs, 2) }}
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        @if($row->gross_profit >= 0)
+                                            <span class="text-success">₹ {{ number_format($row->gross_profit, 2) }}</span>
+                                        @else
+                                            <span class="text-danger">− ₹ {{ number_format(abs($row->gross_profit), 2) }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        @if($row->margin_pct >= 0)
+                                            <span class="badge badge-success px-2 py-1">{{ number_format($row->margin_pct, 2) }}%</span>
+                                        @else
+                                            <span class="badge badge-danger px-2 py-1">−{{ number_format(abs($row->margin_pct), 2) }}%</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted font-weight-bold">
+                                        <i class="fas fa-search fa-2x mb-2 d-block text-muted"></i>
+                                        THERE IS NO RECORD IN THIS DATE
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        @if(count($dailySalesMargins) > 0)
+                            <tfoot>
+                                <tr class="font-weight-bold bg-light" style="font-size: 0.95rem; border-top: 2px solid #cbd5e1;">
+                                    <td class="font-weight-bold text-dark">Total</td>
+                                    <td class="text-right font-weight-bold">
+                                        {{ number_format($totalDailySoldQty, 2) }} {{ $dailySalesMargins->first()?->unit ?? 'kg' }}
+                                    </td>
+                                    <td class="text-right font-weight-bold text-primary">
+                                        ₹ {{ number_format($totalDailySales, 2) }}
+                                    </td>
+                                    <td class="text-right font-weight-bold text-muted">
+                                        ₹ {{ number_format($totalDailyCogs, 2) }}
+                                    </td>
+                                    <td class="text-right font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
+                                    </td>
+                                    <td class="text-right font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        @endif
+                    </table>
+                </div>
+            </div>
+            @if(count($dailySalesMargins) > 0)
+                <div class="card-footer bg-white border-top py-2 px-3">
+                    <div class="row text-center text-md-left align-items-center">
+                        <div class="col-md-6 mb-1 mb-md-0">
+                            <span class="text-xs text-muted text-uppercase font-weight-bold">Total gross profit:</span>
+                            <span class="font-weight-bold ml-2 {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.1rem;">
+                                {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
+                            </span>
+                        </div>
+                        <div class="col-md-6 text-md-right">
+                            <span class="text-xs text-muted text-uppercase font-weight-bold">Overall gross margin:</span>
+                            <span class="font-weight-bold ml-2 {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.1rem;">
+                                {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <!-- 2. CATEGORY-WISE SALES MARGIN BREAKDOWN (Formula applied for all categories) -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="font-weight-bold text-dark mb-0">
+                        <i class="fas fa-tags text-primary mr-1"></i> Category-Wise Sales Margin Breakdown
+                    </h6>
+                    <small class="text-muted">Formula applied across all item categories using actual sold volume and moving average COGS</small>
+                </div>
+                <span class="badge badge-light border">{{ count($categorySalesMargins) }} Categories</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 table-custom">
+                        <thead>
+                            <tr>
+                                <th>Category / Item Group</th>
+                                <th class="text-right">Sold Qty</th>
+                                <th class="text-right">Sales (₹)</th>
+                                <th class="text-right">COGS (₹)</th>
+                                <th class="text-right">Gross P/L (₹)</th>
+                                <th class="text-right">Margin %</th>
+                                <th class="text-center">Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($categorySalesMargins as $catRow)
+                                <tr>
+                                    <td class="font-weight-bold text-dark">
+                                        <i class="fas fa-folder text-muted mr-1"></i> {{ $catRow->category }}
+                                    </td>
+                                    <td class="text-right font-weight-medium">
+                                        {{ number_format($catRow->sold_qty, 2) }} {{ $catRow->unit }}
+                                    </td>
+                                    <td class="text-right font-weight-bold text-primary">
+                                        ₹ {{ number_format($catRow->sales, 2) }}
+                                    </td>
+                                    <td class="text-right text-muted font-weight-medium">
+                                        ₹ {{ number_format($catRow->cogs, 2) }}
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        @if($catRow->gross_profit >= 0)
+                                            <span class="text-success">+ ₹ {{ number_format($catRow->gross_profit, 2) }}</span>
+                                        @else
+                                            <span class="text-danger">− ₹ {{ number_format(abs($catRow->gross_profit), 2) }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right font-weight-bold">
+                                        @if($catRow->margin_pct >= 0)
+                                            <span class="badge badge-success px-2 py-1">{{ number_format($catRow->margin_pct, 2) }}%</span>
+                                        @else
+                                            <span class="badge badge-danger px-2 py-1">−{{ number_format(abs($catRow->margin_pct), 2) }}%</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge badge-light border">{{ $catSummary->count }}</span>
-                                    </td>
-                                    <td class="text-right text-muted">₹ {{ number_format($catSummary->avg_landed_cost, 2) }}</td>
-                                    <td class="text-right font-weight-bold text-primary">₹ {{ number_format($catSummary->avg_retail_price, 2) }}</td>
-                                    <td class="text-right font-weight-bold text-success">+ ₹ {{ number_format($catSummary->avg_retail_margin, 2) }}</td>
-                                    <td class="text-center font-weight-bold" style="font-size: 1rem;">
-                                        <span class="{{ $catSummary->avg_retail_margin_pct >= 25 ? 'text-success' : ($catSummary->avg_retail_margin_pct >= 15 ? 'text-primary' : 'text-warning') }}">
-                                            {{ number_format($catSummary->avg_retail_margin_pct, 1) }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        @if($catSummary->avg_retail_margin_pct >= 30)
+                                        @if($catRow->margin_pct >= 25)
                                             <span class="badge badge-success px-2 py-1"><i class="fas fa-arrow-up mr-1"></i> High Margin</span>
-                                        @elseif($catSummary->avg_retail_margin_pct >= 15)
+                                        @elseif($catRow->margin_pct >= 15)
                                             <span class="badge badge-primary px-2 py-1">Healthy</span>
-                                        @elseif($catSummary->avg_retail_margin_pct > 0)
+                                        @elseif($catRow->margin_pct > 0)
                                             <span class="badge badge-warning px-2 py-1">Thin Margin</span>
                                         @else
                                             <span class="badge badge-danger px-2 py-1">Loss Making</span>
@@ -180,7 +376,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">No item groups found.</td>
+                                    <td colspan="7" class="text-center py-4 text-muted font-weight-bold">
+                                        THERE IS NO RECORD IN THIS DATE
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -189,85 +387,132 @@
             </div>
         </div>
 
-        <!-- Part B: Itemized Product Purchase vs Selling Margin Audit -->
-        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
-            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <div>
+        <!-- 3. FORMULA & METHODOLOGY INFORMATION CARD -->
+        <div class="collapse mb-3" id="formulaBox">
+            <div class="card shadow-sm border-0" style="border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0 !important;">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="font-weight-bold text-dark mb-0">
-                        <i class="fas fa-list-alt text-primary mr-1"></i> Itemized Purchase Cost vs. POS Selling Prices
+                        <i class="fas fa-calculator text-info mr-1"></i> Moving Weighted Average Cost (MAC) & Sales Margin Formulas
                     </h6>
-                    <small class="text-muted">Audit landed PO cost vs retail & wholesale selling tiers for individual items</small>
+                    <button type="button" class="close" data-toggle="collapse" data-target="#formulaBox">&times;</button>
                 </div>
-                <span class="badge badge-light border">{{ count($productsMargin) }} Products</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 table-custom">
-                        <thead>
-                            <tr>
-                                <th>Product Details</th>
-                                <th>Group</th>
-                                <th class="text-right">Landed Cost (PO)</th>
-                                <th class="text-right">Retail POS Price</th>
-                                <th class="text-right">Retail Margin</th>
-                                <th class="text-right">Wholesale Price</th>
-                                <th class="text-right">Wholesale Margin</th>
-                                <th class="text-center">GST</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($productsMargin as $p)
-                                <tr>
-                                    <td>
-                                        <div class="font-weight-bold text-dark">{{ $p->name }}</div>
-                                        <small class="text-muted">
-                                            <code>{{ $p->sku }}</code>
-                                            @if($p->barcode)
-                                                &bull; <i class="fas fa-barcode"></i> {{ $p->barcode }}
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td><span class="badge badge-light border">{{ $p->category }}</span></td>
-                                    <td class="text-right">
-                                        <span class="font-weight-bold text-dark">₹ {{ number_format($p->landed_cost, 2) }}</span>
-                                        @if($p->has_real_po)
-                                            <small class="text-success d-block"><i class="fas fa-check-circle"></i> Actual PO</small>
-                                        @else
-                                            <small class="text-muted d-block">Base Price</small>
-                                        @endif
-                                    </td>
-                                    <td class="text-right font-weight-bold text-primary">₹ {{ number_format($p->retail_price, 2) }}</td>
-                                    <td class="text-right">
-                                        <div class="font-weight-bold {{ $p->retail_margin >= 0 ? 'text-success' : 'text-danger' }}">
-                                            +₹ {{ number_format($p->retail_margin, 2) }}
-                                        </div>
-                                        <small class="badge {{ $p->retail_margin_pct >= 25 ? 'badge-success' : ($p->retail_margin_pct >= 15 ? 'badge-primary' : 'badge-warning') }}">
-                                            {{ $p->retail_margin_pct }}%
-                                        </small>
-                                    </td>
-                                    <td class="text-right font-weight-bold text-success">
-                                        ₹ {{ number_format($p->wholesale_price, 2) }}
-                                    </td>
-                                    <td class="text-right">
-                                        <div class="font-weight-bold {{ $p->wholesale_margin >= 0 ? 'text-success' : 'text-danger' }}">
-                                            +₹ {{ number_format($p->wholesale_margin, 2) }}
-                                        </div>
-                                        <small class="text-muted">{{ $p->wholesale_margin_pct }}%</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge badge-gst">{{ $p->gst_rate }}%</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">No products found in catalog.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="p-3 bg-white rounded border h-100">
+                                <span class="badge badge-primary mb-2">Formula 1</span>
+                                <h6 class="font-weight-bold text-dark mb-1">Average Purchase Cost (Perpetual Moving Average)</h6>
+                                <p class="text-muted text-xs mb-2">Applies immediately after each purchase, using the stock quantity and value remaining just before that purchase.</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-primary">
+                                    AverageCost/kg = (OpeningStockValue + PurchaseValue) / (OpeningQty + PurchaseQty)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="p-3 bg-white rounded border h-100">
+                                <span class="badge badge-info mb-2">Formula 2</span>
+                                <h6 class="font-weight-bold text-dark mb-1">Cost of Goods Sold (COGS)</h6>
+                                <p class="text-muted text-xs mb-2">Inventory cost valuation assigned to each unit sold during POS checkout.</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-info">
+                                    COGS = Sold Qty × Average Cost per kg
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <div class="p-3 bg-white rounded border h-100">
+                                <span class="badge badge-success mb-2">Formula 3</span>
+                                <h6 class="font-weight-bold text-dark mb-1">Gross Profit or Loss (Gross P/L)</h6>
+                                <p class="text-muted text-xs mb-2">Net financial margin generated after landed stock cost is recovered.</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-success">
+                                    GrossProfit = SalesAmount − COGS
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded border h-100">
+                                <span class="badge badge-warning mb-2">Formula 4</span>
+                                <h6 class="font-weight-bold text-dark mb-1">Gross Margin Percentage & Closing Stock Value</h6>
+                                <p class="text-muted text-xs mb-2">Profitability ratio against total sales turnover and remaining balance.</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-1 text-warning">
+                                    Gross Margin % = (Gross Profit / Sales Amount) × 100
+                                </div>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-secondary">
+                                    Closing Value = Closing Qty × Average Cost per kg
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- 4. BENCHMARK CATALOG PRICING ACCORDION (Preserves catalog comparison & test compatibility) -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+            <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
+                <a class="text-dark font-weight-bold text-sm text-decoration-none d-flex align-items-center" data-toggle="collapse" href="#catalogPricingCollapse" role="button">
+                    <i class="fas fa-layer-group text-secondary mr-2"></i>
+                    <span>Catalog Selling Price vs. Landed PO Cost Benchmark</span>
+                    <i class="fas fa-chevron-down ml-2 text-xs text-muted"></i>
+                </a>
+                <span class="badge badge-light border text-xs">{{ count($productsMargin) }} Catalog Items</span>
+            </div>
+            <div class="collapse" id="catalogPricingCollapse">
+                <div class="card-body p-0">
+                    <!-- Part A: Margin Audit by Item Group (Category) -->
+                    <div class="p-3 border-bottom bg-light">
+                        <h6 class="font-weight-bold text-dark mb-1"><i class="fas fa-tags text-primary mr-1"></i> Item Group (Category) Margin Comparison</h6>
+                        <small class="text-muted">Aggregated landed purchase costs vs retail prices per product department</small>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Item Group / Department</th>
+                                    <th class="text-center">Products</th>
+                                    <th class="text-right">Avg Landed Cost (₹)</th>
+                                    <th class="text-right">Avg POS Retail (₹)</th>
+                                    <th class="text-right">Avg Profit Margin (₹)</th>
+                                    <th class="text-center">Avg Margin %</th>
+                                    <th class="text-center">Margin Health</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($categoryMarginSummary as $catSummary)
+                                    <tr>
+                                        <td class="font-weight-bold text-dark">
+                                            <i class="fas fa-folder text-muted mr-1"></i> {{ $catSummary->category }}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-light border">{{ $catSummary->count }}</span>
+                                        </td>
+                                        <td class="text-right text-muted">₹ {{ number_format($catSummary->avg_landed_cost, 2) }}</td>
+                                        <td class="text-right font-weight-bold text-primary">₹ {{ number_format($catSummary->avg_retail_price, 2) }}</td>
+                                        <td class="text-right font-weight-bold text-success">+ ₹ {{ number_format($catSummary->avg_retail_margin, 2) }}</td>
+                                        <td class="text-center font-weight-bold">
+                                            {{ number_format($catSummary->avg_retail_margin_pct, 1) }}%
+                                        </td>
+                                        <td class="text-center">
+                                            @if($catSummary->avg_retail_margin_pct >= 25)
+                                                <span class="badge badge-success px-2 py-1">Healthy</span>
+                                            @elseif($catSummary->avg_retail_margin_pct > 0)
+                                                <span class="badge badge-warning px-2 py-1">Thin Margin</span>
+                                            @else
+                                                <span class="badge badge-danger px-2 py-1">Loss Making</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">No item groups found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- ========================================================================= -->

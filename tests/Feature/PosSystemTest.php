@@ -358,6 +358,12 @@ class PosSystemTest extends TestCase
             ->assertSee('Sales Margin Report')
             ->assertSee('Low Stock Reorder Items')
             ->assertSee('Top to Low Qty Sold Items')
+            ->assertSee('Sold Qty')
+            ->assertSee('COGS')
+            ->assertSee('Gross P/L')
+            ->assertSee('Margin %')
+            ->assertViewHas('dailySalesMargins')
+            ->assertViewHas('categorySalesMargins')
             ->assertViewHas('categoryMarginSummary');
 
         // Check low stock alert tab

@@ -25,7 +25,12 @@ class ProductReportController extends Controller
         $branchFilter = $request->get('branch_id', $defaultBranch);
         $branchId = ($branchFilter === 'all' || empty($branchFilter)) && $isSuperAdmin ? null : (int) $branchFilter;
 
-        // Date range filters for Sold Items
+        // Category filter
+        $categoryFilter = $request->get('category_id', 'all');
+        $categoryId = ($categoryFilter === 'all' || empty($categoryFilter)) ? null : (int) $categoryFilter;
+        $categories = Category::where('business_id', $businessId)->orderBy('name')->get();
+
+        // Date range filters for Margin & Sold Items
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
 
@@ -54,8 +59,92 @@ class ProductReportController extends Controller
         }
 
         // =========================================================================
-        // 1. PURCHASE VS SALES MARGIN ANALYSIS
+        // 1. SALES MARGIN REPORT (MOVING AVERAGE COST COGS & DAILY MARGINS)
         // =========================================================================
+        $salesMarginQuery = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->join('units', 'sale_items.unit_id', '=', 'units.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->where('sales.business_id', $businessId)
+            ->where('sales.invoice_status', 'finalized')
+            ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
+            ->when($categoryId, fn ($q) => $q->where('products.category_id', $categoryId))
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('sales.invoice_date', '=', $startDate);
+                } else {
+                    $q->whereDate('sales.invoice_date', '>=', $startDate)
+                        ->whereDate('sales.invoice_date', '<=', $endDate);
+                }
+            });
+
+        // Date-wise timeline breakdown
+        $dailySalesMargins = (clone $salesMarginQuery)
+            ->groupBy('sales.invoice_date')
+            ->selectRaw('
+                sales.invoice_date,
+                SUM(sale_items.quantity) as sold_qty,
+                SUM(sale_items.total_amount) as total_sales,
+                SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END) as total_cogs,
+                (SUM(sale_items.total_amount) - SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END)) as gross_profit,
+                MAX(units.code) as primary_unit
+            ')
+            ->orderBy('sales.invoice_date', 'desc')
+            ->get()
+            ->map(function ($row) {
+                $sales = (float) $row->total_sales;
+                $cogs = (float) $row->total_cogs;
+                $profit = (float) $row->gross_profit;
+                $marginPct = $sales > 0 ? round(($profit / $sales) * 100, 2) : 0.0;
+
+                return (object) [
+                    'date' => $row->invoice_date,
+                    'sold_qty' => (float) $row->sold_qty,
+                    'unit' => $row->primary_unit ?: 'kg',
+                    'sales' => $sales,
+                    'cogs' => $cogs,
+                    'gross_profit' => $profit,
+                    'margin_pct' => $marginPct,
+                ];
+            });
+
+        $totalDailySoldQty = (float) $dailySalesMargins->sum('sold_qty');
+        $totalDailySales = (float) $dailySalesMargins->sum('sales');
+        $totalDailyCogs = (float) $dailySalesMargins->sum('cogs');
+        $totalDailyGrossProfit = $totalDailySales - $totalDailyCogs;
+        $overallDailyMarginPct = $totalDailySales > 0 ? round(($totalDailyGrossProfit / $totalDailySales) * 100, 2) : 0.0;
+
+        // Category-wise Sales Margin Breakdown (Formula for all categories)
+        $categorySalesMargins = (clone $salesMarginQuery)
+            ->groupBy('categories.id', 'categories.name')
+            ->selectRaw('
+                COALESCE(categories.name, "Uncategorized") as category_name,
+                SUM(sale_items.quantity) as sold_qty,
+                SUM(sale_items.total_amount) as total_sales,
+                SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END) as total_cogs,
+                (SUM(sale_items.total_amount) - SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END)) as gross_profit,
+                MAX(units.code) as primary_unit
+            ')
+            ->orderByDesc('total_sales')
+            ->get()
+            ->map(function ($row) {
+                $sales = (float) $row->total_sales;
+                $cogs = (float) $row->total_cogs;
+                $profit = (float) $row->gross_profit;
+                $marginPct = $sales > 0 ? round(($profit / $sales) * 100, 2) : 0.0;
+
+                return (object) [
+                    'category' => $row->category_name,
+                    'sold_qty' => (float) $row->sold_qty,
+                    'unit' => $row->primary_unit ?: 'kg',
+                    'sales' => $sales,
+                    'cogs' => $cogs,
+                    'gross_profit' => $profit,
+                    'margin_pct' => $marginPct,
+                ];
+            });
+
         // Fetch all products with latest landed PO unit cost (from purchase_items) or base purchase_price
         $latestPoCosts = DB::table('purchase_items')
             ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
@@ -237,8 +326,17 @@ class ProductReportController extends Controller
             'activeTab',
             'branchFilter',
             'branches',
+            'categoryFilter',
+            'categories',
             'startDate',
             'endDate',
+            'dailySalesMargins',
+            'totalDailySoldQty',
+            'totalDailySales',
+            'totalDailyCogs',
+            'totalDailyGrossProfit',
+            'overallDailyMarginPct',
+            'categorySalesMargins',
             'productsMargin',
             'categoryMarginSummary',
             'overallAvgMarginPct',
