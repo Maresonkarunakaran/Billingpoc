@@ -21,7 +21,13 @@ class ReportController extends Controller
 
         $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->get('end_date', now()->toDateString());
-        $branchId = $request->filled('branch_id') ? (int) $request->branch_id : session('active_branch_id');
+        $isSuperAdmin = $user->role?->slug === 'super-admin';
+        if ($request->has('branch_id')) {
+            $b = $request->get('branch_id');
+            $branchId = ($b === '' || $b === 'all') ? null : (int) $b;
+        } else {
+            $branchId = $isSuperAdmin ? null : session('active_branch_id');
+        }
 
         $summary = $this->reportService->getFinancialSummary($businessId, $branchId, $startDate, $endDate);
         $expenseBreakdown = $this->reportService->getExpenseBreakdown($businessId, $branchId, $startDate, $endDate);

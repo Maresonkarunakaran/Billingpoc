@@ -229,9 +229,14 @@
                     <i class="fas fa-calculator text-primary mr-1"></i> How Profit is Calculated ({{ ucfirst(str_replace('_', ' ', $filterRange)) }})
                 </h6>
             </div>
-            <span class="badge badge-light border text-xs">
-                Margin: <strong class="{{ $periodSummary['net_profit_margin'] >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($periodSummary['net_profit_margin'], 1) }}%</strong>
-            </span>
+            <div>
+                <span class="badge badge-light border text-xs mr-2">
+                    Net Margin: <strong class="{{ $periodSummary['net_profit_margin'] >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($periodSummary['net_profit_margin'], 1) }}%</strong>
+                </span>
+                <a href="{{ route('reports.profit_loss', ['start_date' => $startDate, 'end_date' => $endDate, 'branch_id' => $branchFilter === 'all' ? '' : $branchFilter]) }}" class="btn btn-xs btn-outline-primary" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;">
+                    <i class="fas fa-file-invoice-dollar mr-1"></i> Full P&L Statement &rarr;
+                </a>
+            </div>
         </div>
 
         <div class="d-flex align-items-center justify-content-between profit-walkthrough-container">
@@ -279,13 +284,113 @@
 </div>
 
 <!-- ========================================== -->
-<!-- 2. TODAY'S SNAPSHOT (4 KPIS) -->
+<!-- 2. SELECTED TIMEFRAME PERFORMANCE (4 KPIS) -->
 <!-- ========================================== -->
+@php
+    $periodLabel = match($filterRange) {
+        'today' => "Today's Performance (" . now()->format('d M Y') . ")",
+        'yesterday' => "Yesterday's Performance (" . now()->subDay()->format('d M Y') . ")",
+        '7days' => "Last 7 Days Performance (" . \Carbon\Carbon::parse($startDate)->format('d M') . " - " . \Carbon\Carbon::parse($endDate)->format('d M Y') . ")",
+        '30days' => "Last 30 Days Performance (" . \Carbon\Carbon::parse($startDate)->format('d M') . " - " . \Carbon\Carbon::parse($endDate)->format('d M Y') . ")",
+        'last_month' => "Last Month Performance (" . now()->subMonth()->format('F Y') . ")",
+        'custom' => "Custom Period (" . \Carbon\Carbon::parse($startDate)->format('d M Y') . " - " . \Carbon\Carbon::parse($endDate)->format('d M Y') . ")",
+        default => "This Month's Performance (" . now()->format('F Y') . ")",
+    };
+    $periodIcon = match($filterRange) {
+        'today' => 'fa-sun text-warning',
+        'yesterday' => 'fa-history text-secondary',
+        'last_month' => 'fa-calendar-check text-indigo',
+        default => 'fa-calendar-alt text-primary',
+    };
+@endphp
 <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
-    <div class="card-header py-2 bg-white border-bottom">
-        <h6 class="font-weight-bold text-primary mb-0 text-xs text-uppercase">
-            <i class="fas fa-sun mr-1 text-warning"></i> Today's Performance ({{ now()->format('d M Y') }})
+    <div class="card-header py-2 bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="font-weight-bold text-dark mb-0 text-xs text-uppercase">
+            <i class="fas {{ $periodIcon }} mr-1"></i> {{ $periodLabel }}
         </h6>
+        @if($filterRange !== 'today')
+            <span class="badge badge-light border text-xs text-muted">
+                Today Live: <strong class="text-dark">₹ {{ number_format($kpis['today_sales'], 2) }}</strong> ({{ $kpis['today_invoices'] }} bills)
+            </span>
+        @endif
+    </div>
+    <div class="card-body p-2 p-md-3">
+        <div class="row">
+            <!-- Period Sales -->
+            <div class="col-6 col-lg-3 mb-2 mb-lg-0">
+                <div class="dash-kpi">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="kpi-label">Net Sales Revenue</div>
+                            <div class="kpi-number text-dark">₹ {{ number_format($periodSummary['net_sales'], 2) }}</div>
+                        </div>
+                        <div class="kpi-icon bg-light text-primary"><i class="fas fa-shopping-cart"></i></div>
+                    </div>
+                    <div class="kpi-sub">{{ $periodSummary['invoice_count'] }} invoices billed</div>
+                </div>
+            </div>
+
+            <!-- Period Gross Profit -->
+            <div class="col-6 col-lg-3 mb-2 mb-lg-0">
+                <div class="dash-kpi">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="kpi-label">Gross Margin</div>
+                            <div class="kpi-number text-success">₹ {{ number_format($periodSummary['gross_profit'], 2) }}</div>
+                        </div>
+                        <div class="kpi-icon bg-light text-success"><i class="fas fa-tags"></i></div>
+                    </div>
+                    <div class="kpi-sub">Margin: {{ number_format($periodSummary['gross_profit_margin'], 1) }}% after COGS</div>
+                </div>
+            </div>
+
+            <!-- Period Expenses -->
+            <div class="col-6 col-lg-3 mb-2 mb-lg-0">
+                <div class="dash-kpi">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="kpi-label">Shop Expenses</div>
+                            <div class="kpi-number text-danger">₹ {{ number_format($periodSummary['operating_expenses'], 2) }}</div>
+                        </div>
+                        <div class="kpi-icon bg-light text-danger"><i class="fas fa-receipt"></i></div>
+                    </div>
+                    <div class="kpi-sub">Logged store overheads</div>
+                </div>
+            </div>
+
+            <!-- Period Net Profit -->
+            <div class="col-6 col-lg-3 mb-2 mb-lg-0">
+                <div class="dash-kpi" style="background: {{ $periodSummary['estimated_net_profit'] >= 0 ? '#f0fdf4' : '#fef2f2' }}; border-color: {{ $periodSummary['estimated_net_profit'] >= 0 ? '#86efac' : '#fca5a5' }};">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="kpi-label {{ $periodSummary['estimated_net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">Net Take-Home</div>
+                            <div class="kpi-number {{ $periodSummary['estimated_net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                ₹ {{ number_format($periodSummary['estimated_net_profit'], 2) }}
+                            </div>
+                        </div>
+                        <div class="kpi-icon {{ $periodSummary['estimated_net_profit'] >= 0 ? 'bg-success' : 'bg-danger' }} text-white shadow-xs">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-sub font-weight-bold {{ $periodSummary['estimated_net_profit'] >= 0 ? 'text-success' : 'text-danger' }}">
+                        {{ $periodSummary['estimated_net_profit'] >= 0 ? 'Net Profit' : 'Net Operating Loss' }} ({{ number_format($periodSummary['net_profit_margin'], 1) }}%)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 3. SECONDARY BENCHMARK SNAPSHOT (4 KPIS) -->
+<!-- ========================================== -->
+@if($filterRange !== 'today')
+<div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+    <div class="card-header py-2 bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="font-weight-bold text-warning mb-0 text-xs text-uppercase">
+            <i class="fas fa-sun mr-1"></i> Today's Live Pulse ({{ now()->format('d M Y') }})
+        </h6>
+        <span class="text-xs text-muted">Real-time daily tracker</span>
     </div>
     <div class="card-body p-2 p-md-3">
         <div class="row">
@@ -299,7 +404,7 @@
                         </div>
                         <div class="kpi-icon bg-light text-primary"><i class="fas fa-shopping-cart"></i></div>
                     </div>
-                    <div class="kpi-sub">Billed minus returns today</div>
+                    <div class="kpi-sub">{{ $kpis['today_invoices'] }} bills billed today</div>
                 </div>
             </div>
 
@@ -351,15 +456,13 @@
         </div>
     </div>
 </div>
-
-<!-- ========================================== -->
-<!-- 3. CURRENT MONTH SNAPSHOT (4 KPIS) -->
-<!-- ========================================== -->
+@else
 <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
-    <div class="card-header py-2 bg-white border-bottom">
+    <div class="card-header py-2 bg-white border-bottom d-flex justify-content-between align-items-center">
         <h6 class="font-weight-bold text-info mb-0 text-xs text-uppercase">
             <i class="fas fa-calendar-alt mr-1"></i> Current Month Performance ({{ now()->format('F Y') }})
         </h6>
+        <span class="text-xs text-muted">Month-to-date benchmark</span>
     </div>
     <div class="card-body p-2 p-md-3">
         <div class="row">
@@ -373,7 +476,7 @@
                         </div>
                         <div class="kpi-icon bg-light text-primary"><i class="fas fa-chart-line"></i></div>
                     </div>
-                    <div class="kpi-sub">Total revenue this month</div>
+                    <div class="kpi-sub">{{ $kpis['monthly_invoices'] }} bills this month</div>
                 </div>
             </div>
 
@@ -425,6 +528,7 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- ========================================== -->
 <!-- 4. STORE HEALTH & DUES (4 KPIS) -->

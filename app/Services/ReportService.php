@@ -37,6 +37,7 @@ class ReportService
             $salesQuery->where('branch_id', $branchId);
         }
 
+        $invoiceCount = (int) (clone $salesQuery)->count();
         $grossSales = (float) $salesQuery->sum('total_amount');
         $invoiceDiscounts = (float) $salesQuery->sum('discount_amount');
         $salesCogs = (float) $salesQuery->sum('cost_of_goods_sold');
@@ -105,6 +106,7 @@ class ReportService
         return [
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'invoice_count' => $invoiceCount,
             'gross_sales' => $grossSales,
             'invoice_discounts' => $invoiceDiscounts,
             'sales_tax' => $totalSalesTax,
@@ -138,11 +140,13 @@ class ReportService
 
         return [
             'today_sales' => $todaySummary['net_sales'],
+            'today_invoices' => $todaySummary['invoice_count'],
             'today_gross_profit' => $todaySummary['gross_profit'],
             'today_expenses' => $todaySummary['operating_expenses'],
             'today_net_profit' => $todaySummary['estimated_net_profit'],
 
             'monthly_sales' => $monthlySummary['net_sales'],
+            'monthly_invoices' => $monthlySummary['invoice_count'],
             'monthly_gross_profit' => $monthlySummary['gross_profit'],
             'monthly_expenses' => $monthlySummary['operating_expenses'],
             'monthly_net_profit' => $monthlySummary['estimated_net_profit'],

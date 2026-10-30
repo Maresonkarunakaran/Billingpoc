@@ -45,6 +45,7 @@
         <h5 class="text-primary font-weight-bold text-uppercase mb-1">PROFIT AND LOSS ESTIMATE STATEMENT</h5>
         <span class="text-muted text-sm">
             For Period: <strong>{{ \Carbon\Carbon::parse($startDate)->format('d M Y') }}</strong> to <strong>{{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}</strong>
+            &bull; Scope: <strong>{{ $branchId ? ($branches->firstWhere('id', $branchId)?->name ?? 'Branch #' . $branchId) : 'All Branches (Consolidated)' }}</strong>
         </span>
     </div>
 

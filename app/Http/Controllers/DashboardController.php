@@ -18,8 +18,10 @@ class DashboardController extends Controller
         $businessId = $user->business_id;
 
         $filterRange = $request->get('period', 'this_month');
-        $branchFilter = $request->get('branch_id', session('active_branch_id'));
-        $branchId = ($branchFilter === 'all' && $user->role?->slug === 'super-admin') ? null : (int) $branchFilter;
+        $isSuperAdmin = $user->role?->slug === 'super-admin';
+        $defaultBranch = $isSuperAdmin ? 'all' : session('active_branch_id');
+        $branchFilter = $request->get('branch_id', $defaultBranch);
+        $branchId = ($branchFilter === 'all' || empty($branchFilter)) && $isSuperAdmin ? null : (int) $branchFilter;
 
         $startDate = match ($filterRange) {
             'today' => now()->toDateString(),
@@ -62,7 +64,7 @@ class DashboardController extends Controller
             ? Branch::where('business_id', $businessId)->get()
             : $user->branches;
 
-        $activeBranch = Branch::find(session('active_branch_id'));
+        $activeBranch = $branchId ? Branch::find($branchId) : null;
 
         return view('dashboard.index', compact(
             'kpis',
