@@ -347,4 +347,32 @@ class PosSystemTest extends TestCase
         ]));
         $purchResp->assertOk()->assertViewHas('suppliers');
     }
+
+    public function test_product_catalog_report_screen_renders_all_three_sections(): void
+    {
+        $admin = User::where('email', 'admin@pos.com')->first();
+
+        // Check margin audit tab
+        $response = $this->actingAs($admin)->get(route('products.reports', ['tab' => 'margin']));
+        $response->assertOk()
+            ->assertSee('Purchase vs. Sales Margin Analysis')
+            ->assertSee('Low Stock Reorder Items')
+            ->assertSee('Top to Low Qty Sold Items')
+            ->assertViewHas('categoryMarginSummary');
+
+        // Check low stock alert tab
+        $lowStockResponse = $this->actingAs($admin)->get(route('products.reports', ['tab' => 'low_stock']));
+        $lowStockResponse->assertOk()
+            ->assertViewHas('lowStockItems');
+
+        // Check sales rank tab with date filter
+        $salesRankResponse = $this->actingAs($admin)->get(route('products.reports', [
+            'tab' => 'sales_rank',
+            'preset' => 'this_month',
+            'start_date' => now()->startOfMonth()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ]));
+        $salesRankResponse->assertOk()
+            ->assertViewHas('soldItems');
+    }
 }

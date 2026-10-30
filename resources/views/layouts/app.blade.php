@@ -273,15 +273,21 @@
 
                     <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Product Catalog</li>
                     <li class="nav-item">
-                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->is('products*') ? 'active' : '' }}">
+                        <a href="{{ route('products.index') }}" class="nav-link {{ (request()->is('products') || request()->is('products/create') || (request()->is('products/*') && !request()->is('products/reports*'))) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-boxes text-danger"></i>
                             <p>Products & Pricing</p>
                         </a>
                     </li>
-                    <li class="nav-item mb-4">
+                    <li class="nav-item">
                         <a href="{{ route('categories.index') }}" class="nav-link {{ request()->is('categories*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-tags"></i>
                             <p>Categories</p>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-4">
+                        <a href="{{ route('products.reports') }}" class="nav-link {{ request()->is('products/reports*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-chart-line text-warning"></i>
+                            <p>Report</p>
                         </a>
                     </li>
                 </ul>

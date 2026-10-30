@@ -11,6 +11,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\ReportController;
@@ -76,7 +77,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{id}', [TransferController::class, 'show'])->name('show');
     });
 
-    // Catalog: Products, Categories, Units
+    // Catalog: Products, Categories, Units & Reports
+    Route::get('products/reports', [ProductReportController::class, 'index'])->name('products.reports');
     Route::resource('products', ProductController::class);
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
