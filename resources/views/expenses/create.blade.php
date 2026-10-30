@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="font-weight-bold text-dark mb-0"><i class="fas fa-receipt text-warning mr-2"></i>Record Operating Expense</h4>
-        <span class="text-muted text-sm">Cash expenses will be automatically deducted from your active shift register.</span>
+        <span class="text-muted text-sm">Track business operating expenses and disbursements.</span>
     </div>
     <a href="{{ route('expenses.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Back to Expenses</a>
 </div>

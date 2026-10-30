@@ -110,19 +110,6 @@
 @endpush
 
 @section('content')
-<!-- Check if Cash Shift is open -->
-@if(! $activeShift)
-<div class="alert alert-warning shadow-sm border-0 d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <i class="fas fa-exclamation-circle fa-lg mr-2"></i>
-        <strong>No Open Cash Shift Found:</strong> Please open your daily cash shift register to track cash sales accurately.
-    </div>
-    <button class="btn btn-warning btn-sm font-weight-bold" data-toggle="modal" data-target="#openShiftModal">
-        <i class="fas fa-key mr-1"></i> Open Shift Now
-    </button>
-</div>
-@endif
-
 <div class="row">
     <!-- LEFT PANEL: BARCODE, SEARCH & COMPACT PRODUCT CATALOG (5 COLS) -->
     <div class="col-lg-5 mb-3">
@@ -409,35 +396,6 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- OPEN CASH SHIFT MODAL -->
-<div class="modal fade" id="openShiftModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <form action="{{ route('shifts.open') }}" method="POST">
-            @csrf
-            <div class="modal-content">
-                <div class="modal-header bg-warning py-2">
-                    <h5 class="modal-title font-weight-bold"><i class="fas fa-wallet mr-1"></i> Open Cash Shift</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted text-sm">Enter the initial opening cash drawer float to begin transactions.</p>
-                    <div class="form-group">
-                        <label class="font-weight-bold">Opening Cash Float (₹)</label>
-                        <input type="number" name="opening_cash" class="form-control form-control-lg font-weight-bold" value="2000.00" required min="0" step="10">
-                    </div>
-                    <div class="form-group">
-                        <label class="text-sm">Shift Notes (Optional)</label>
-                        <input type="text" name="notes" class="form-control" placeholder="E.g. Morning register drawer float">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-warning font-weight-bold"><i class="fas fa-unlock mr-1"></i> Start Shift</button>
-                </div>
-            </div>
-        </form>
     </div>
 </div>
 
