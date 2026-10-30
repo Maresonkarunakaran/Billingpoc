@@ -1,10 +1,11 @@
-const CACHE_NAME = 'billingpoc-pwa-v1';
+const CACHE_NAME = 'billingpoc-pwa-v2';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_PRECACHE = [
   '/',
   '/manifest.json',
   '/offline.html',
+  '/js/translator.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable.png',

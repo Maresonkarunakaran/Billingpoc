@@ -16,30 +16,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
+    <!-- Instant Bilingual Translation Engine (0ms UI dictionary & Google Translate integration) -->
+    <script src="/js/translator.js"></script>
+
     <!-- Preconnect & Early Load for Google Translate -->
     <link rel="preconnect" href="https://translate.googleapis.com">
     <link rel="preconnect" href="https://translate.google.com">
     <link rel="dns-prefetch" href="https://translate.googleapis.com">
     <link rel="dns-prefetch" href="https://translate.google.com">
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
-
-    <!-- Immediate Language Detection Script (Prevents English text flash on page navigation) -->
-    <script>
-        (function() {
-            var isTamil = false;
-            try {
-                var saved = localStorage.getItem('billingpoc_lang');
-                var match = document.cookie.match(/(?:^|;)\s*googtrans=([^;]+)/);
-                if (saved === 'ta' || (match && match[1].indexOf('/ta') !== -1)) {
-                    isTamil = true;
-                }
-            } catch(e) {}
-            if (isTamil) {
-                document.documentElement.classList.add('translating-tamil');
-                document.documentElement.setAttribute('lang', 'ta');
-            }
-        })();
-    </script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -392,160 +377,6 @@
             icon.classList.add('fa-eye');
         }
     }
-
-    // Clean Cookie Helper for Google Translate across host / domain
-    function setGoogtransCookie(val) {
-        var host = window.location.hostname;
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + host + ";";
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=." + host + ";";
-
-        if (val) {
-            document.cookie = "googtrans=" + val + "; path=/; SameSite=Lax; max-age=31536000";
-        }
-    }
-
-    // Language switcher logic - Instant on 1st click & zero page reload kill
-    function switchLanguage(lang) {
-        localStorage.setItem('billingpoc_lang', lang);
-
-        if (lang === 'en') {
-            setGoogtransCookie(null);
-            document.documentElement.classList.remove('translating-tamil');
-            document.documentElement.lang = 'en';
-            updateLangButtons('en');
-
-            var combo = document.querySelector('.goog-te-combo');
-            if (combo) {
-                combo.value = '';
-                combo.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            window.location.reload();
-            return;
-        }
-
-        // Switching to Tamil ('ta')
-        setGoogtransCookie('/en/ta');
-        document.documentElement.classList.add('translating-tamil');
-        document.documentElement.lang = 'ta';
-        updateLangButtons('ta');
-
-        function triggerTamilCombo(select) {
-            for (var i = 0; i < select.options.length; i++) {
-                if (select.options[i].value === 'ta') {
-                    select.selectedIndex = i;
-                    break;
-                }
-            }
-            select.value = 'ta';
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-            if (window.jQuery) {
-                window.jQuery(select).val('ta').trigger('change');
-            }
-        }
-
-        var select = document.querySelector('.goog-te-combo');
-        if (select) {
-            triggerTamilCombo(select);
-            var checkCount = 0;
-            var pollReady = setInterval(function() {
-                checkCount++;
-                if (document.documentElement.classList.contains('translated-ltr') || checkCount > 30) {
-                    clearInterval(pollReady);
-                    document.documentElement.classList.add('translation-ready');
-                }
-            }, 50);
-        } else {
-            var waitCount = 0;
-            var waitCombo = setInterval(function() {
-                waitCount++;
-                var s = document.querySelector('.goog-te-combo');
-                if (s) {
-                    clearInterval(waitCombo);
-                    triggerTamilCombo(s);
-                } else if (waitCount >= 20) {
-                    clearInterval(waitCombo);
-                    window.location.reload();
-                }
-            }, 100);
-        }
-    }
-
-    function updateLangButtons(lang) {
-        document.querySelectorAll('.lang-btn-en').forEach(function(el) {
-            if (lang === 'en') {
-                el.classList.add('active');
-            } else {
-                el.classList.remove('active');
-            }
-        });
-        document.querySelectorAll('.lang-btn-ta').forEach(function(el) {
-            if (lang === 'ta') {
-                el.classList.add('active');
-            } else {
-                el.classList.remove('active');
-            }
-        });
-    }
-
-    function googleTranslateElementInit() {
-        new google.translate.TranslateElement({
-            pageLanguage: 'en',
-            includedLanguages: 'en,ta',
-            autoDisplay: false
-        }, 'google_translate_element');
-
-        var saved = localStorage.getItem('billingpoc_lang') || 'en';
-        if (saved === 'ta') {
-            var checkTimer = setInterval(function() {
-                var select = document.querySelector('.goog-te-combo');
-                if (select) {
-                    clearInterval(checkTimer);
-                    if (select.value !== 'ta') {
-                        select.value = 'ta';
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                }
-            }, 30);
-            setTimeout(function() { clearInterval(checkTimer); }, 1500);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        var match = document.cookie.match(/(?:^|;)\s*googtrans=\/en\/([a-z]{2})/);
-        var saved = (localStorage.getItem('billingpoc_lang') === 'ta' || (match && match[1] === 'ta')) ? 'ta' : 'en';
-        updateLangButtons(saved);
-
-        var observer = new MutationObserver(function() {
-            if (document.documentElement.classList.contains('translated-ltr') ||
-                document.documentElement.classList.contains('translated-rtl')) {
-                document.documentElement.classList.add('translation-ready');
-            }
-        });
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-        setTimeout(function() {
-            document.documentElement.classList.add('translation-ready');
-        }, 1400);
-
-        var removeGoogleBanner = function() {
-            if (document.body && document.body.style.top && document.body.style.top !== '0px') {
-                document.body.style.top = '0px';
-            }
-            var banners = document.querySelectorAll('iframe.skiptranslate, .VIpgJd-ZVi9od-ORHb-OEVmcd, .goog-te-banner-frame');
-            banners.forEach(function(b) {
-                b.style.setProperty('display', 'none', 'important');
-                b.style.setProperty('visibility', 'hidden', 'important');
-                b.style.setProperty('height', '0px', 'important');
-                b.style.setProperty('opacity', '0', 'important');
-                b.style.setProperty('pointer-events', 'none', 'important');
-            });
-        };
-
-        var bannerObserver = new MutationObserver(removeGoogleBanner);
-        bannerObserver.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-        setInterval(removeGoogleBanner, 300);
-    });
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
