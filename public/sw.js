@@ -1,4 +1,4 @@
-const CACHE_NAME = 'billingpoc-pwa-v4';
+const CACHE_NAME = 'billingpoc-pwa-v5';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_PRECACHE = [

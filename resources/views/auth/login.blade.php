@@ -1,9 +1,34 @@
+@php
+    $cookieHeader = request()->header('cookie', '');
+    $serverLang = request()->cookie('app_language') 
+        ?? request()->cookie('billingpoc_lang')
+        ?? ($_COOKIE['app_language'] ?? ($_COOKIE['billingpoc_lang'] ?? (preg_match('/(?:^|;\s*)(?:app_language|billingpoc_lang)=([^;]+)/', $cookieHeader, $m) ? $m[1] : 'en')));
+    $isTamil = ($serverLang === 'ta');
+@endphp
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $isTamil ? 'ta' : 'en' }}" class="{{ $isTamil ? 'lang-tamil translating-tamil' : '' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign In | BILLINGPOC GST Retail & Wholesale Hub</title>
+
+    <!-- Synchronous Anti-Flash Language State Detection (0ms before body render) -->
+    <script>
+        (function() {
+            var l = localStorage.getItem('app_language') || localStorage.getItem('billingpoc_lang');
+            if (!l) {
+                var m = document.cookie.match(/(?:^|;)\s*app_language=([^;]+)/) || document.cookie.match(/(?:^|;)\s*billingpoc_lang=([^;]+)/);
+                if (m) l = m[1];
+            }
+            if (l === 'ta') {
+                document.documentElement.classList.add('lang-tamil', 'translating-tamil');
+                document.documentElement.setAttribute('lang', 'ta');
+            } else if (l === 'en') {
+                document.documentElement.classList.remove('lang-tamil', 'translating-tamil');
+                document.documentElement.setAttribute('lang', 'en');
+            }
+        })();
+    </script>
 
     <!-- PWA Desktop & Mobile App Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -78,33 +103,20 @@
         .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
         /* Smooth anti-flash: when user has chosen Tamil, hide untranslated English text until translated */
-        html.translating-tamil:not(.translated-ltr):not(.translation-ready) body {
+        html.lang-tamil:not(.lang-ready) body,
+        html.translating-tamil:not(.translation-ready) body {
             visibility: hidden !important;
             opacity: 0 !important;
         }
-        html.translating-tamil.translated-ltr body,
+        html.lang-tamil.lang-ready body,
         html.translating-tamil.translation-ready body {
             visibility: visible !important;
             opacity: 1 !important;
-            transition: opacity 0.15s ease-in;
+            transition: opacity 0.1s ease-in;
         }
 
         #tamil-translate-loader {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #0f172a;
-            color: #ffffff;
-            z-index: 999999;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-        html.translating-tamil:not(.translated-ltr):not(.translation-ready) #tamil-translate-loader {
-            display: flex !important;
+            display: none !important;
         }
 
     </style>
