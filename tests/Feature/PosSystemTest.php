@@ -355,7 +355,7 @@ class PosSystemTest extends TestCase
         // Check margin audit tab
         $response = $this->actingAs($admin)->get(route('products.reports', ['tab' => 'margin']));
         $response->assertOk()
-            ->assertSee('Purchase vs. Sales Margin Analysis')
+            ->assertSee('Sales Margin Report')
             ->assertSee('Low Stock Reorder Items')
             ->assertSee('Top to Low Qty Sold Items')
             ->assertViewHas('categoryMarginSummary');

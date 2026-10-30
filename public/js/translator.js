@@ -82,7 +82,8 @@
         'Change Due': 'மீதி தர வேண்டிய தொகை',
 
         // Reports
-        'Purchase vs. Sales Margin Analysis': 'கொள்முதல் மற்றும் விற்பனை லாப விளிம்பு பகுப்பாய்வு',
+        'Sales Margin Report': 'விற்பனை லாப விளிம்பு அறிக்கை',
+        'Purchase vs. Sales Margin Analysis': 'விற்பனை லாப விளிம்பு அறிக்கை',
         'Low Quantity Stock/Reorder items': 'குறைந்த இருப்பு / மறுஆர்டர் பொருட்கள் பட்டியல்',
         'Top to low qty sold items': 'அதிகம் முதல் குறைவாக விற்ற பொருட்கள்',
         'Reorder Alert (< 5 Qty)': 'மறுஆர்டர் எச்சரிக்கை (< 5 இருப்பு)',

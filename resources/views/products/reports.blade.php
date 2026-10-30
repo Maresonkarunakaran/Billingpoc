@@ -58,7 +58,7 @@
             <li class="nav-item flex-fill">
                 <a class="nav-link text-center report-tab-btn {{ $activeTab === 'margin' ? 'active' : '' }}" 
                    id="tab-margin" data-toggle="pill" href="#pane-margin" role="tab">
-                    <i class="fas fa-percentage mr-1"></i> Purchase vs. Sales Margin Analysis
+                    <i class="fas fa-percentage mr-1"></i> Sales Margin Report
                 </a>
             </li>
             <li class="nav-item flex-fill">
