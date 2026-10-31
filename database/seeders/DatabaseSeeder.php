@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         if (User::where('email', 'admin@pos.com')->exists()) {
+            $this->call(MasterAdminSeeder::class);
             return;
         }
 
@@ -586,5 +587,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'open',
             'notes' => 'Morning shift initialized with opening float ₹2,000.',
         ]);
+
+        $this->call(MasterAdminSeeder::class);
     }
 }

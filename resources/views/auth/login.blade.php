@@ -211,45 +211,140 @@
                 </button>
             </form>
 
-            <!-- Admin Panel Login Credentials Card -->
-            <div class="mt-3 p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="font-weight-bold text-xs text-uppercase text-dark">
-                        <i class="fas fa-user-shield text-primary mr-1"></i> Admin Panel Credentials
-                    </span>
-                    <span class="badge badge-primary px-2 py-1 text-xs">Super Admin</span>
-                </div>
-                <div class="bg-white p-2 rounded border mb-2 text-xs">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Admin User ID:</span>
-                        <code class="font-weight-bold text-dark">admin@pos.com</code>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Admin Password:</span>
-                        <code class="font-weight-bold text-danger">password</code>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-outline-primary btn-sm btn-block font-weight-bold shadow-xs" onclick="fillAdminCredentials()">
-                    <i class="fas fa-magic mr-1"></i> Fill Admin Credentials
-                </button>
-            </div>
-
-            <div class="text-center mt-3">
+            <div class="text-center mt-3 pt-2 border-top">
                 <span class="text-xs text-muted">Need a new business POS setup?</span>
                 <a href="{{ route('register') }}" class="text-xs font-weight-bold ml-1 text-primary">
-                    <i class="fas fa-user-plus mr-1"></i> Register New Business
+                    <i class="fas fa-user-plus mr-1"></i> Register New Business / Sign Up
                 </a>
+                <div class="text-xs text-muted mt-1">
+                    <i class="fas fa-lock text-secondary mr-1"></i> Client access: User IDs & passwords are created & assigned by the Software Administrator.
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    function fillAdminCredentials() {
-        document.getElementById('emailInput').value = 'admin@pos.com';
-        document.getElementById('passwordInput').value = 'password';
-    }
+<!-- Floating Master Admin Portal Button (Bottom-Right Corner) -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 1050;">
+    <button type="button" 
+            class="btn shadow-lg d-flex align-items-center justify-content-center"
+            data-toggle="modal" 
+            data-target="#masterAdminModal"
+            title="Software Master Admin Portal (Owner Access)"
+            id="masterAdminBtn"
+            style="width: 46px; height: 46px; border-radius: 50%; background: #0f172a; border: 2px solid #f59e0b; color: #f59e0b; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; transition: all 0.2s ease;">
+        <i class="fas fa-user-shield fa-lg"></i>
+    </button>
+</div>
 
+<!-- Master Admin Login Modal -->
+<div class="modal fade" id="masterAdminModal" tabindex="-1" role="dialog" aria-labelledby="masterAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden; background: #0f172a; color: #f8fafc;">
+            <div class="modal-header border-0 pb-1" style="background: #1e293b;">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-2 mr-2 d-flex align-items-center justify-content-center" style="background: rgba(245, 158, 11, 0.15); width: 40px; height: 40px; border: 1px solid #f59e0b;">
+                        <i class="fas fa-shield-alt text-warning"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title font-weight-bold text-white mb-0" id="masterAdminModalLabel" style="font-size: 1.05rem;">
+                            Software Master Admin Portal
+                        </h5>
+                        <span class="badge badge-warning text-dark font-weight-bold px-2 py-0.5" style="font-size: 0.65rem;">
+                            Software Owner Only
+                        </span>
+                    </div>
+                </div>
+                <button type="button" class="close text-white opacity-75" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <form action="{{ route('master-admin.login') }}" method="POST">
+                @csrf
+                <div class="modal-body pt-3 pb-3 px-4">
+                    <p class="text-xs mb-3" style="color: #94a3b8 !important;">
+                        Master software administration portal. Manage all clients, view all user accounts, and provision custom Client User IDs & Passwords.
+                    </p>
+
+                    @if ($errors->has('master_id'))
+                        <div class="alert alert-danger py-2 px-3 text-xs mb-3">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> {{ $errors->first('master_id') }}
+                        </div>
+                    @endif
+
+                    <div class="form-group mb-3">
+                        <label class="text-xs font-weight-bold text-uppercase text-light mb-1">Master Admin ID</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-dark border-secondary text-warning"><i class="fas fa-user-shield"></i></span>
+                            </div>
+                            <input type="text" name="master_id" id="masterAdminId" class="form-control bg-dark border-secondary text-white" 
+                                   value="{{ old('master_id', 'master@admin.com') }}" required autocomplete="username" placeholder="master@admin.com">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="text-xs font-weight-bold text-uppercase text-light mb-1">Master Password</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-dark border-secondary text-warning"><i class="fas fa-key"></i></span>
+                            </div>
+                            <input type="password" name="master_password" id="masterAdminPassword" class="form-control bg-dark border-secondary text-white" 
+                                   required autocomplete="current-password" placeholder="Enter Master Password">
+                            <div class="input-group-append">
+                                <button class="btn btn-dark border-secondary text-light" type="button" onclick="toggleMasterPassword()">
+                                    <i class="fas fa-eye" id="toggleMasterIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dual Password Quick-Select Card -->
+                    <div class="p-2 mb-3 rounded" style="background: rgba(30, 41, 59, 0.8); border: 1px dashed #475569;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-xs font-weight-bold text-warning">
+                                <i class="fas fa-lock mr-1"></i> Two Master Passwords Available:
+                            </span>
+                            <span class="text-xs text-muted" style="color: #94a3b8 !important;">Either is accepted</span>
+                        </div>
+                        <div class="row no-gutters">
+                            <div class="col-6 pr-1">
+                                <button type="button" class="btn btn-sm btn-outline-warning btn-block text-xs py-1" onclick="useMasterPass(1)">
+                                    <i class="fas fa-key mr-1"></i> Password 1
+                                    <br><small class="text-white opacity-75">MasterAdmin#2026</small>
+                                </button>
+                            </div>
+                            <div class="col-6 pl-1">
+                                <button type="button" class="btn btn-sm btn-outline-info btn-block text-xs py-1" onclick="useMasterPass(2)">
+                                    <i class="fas fa-shield-alt mr-1"></i> Password 2
+                                    <br><small class="text-white opacity-75">SoftwareDev@2026</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-0 form-check">
+                        <input type="checkbox" name="remember" class="form-check-input" id="rememberMaster" checked>
+                        <label class="form-check-label text-xs" for="rememberMaster" style="color: #94a3b8 !important;">Remember Master Admin session</label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-light" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning font-weight-bold px-4 text-dark shadow-sm">
+                        <i class="fas fa-unlock-alt mr-1"></i> Access Master Panel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
     function togglePasswordVisibility() {
         const pwd = document.getElementById('passwordInput');
         const icon = document.getElementById('toggleIcon');
@@ -263,6 +358,35 @@
             icon.classList.add('fa-eye');
         }
     }
+
+    function toggleMasterPassword() {
+        const pwd = document.getElementById('masterAdminPassword');
+        const icon = document.getElementById('toggleMasterIcon');
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            pwd.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    function useMasterPass(index) {
+        document.getElementById('masterAdminId').value = 'master@admin.com';
+        if (index === 1) {
+            document.getElementById('masterAdminPassword').value = 'MasterAdmin#2026';
+        } else {
+            document.getElementById('masterAdminPassword').value = 'SoftwareDev@2026';
+        }
+    }
+
+    @if ($errors->has('master_id') || session('open_master_modal'))
+        $(document).ready(function() {
+            $('#masterAdminModal').modal('show');
+        });
+    @endif
 
     // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {

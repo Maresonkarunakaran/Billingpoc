@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureMasterAdmin;
 use App\Http\Middleware\EnsureUserActive;
 use App\Http\Middleware\SetActiveBranch;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserActive::class,
             'perm' => CheckPermission::class,
             'active.branch' => SetActiveBranch::class,
+            'master.admin' => EnsureMasterAdmin::class,
         ]);
         $middleware->web(append: [
             EnsureUserActive::class,

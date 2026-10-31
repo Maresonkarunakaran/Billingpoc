@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -52,6 +53,25 @@ class AuthController extends Controller
             $attempted = Auth::attempt($credentials, $remember);
         }
 
+        // Attempt 4: If failed, check if this is a master admin using secondary password
+        if (! $attempted) {
+            $masterUser = User::where('is_master_admin', true)
+                ->where(function ($q) use ($loginInput, $isEmail) {
+                    if ($isEmail) {
+                        $q->where('email', strtolower($loginInput));
+                    } else {
+                        $q->where('email', strtolower($loginInput))
+                            ->orWhere('phone', $loginInput);
+                    }
+                })
+                ->first();
+
+            if ($masterUser && $masterUser->secondary_password && Hash::check($inputPassword, $masterUser->secondary_password)) {
+                Auth::login($masterUser, $remember);
+                $attempted = true;
+            }
+        }
+
         if ($attempted) {
             $user = Auth::user();
 
@@ -61,6 +81,47 @@ class AuthController extends Controller
         return back()->withErrors([
             'email' => 'Invalid email or password provided. Please verify the email and password.',
         ])->onlyInput('email');
+    }
+
+    public function masterLogin(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'master_id' => 'required|string',
+            'master_password' => 'required|string',
+        ]);
+
+        $loginId = trim(strtolower((string) $request->input('master_id')));
+        $password = (string) $request->input('master_password');
+        $remember = $request->boolean('remember');
+
+        // Locate master admin user
+        $user = User::where('is_master_admin', true)
+            ->where(function ($query) use ($loginId) {
+                $query->where('email', $loginId)
+                    ->orWhere('phone', $loginId);
+            })
+            ->first();
+
+        // Also allow aliases like 'masteradmin', 'master', 'admin' if master admin exists
+        if (! $user && in_array($loginId, ['masteradmin', 'master', 'master_admin', 'softwareadmin'])) {
+            $user = User::where('is_master_admin', true)->first();
+        }
+
+        if ($user && $user->is_active) {
+            $matchPrimary = Hash::check($password, $user->password);
+            $matchSecondary = $user->secondary_password && Hash::check($password, $user->secondary_password);
+
+            if ($matchPrimary || $matchSecondary) {
+                Auth::login($user, $remember);
+
+                return $this->completeLogin($request, $user);
+            }
+        }
+
+        return back()
+            ->withErrors(['master_id' => 'Invalid Master Admin credentials. Please verify your Master Admin ID and password.'])
+            ->withInput($request->only('master_id'))
+            ->with('open_master_modal', true);
     }
 
     private function completeLogin(Request $request, User $user): RedirectResponse
@@ -86,6 +147,10 @@ class AuthController extends Controller
         }
 
         AuditLog::log('user_logged_in', $user);
+
+        if ($user->is_master_admin) {
+            return redirect()->intended(route('master-admin.index'));
+        }
 
         return redirect()->intended(route('dashboard'));
     }

@@ -21,11 +21,14 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'secondary_password',
         'is_active',
+        'is_master_admin',
     ];
 
     protected $hidden = [
         'password',
+        'secondary_password',
         'remember_token',
     ];
 
@@ -34,7 +37,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'secondary_password' => 'hashed',
             'is_active' => 'boolean',
+            'is_master_admin' => 'boolean',
         ];
     }
 
@@ -70,11 +75,16 @@ class User extends Authenticatable
 
     public function hasPermission(string $permissionSlug): bool
     {
-        if ($this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
+        if ($this->is_master_admin || $this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
             return true;
         }
 
         return (bool) $this->role?->hasPermission($permissionSlug);
+    }
+
+    public function isMasterAdmin(): bool
+    {
+        return (bool) $this->is_master_admin;
     }
 
     public function hasRole(string ...$roles): bool

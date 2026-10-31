@@ -246,6 +246,15 @@
                 </button>
             </li>
 
+            <!-- Master Admin Button -->
+            @if(auth()->user()->is_master_admin)
+            <li class="nav-item mr-2">
+                <a href="{{ route('master-admin.index') }}" class="btn btn-warning btn-sm px-2 font-weight-bold text-dark shadow-sm" title="Software Master Admin Portal">
+                    <i class="fas fa-shield-alt mr-1"></i> <span class="d-none d-md-inline">Master Admin</span>
+                </a>
+            </li>
+            @endif
+
             <!-- Admin Panel / User Management Button -->
             @if(auth()->user()->role?->slug === 'super-admin')
             <li class="nav-item mr-2">
@@ -267,6 +276,12 @@
                         <strong>{{ auth()->user()->business?->name }}</strong><br>
                         <small class="text-muted">{{ auth()->user()->email }}</small>
                     </div>
+                    @if(auth()->user()->is_master_admin)
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ route('master-admin.index') }}" class="dropdown-item text-warning font-weight-bold">
+                            <i class="fas fa-shield-alt mr-2 text-warning"></i> Software Master Admin Portal
+                        </a>
+                    @endif
                     @if(auth()->user()->role?->slug === 'super-admin')
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('users.index') }}" class="dropdown-item">
@@ -367,12 +382,22 @@
                             <p>Expenses</p>
                         </a>
                     </li>
-                    <li class="nav-item mb-4">
+                    <li class="nav-item mb-2">
                         <a href="{{ route('cash-register.index') }}" class="nav-link {{ (request()->is('opening-closing-cash*') || request()->is('cash-register*')) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-coins text-success"></i>
                             <p>Opening & Closing Cash</p>
                         </a>
                     </li>
+
+                    @if(auth()->user()->is_master_admin)
+                    <li class="nav-header text-uppercase text-xs text-warning font-weight-bold mt-2">Platform Master</li>
+                    <li class="nav-item mb-4">
+                        <a href="{{ route('master-admin.index') }}" class="nav-link {{ request()->is('master-admin*') ? 'active' : '' }}" style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b;">
+                            <i class="nav-icon fas fa-shield-alt text-warning"></i>
+                            <p class="font-weight-bold text-warning">Master Admin Panel</p>
+                        </a>
+                    </li>
+                    @endif
                 </ul>
             </nav>
         </div>

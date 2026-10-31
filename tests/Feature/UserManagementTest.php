@@ -67,15 +67,14 @@ class UserManagementTest extends TestCase
         $this->admin->branches()->attach($this->branch->id);
     }
 
-    public function test_sign_in_page_displays_admin_panel_credentials(): void
+    public function test_sign_in_page_displays_master_admin_portal_trigger(): void
     {
         $response = $this->get(route('login'));
 
         $response->assertStatus(200);
-        $response->assertSee('Admin Panel Credentials');
-        $response->assertSee('admin@pos.com');
-        $response->assertSee('password');
-        $response->assertSee('Fill Admin Credentials');
+        $response->assertSee('masterAdminBtn');
+        $response->assertSee('masterAdminModal');
+        $response->assertSee('Software Master Admin Portal');
     }
 
     public function test_admin_can_log_in_with_admin_id_and_password(): void

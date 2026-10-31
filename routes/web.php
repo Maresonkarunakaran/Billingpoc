@@ -9,6 +9,7 @@ use App\Http\Controllers\DailyCashController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MasterAdminController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
@@ -27,10 +28,22 @@ use Illuminate\Support\Facades\Route;
 // Authentication
 Route::get('login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->name('login.post');
+Route::post('master-admin/login', [AuthController::class, 'masterLogin'])->name('master-admin.login');
+Route::get('master-admin/login', fn () => redirect()->route('login')->with('open_master_modal', true));
 Route::get('register', [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::get('signup', [RegisterController::class, 'showRegistrationForm'])->name('signup');
 Route::post('register', [RegisterController::class, 'register'])->name('register.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+
+// Software Master Admin Portal Routes (Restricted to Software Owner)
+Route::middleware(['auth', 'active', 'master.admin'])->prefix('master-admin')->name('master-admin.')->group(function () {
+    Route::get('/', [MasterAdminController::class, 'index'])->name('index');
+    Route::post('/clients', [MasterAdminController::class, 'storeClient'])->name('clients.store');
+    Route::post('/users', [MasterAdminController::class, 'storeUser'])->name('users.store');
+    Route::post('/users/{user}/password', [MasterAdminController::class, 'updatePassword'])->name('users.password');
+    Route::post('/users/{user}/toggle-status', [MasterAdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
+    Route::post('/businesses/{business}/toggle-status', [MasterAdminController::class, 'toggleBusinessStatus'])->name('businesses.toggle-status');
+});
 
 // Authenticated Application Routes
 Route::middleware(['auth', 'active'])->group(function () {
