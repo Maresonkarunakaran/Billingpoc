@@ -154,7 +154,7 @@
             <a href="{{ route('products.create') }}" class="btn btn-outline-secondary quick-action-btn bg-white">
                 <i class="fas fa-plus mr-1"></i> Add Product
             </a>
-            <a href="{{ route('products.reports', ['tab' => 'expenses']) }}" class="btn btn-outline-secondary quick-action-btn bg-white">
+            <a href="{{ route('expenses.index') }}" class="btn btn-outline-secondary quick-action-btn bg-white">
                 <i class="fas fa-receipt mr-1"></i> Expenses
             </a>
             <a href="{{ route('reports.profit_loss') }}" class="btn btn-outline-info quick-action-btn bg-white">

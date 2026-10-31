@@ -340,10 +340,16 @@
                             <p>Categories</p>
                         </a>
                     </li>
-                    <li class="nav-item mb-4">
+                    <li class="nav-item">
                         <a href="{{ route('products.reports') }}" class="nav-link {{ request()->is('products/reports*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-chart-line text-warning"></i>
                             <p>Report</p>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-4">
+                        <a href="{{ route('expenses.index') }}" class="nav-link {{ request()->is('expenses*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-receipt text-danger"></i>
+                            <p>Expenses</p>
                         </a>
                     </li>
                 </ul>

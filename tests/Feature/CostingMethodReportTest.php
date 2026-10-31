@@ -256,7 +256,7 @@ class CostingMethodReportTest extends TestCase
         $this->assertEquals(1866.66, $costingDatasets['moving_average']['total']['closing_stock_value']);
     }
 
-    public function test_expenses_tab_under_report_page_renders_expenses_data_and_breakdown(): void
+    public function test_expenses_page_renders_dedicated_report_layout_below_report_page(): void
     {
         $expCat = ExpenseCategory::create([
             'business_id' => $this->business->id,
@@ -277,16 +277,26 @@ class CostingMethodReportTest extends TestCase
             'description' => 'Monthly electricity bill',
         ]);
 
-        $response = $this->actingAs($this->admin)->get(route('products.reports', ['tab' => 'expenses']));
+        // 1. Standalone Expenses Report Page
+        $response = $this->actingAs($this->admin)->get(route('expenses.index'));
 
         $response->assertStatus(200);
-        $response->assertViewHas('activeTab', 'expenses');
-        $response->assertViewHas('totalOperatingExpenses', 1250.00);
-        $response->assertViewHas('totalExpenseCount', 1);
+        $response->assertViewHas('totalExpense', 1250.00);
+        $response->assertViewHas('totalCount', 1);
 
+        $response->assertSee('Operating Expenses Report');
         $response->assertSee('Total Operating Expenses');
         $response->assertSee('EXP-2026-001');
         $response->assertSee('Shop Electricity');
         $response->assertSee('1,250.00');
+
+        // 2. Report page has 3 canonical tabs without inner expenses tab
+        $reportResponse = $this->actingAs($this->admin)->get(route('products.reports'));
+        $reportResponse->assertStatus(200);
+        $reportResponse->assertSee('id="tab-margin"', false);
+        $reportResponse->assertSee('id="tab-low-stock"', false);
+        $reportResponse->assertSee('id="tab-sales-rank"', false);
+        $reportResponse->assertDontSee('id="tab-expenses"', false);
+        $reportResponse->assertDontSee('id="pane-expenses"', false);
     }
 }

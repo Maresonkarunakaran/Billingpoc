@@ -328,12 +328,13 @@ class ComprehensivePosHttpTest extends TestCase
             'products.index' => 'Products & Pricing',
             'categories.index' => 'Categories',
             'products.reports' => 'Report',
+            'expenses.index' => 'Expenses',
         ] as $routeName => $label) {
             $this->assertStringContainsString('href="'.route($routeName).'"', $sidebar);
             $this->assertStringContainsString('<p>'.$label.'</p>', $sidebar);
         }
 
-        $this->assertSame(9, preg_match_all('/<a href="[^"]+" class="nav-link(?: active)?\s*"/', $sidebar));
+        $this->assertSame(10, preg_match_all('/<a href="[^"]+" class="nav-link(?: active)?\s*"/', $sidebar));
 
         foreach ([
             'shifts.index',
@@ -342,7 +343,6 @@ class ComprehensivePosHttpTest extends TestCase
             'units.index',
             'customers.index',
             'suppliers.index',
-            'expenses.index',
             'payments.index',
             'reports.profit_loss',
             'reports.daily',

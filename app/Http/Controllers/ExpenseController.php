@@ -20,7 +20,10 @@ class ExpenseController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $branchId = session('active_branch_id');
+        $isSuperAdmin = $user->role?->slug === 'super-admin';
+        $defaultBranch = $isSuperAdmin ? 'all' : session('active_branch_id');
+        $branchFilter = $request->get('branch_id', $defaultBranch);
+        $branchId = ($branchFilter === 'all' || empty($branchFilter)) && $isSuperAdmin ? null : (int) ($branchFilter ?: session('active_branch_id'));
 
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
@@ -31,6 +34,7 @@ class ExpenseController extends Controller
                 'yesterday' => [$startDate = now()->subDay()->toDateString(), $endDate = now()->subDay()->toDateString()],
                 'this_month' => [$startDate = now()->startOfMonth()->toDateString(), $endDate = now()->toDateString()],
                 'last_month' => [$startDate = now()->subMonth()->startOfMonth()->toDateString(), $endDate = now()->subMonth()->endOfMonth()->toDateString()],
+                'all' => [$startDate = null, $endDate = null],
                 default => null,
             };
         } else {
@@ -44,38 +48,86 @@ class ExpenseController extends Controller
             }
         }
 
-        $query = Expense::where('business_id', $user->business_id)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->when($request->filled('category_id'), fn ($q) => $q->where('expense_category_id', $request->category_id))
+        $query = Expense::where('expenses.business_id', $user->business_id)
+            ->when($branchId, fn ($q) => $q->where('expenses.branch_id', $branchId))
+            ->when($request->filled('category_id'), fn ($q) => $q->where('expenses.expense_category_id', $request->category_id))
             ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
                 if ($startDate === $endDate) {
-                    $q->whereDate('expense_date', '=', $startDate);
+                    $q->whereDate('expenses.expense_date', '=', $startDate);
                 } else {
-                    $q->whereDate('expense_date', '>=', $startDate)
-                        ->whereDate('expense_date', '<=', $endDate);
+                    $q->whereDate('expenses.expense_date', '>=', $startDate)
+                        ->whereDate('expenses.expense_date', '<=', $endDate);
                 }
             })
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
                 $q->where(function ($sub) use ($s) {
-                    $sub->where('expense_number', 'like', "%{$s}%")
-                        ->orWhere('description', 'like', "%{$s}%")
-                        ->orWhere('reference_no', 'like', "%{$s}%");
+                    $sub->where('expenses.expense_number', 'like', "%{$s}%")
+                        ->orWhere('expenses.description', 'like', "%{$s}%")
+                        ->orWhere('expenses.reference_no', 'like', "%{$s}%");
                 });
             });
 
         $totalExpense = (float) (clone $query)->sum('amount');
         $totalCount = (int) (clone $query)->count();
 
+        // Category-wise Breakdown
+        $expensesByCategory = (clone $query)
+            ->join('expense_categories', 'expenses.expense_category_id', '=', 'expense_categories.id')
+            ->selectRaw('
+                expense_categories.id as category_id,
+                expense_categories.name as category_name,
+                COUNT(expenses.id) as count,
+                SUM(expenses.amount) as total_amount
+            ')
+            ->groupBy('expense_categories.id', 'expense_categories.name')
+            ->orderByDesc('total_amount')
+            ->get()
+            ->map(function ($cat) use ($totalExpense) {
+                $pct = $totalExpense > 0 ? round(($cat->total_amount / $totalExpense) * 100, 1) : 0.0;
+                return (object) [
+                    'category_id' => $cat->category_id,
+                    'category_name' => $cat->category_name,
+                    'count' => (int) $cat->count,
+                    'total_amount' => (float) $cat->total_amount,
+                    'percentage' => $pct,
+                ];
+            });
+
+        // Payment Mode Breakdown
+        $expensesByPaymentMethod = (clone $query)
+            ->selectRaw('payment_method, COUNT(id) as count, SUM(amount) as total_amount')
+            ->groupBy('payment_method')
+            ->orderByDesc('total_amount')
+            ->get();
+
+        $topCategory = $expensesByCategory->first();
+
+        $branches = $isSuperAdmin ? Branch::where('business_id', $user->business_id)->get() : $user->branches;
+
         $expenses = $query->with(['category', 'branch', 'user'])
-            ->latest('expense_date')
-            ->latest('id')
+            ->select('expenses.*')
+            ->latest('expenses.expense_date')
+            ->latest('expenses.id')
             ->paginate(15)
             ->withQueryString();
 
         $categories = ExpenseCategory::where('business_id', $user->business_id)->get();
 
-        return view('expenses.index', compact('expenses', 'categories', 'totalExpense', 'totalCount', 'startDate', 'endDate'));
+        return view('expenses.index', compact(
+            'expenses',
+            'categories',
+            'totalExpense',
+            'totalCount',
+            'startDate',
+            'endDate',
+            'expensesByCategory',
+            'expensesByPaymentMethod',
+            'topCategory',
+            'branches',
+            'branchFilter',
+            'isSuperAdmin'
+        ));
     }
 
     public function create()
