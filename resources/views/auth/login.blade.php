@@ -177,12 +177,12 @@
             <form id="loginForm" action="{{ route('login.post') }}" method="POST">
                 @csrf
                 <div class="form-group mb-3">
-                    <label class="text-xs font-weight-bold text-uppercase text-muted">Email Address</label>
+                    <label class="text-xs font-weight-bold text-uppercase text-muted">User Login ID / Email</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
-                            <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
+                            <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
                         </div>
-                        <input type="email" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="name@store.com" required autofocus autocomplete="email">
+                        <input type="text" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="admin@pos.com or User ID" required autofocus autocomplete="username">
                     </div>
                 </div>
 
@@ -211,7 +211,30 @@
                 </button>
             </form>
 
-            <div class="text-center my-2">
+            <!-- Admin Panel Login Credentials Card -->
+            <div class="mt-3 p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="font-weight-bold text-xs text-uppercase text-dark">
+                        <i class="fas fa-user-shield text-primary mr-1"></i> Admin Panel Credentials
+                    </span>
+                    <span class="badge badge-primary px-2 py-1 text-xs">Super Admin</span>
+                </div>
+                <div class="bg-white p-2 rounded border mb-2 text-xs">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Admin User ID:</span>
+                        <code class="font-weight-bold text-dark">admin@pos.com</code>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Admin Password:</span>
+                        <code class="font-weight-bold text-danger">password</code>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm btn-block font-weight-bold shadow-xs" onclick="fillAdminCredentials()">
+                    <i class="fas fa-magic mr-1"></i> Fill Admin Credentials
+                </button>
+            </div>
+
+            <div class="text-center mt-3">
                 <span class="text-xs text-muted">Need a new business POS setup?</span>
                 <a href="{{ route('register') }}" class="text-xs font-weight-bold ml-1 text-primary">
                     <i class="fas fa-user-plus mr-1"></i> Register New Business
@@ -222,6 +245,11 @@
 </div>
 
 <script>
+    function fillAdminCredentials() {
+        document.getElementById('emailInput').value = 'admin@pos.com';
+        document.getElementById('passwordInput').value = 'password';
+    }
+
     function togglePasswordVisibility() {
         const pwd = document.getElementById('passwordInput');
         const icon = document.getElementById('toggleIcon');

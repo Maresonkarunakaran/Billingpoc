@@ -246,6 +246,15 @@
                 </button>
             </li>
 
+            <!-- Admin Panel / User Management Button -->
+            @if(auth()->user()->role?->slug === 'super-admin')
+            <li class="nav-item mr-2">
+                <a href="{{ route('users.index') }}" class="btn btn-outline-info btn-sm px-2 font-weight-bold" title="Admin Panel: Manage Users & Staff Logins">
+                    <i class="fas fa-users-cog mr-1"></i> <span class="d-none d-md-inline">Admin Panel</span>
+                </a>
+            </li>
+            @endif
+
             <!-- User Menu -->
             <li class="nav-item dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
@@ -258,6 +267,12 @@
                         <strong>{{ auth()->user()->business?->name }}</strong><br>
                         <small class="text-muted">{{ auth()->user()->email }}</small>
                     </div>
+                    @if(auth()->user()->role?->slug === 'super-admin')
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ route('users.index') }}" class="dropdown-item">
+                            <i class="fas fa-users-cog mr-2 text-info"></i> User Management (Admin Panel)
+                        </a>
+                    @endif
                     <div class="dropdown-divider"></div>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf

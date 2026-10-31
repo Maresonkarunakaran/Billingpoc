@@ -22,26 +22,34 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $inputEmail = strtolower(trim((string) $request->input('email', '')));
+        $loginInput = trim((string) $request->input('email', ''));
         $inputPassword = (string) $request->input('password', '');
 
-        $request->merge([
-            'email' => $inputEmail,
-        ]);
-
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
+        $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
+        $credentials = [
+            $isEmail ? 'email' : 'phone' => $isEmail ? strtolower($loginInput) : $loginInput,
+            'password' => $inputPassword,
+        ];
+
         $remember = $request->boolean('remember');
 
-        // Attempt 1: Exact password entered
-        $attempted = Auth::attempt(['email' => $inputEmail, 'password' => $inputPassword], $remember);
+        // Attempt 1: Exact credentials
+        $attempted = Auth::attempt($credentials, $remember);
 
-        // Attempt 2: If failed, try trimming password in case trailing space was copied
+        // Attempt 2: If failed and not email, also check if entered as email anyway
+        if (! $attempted && ! $isEmail) {
+            $attempted = Auth::attempt(['email' => strtolower($loginInput), 'password' => $inputPassword], $remember);
+        }
+
+        // Attempt 3: If failed, try trimming password in case trailing space was copied
         if (! $attempted && trim($inputPassword) !== $inputPassword) {
-            $attempted = Auth::attempt(['email' => $inputEmail, 'password' => trim($inputPassword)], $remember);
+            $credentials['password'] = trim($inputPassword);
+            $attempted = Auth::attempt($credentials, $remember);
         }
 
         if ($attempted) {
