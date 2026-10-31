@@ -23,6 +23,11 @@ class PosController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        if ($user->is_master_admin) {
+            return redirect()->route('master-admin.dashboard');
+        }
+
         $businessId = $user->business_id;
         $branchId = session('active_branch_id') ?? $user->default_branch_id;
         $branch = Branch::findOrFail($branchId);

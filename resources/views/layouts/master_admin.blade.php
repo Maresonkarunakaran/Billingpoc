@@ -43,11 +43,6 @@
                     <i class="fas fa-plus-circle mr-1"></i> Provision Client
                 </a>
             </li>
-            <li class="nav-item mr-3">
-                <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary btn-sm" title="View POS Terminal">
-                    <i class="fas fa-cash-register mr-1"></i> <span class="d-none d-md-inline">POS Terminal</span>
-                </a>
-            </li>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle text-dark font-weight-medium" data-toggle="dropdown" href="#">
                     <i class="fas fa-user-shield text-warning mr-1"></i> Master Admin
@@ -118,15 +113,6 @@
                         <a href="{{ route('master-admin.audit-logs') }}" class="nav-link {{ request()->routeIs('master-admin.audit-logs') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-history"></i>
                             <p>Audit Activity Logs</p>
-                        </a>
-                    </li>
-
-                    <li class="nav-header text-uppercase text-xs text-muted font-weight-bold px-3 mt-2">Quick Navigation</li>
-
-                    <li class="nav-item">
-                        <a href="{{ route('dashboard') }}" class="nav-link text-white-50">
-                            <i class="nav-icon fas fa-desktop"></i>
-                            <p>Open POS Billing App</p>
                         </a>
                     </li>
 

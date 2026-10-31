@@ -15,6 +15,11 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        if ($user->is_master_admin) {
+            return redirect()->route('master-admin.dashboard');
+        }
+
         $businessId = $user->business_id;
 
         $filterRange = $request->get('period', 'this_month');

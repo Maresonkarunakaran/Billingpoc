@@ -205,6 +205,18 @@ class MasterAdminTest extends TestCase
         $response->assertSee('Invoices Generated');
         $response->assertSee('Client A Supermarket');
         $response->assertSee('Client B Bakery');
+        $response->assertDontSee('Open POS Billing App');
+        $response->assertDontSee('POS Terminal');
+        $response->assertDontSee('Quick Navigation');
+    }
+
+    public function test_master_admin_visiting_pos_routes_is_redirected_to_master_dashboard(): void
+    {
+        $dashResponse = $this->actingAs($this->masterAdmin)->get(route('dashboard'));
+        $dashResponse->assertRedirect(route('master-admin.dashboard'));
+
+        $posResponse = $this->actingAs($this->masterAdmin)->get(route('pos.index'));
+        $posResponse->assertRedirect(route('master-admin.dashboard'));
     }
 
     public function test_master_admin_can_view_provision_form_with_three_sections(): void

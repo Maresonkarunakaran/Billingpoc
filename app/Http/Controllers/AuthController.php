@@ -208,7 +208,7 @@ class AuthController extends Controller
         AuditLog::log('user_logged_in', $user);
 
         if ($user->is_master_admin) {
-            return redirect()->intended(route('master-admin.dashboard'));
+            return redirect()->route('master-admin.dashboard');
         }
 
         if ($user->must_change_password) {
