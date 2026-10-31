@@ -51,12 +51,24 @@ class AuthController extends Controller
 
         $remember = $request->boolean('remember');
 
-        // Check 1: User entered a Client ID (e.g. CLT0001, CLT0002...)
-        $userByClientId = User::where('client_id', strtoupper($loginInput))->first();
-        if ($userByClientId && Hash::check($inputPassword, $userByClientId->password)) {
-            Auth::login($userByClientId, $remember);
+        // Check 1: Direct identifier match (Client ID, Staff ID, Username, Email, or Phone)
+        $userMatch = User::where(function ($q) use ($loginInput) {
+            $q->where('client_id', strtoupper($loginInput))
+                ->orWhere('staff_id', strtoupper($loginInput))
+                ->orWhere('username', strtolower($loginInput))
+                ->orWhere('email', strtolower($loginInput))
+                ->orWhere('phone', $loginInput);
+        })->first();
 
-            return $this->completeLogin($request, $userByClientId);
+        if ($userMatch) {
+            $validPassword = Hash::check($inputPassword, $userMatch->password)
+                || (trim($inputPassword) !== $inputPassword && Hash::check(trim($inputPassword), $userMatch->password));
+
+            if ($validPassword) {
+                Auth::login($userMatch, $remember);
+
+                return $this->completeLogin($request, $userMatch);
+            }
         }
 
         $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);

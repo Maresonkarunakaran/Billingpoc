@@ -18,6 +18,8 @@ class User extends Authenticatable
         'role_id',
         'default_branch_id',
         'client_id',
+        'staff_id',
+        'username',
         'name',
         'email',
         'phone',
@@ -79,13 +81,125 @@ class User extends Authenticatable
         return $this->hasMany(CashShift::class);
     }
 
+    public function staffPermissions(): HasMany
+    {
+        return $this->hasMany(StaffPermission::class);
+    }
+
     public function hasPermission(string $permissionSlug): bool
     {
         if ($this->is_master_admin || $this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
             return true;
         }
 
-        return (bool) $this->role?->hasPermission($permissionSlug);
+        // Check if user has specific staff permissions configured
+        $hasCustomPermissions = $this->relationLoaded('staffPermissions')
+            ? $this->staffPermissions->isNotEmpty()
+            : $this->staffPermissions()->exists();
+
+        if ($hasCustomPermissions) {
+            $allowedKeys = $this->relationLoaded('staffPermissions')
+                ? $this->staffPermissions->where('is_allowed', true)->pluck('permission_key')->all()
+                : $this->staffPermissions()->where('is_allowed', true)->pluck('permission_key')->all();
+
+            // Direct check
+            if (in_array($permissionSlug, $allowedKeys, true)) {
+                return true;
+            }
+
+            // Map fine-grained permission slugs to the 12 page permissions
+            $mappings = [
+                'pos.checkout' => 'pos_terminal',
+                'pos.shifts' => 'opening_closing_cash',
+                'sales.view' => 'sales_history',
+                'sales.create' => 'sales_history',
+                'sales.return' => 'sales_history',
+                'purchases.view' => 'purchase_management',
+                'purchases.create' => 'purchase_management',
+                'purchases.receive' => 'purchase_management',
+                'inventory.view' => 'inventory_balance',
+                'inventory.transfer' => 'inventory_balance',
+                'inventory.adjust' => 'inventory_balance',
+                'products.manage' => 'products_pricing',
+                'customers.manage' => 'customer_management',
+                'suppliers.manage' => 'supplier_management',
+                'expenses.manage' => 'expenses',
+                'payments.manage' => 'sales_history',
+                'reports.view' => 'reports_analytics',
+                'settings.manage' => 'business_settings',
+                'users.manage' => 'staff_management',
+            ];
+
+            if (isset($mappings[$permissionSlug]) && in_array($mappings[$permissionSlug], $allowedKeys, true)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Fallback for legacy or unconfigured users without explicit staff_permissions
+        if ($this->role?->hasPermission($permissionSlug)) {
+            return true;
+        }
+
+        // Default allow for unconfigured users to preserve backwards compatibility
+        return true;
+    }
+
+    public function syncPermissions(array $selectedKeys): void
+    {
+        $allPermissions = array_keys(StaffPermission::AVAILABLE_PERMISSIONS);
+
+        foreach ($allPermissions as $key) {
+            $isAllowed = in_array($key, $selectedKeys, true);
+            $this->staffPermissions()->updateOrCreate(
+                ['permission_key' => $key],
+                ['is_allowed' => $isAllowed]
+            );
+        }
+    }
+
+    public function getAllowedPermissionKeys(): array
+    {
+        if ($this->is_master_admin || $this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
+            return array_keys(StaffPermission::AVAILABLE_PERMISSIONS);
+        }
+
+        return $this->staffPermissions()->where('is_allowed', true)->pluck('permission_key')->toArray();
+    }
+
+    public static function generateNextStaffId(int $businessId): string
+    {
+        $lastStaff = static::where('business_id', $businessId)
+            ->where(function ($q) {
+                $q->where('staff_id', 'like', 'STF%')
+                    ->orWhere('client_id', 'like', 'STF%');
+            })
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $nextNum = 1;
+        $idCandidate = $lastStaff?->staff_id ?: $lastStaff?->client_id;
+        if ($idCandidate && preg_match('/STF(\d+)/', (string) $idCandidate, $matches)) {
+            $nextNum = ((int) $matches[1]) + 1;
+        } else {
+            $existingCount = static::where('business_id', $businessId)
+                ->where(function ($q) {
+                    $q->whereNotNull('staff_id')
+                        ->orWhere('client_id', 'like', 'STF%');
+                })
+                ->count();
+            $nextNum = $existingCount + 1;
+        }
+
+        $candidate = sprintf('STF%04d', $nextNum);
+
+        while (static::where('staff_id', $candidate)->orWhere('client_id', $candidate)->exists()) {
+            $nextNum++;
+            $candidate = sprintf('STF%04d', $nextNum);
+        }
+
+        return $candidate;
     }
 
     public function isMasterAdmin(): bool

@@ -255,11 +255,11 @@
             </li>
             @endif
 
-            <!-- Admin Panel / User Management Button -->
-            @if(auth()->user()->role?->slug === 'super-admin')
+            <!-- Staff Management Button -->
+            @if(auth()->user()->hasPermission('staff_management'))
             <li class="nav-item mr-2">
-                <a href="{{ route('users.index') }}" class="btn btn-outline-info btn-sm px-2 font-weight-bold" title="Admin Panel: Manage Users & Staff Logins">
-                    <i class="fas fa-users-cog mr-1"></i> <span class="d-none d-md-inline">Admin Panel</span>
+                <a href="{{ route('users.index') }}" class="btn btn-outline-info btn-sm px-2 font-weight-bold" title="Staff Management: Manage Staff Logins & Permissions">
+                    <i class="fas fa-users-cog mr-1"></i> <span class="d-none d-md-inline">Staff Management</span>
                 </a>
             </li>
             @endif
@@ -282,10 +282,10 @@
                             <i class="fas fa-shield-alt mr-2 text-warning"></i> Software Master Admin Portal
                         </a>
                     @endif
-                    @if(auth()->user()->role?->slug === 'super-admin')
+                    @if(auth()->user()->hasPermission('staff_management'))
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('users.index') }}" class="dropdown-item">
-                            <i class="fas fa-users-cog mr-2 text-info"></i> User Management (Admin Panel)
+                            <i class="fas fa-users-cog mr-2 text-info"></i> Staff Management
                         </a>
                     @endif
                     <div class="dropdown-divider"></div>
@@ -323,27 +323,37 @@
                         </a>
                     </li>
 
+                    @if(auth()->user()->hasPermission('pos_terminal') || auth()->user()->hasPermission('sales_history'))
                     <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Sales</li>
+                    @if(auth()->user()->hasPermission('pos_terminal'))
                     <li class="nav-item">
                         <a href="{{ route('pos.index') }}" class="nav-link {{ request()->is('pos*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-cash-register text-success"></i>
                             <p>POS Terminal</p>
                         </a>
                     </li>
+                    @endif
+                    @if(auth()->user()->hasPermission('sales_history'))
                     <li class="nav-item">
                         <a href="{{ route('sales.index') }}" class="nav-link {{ request()->is('sales*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-file-invoice text-primary"></i>
                             <p>Sales & Invoices</p>
                         </a>
                     </li>
+                    @endif
+                    @endif
 
+                    @if(auth()->user()->hasPermission('purchase_management') || auth()->user()->hasPermission('inventory_balance'))
                     <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Purchases & Inventory</li>
+                    @if(auth()->user()->hasPermission('purchase_management'))
                     <li class="nav-item">
                         <a href="{{ route('purchases.index') }}" class="nav-link {{ request()->is('purchases*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-shopping-cart text-info"></i>
                             <p>Purchases & Receipts</p>
                         </a>
                     </li>
+                    @endif
+                    @if(auth()->user()->hasPermission('inventory_balance'))
                     <li class="nav-item">
                         <a href="{{ route('inventory.index') }}" class="nav-link {{ request()->is('inventory') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-warehouse text-warning"></i>
@@ -356,8 +366,12 @@
                             <p>Inventory Valuation</p>
                         </a>
                     </li>
+                    @endif
+                    @endif
 
-                    <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Product Catalog</li>
+                    @if(auth()->user()->hasPermission('products_pricing') || auth()->user()->hasPermission('reports_analytics') || auth()->user()->hasPermission('expenses') || auth()->user()->hasPermission('opening_closing_cash'))
+                    <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Catalog & Accounts</li>
+                    @if(auth()->user()->hasPermission('products_pricing'))
                     <li class="nav-item">
                         <a href="{{ route('products.index') }}" class="nav-link {{ (request()->is('products') || request()->is('products/create') || (request()->is('products/*') && !request()->is('products/reports*'))) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-boxes text-danger"></i>
@@ -370,24 +384,32 @@
                             <p>Categories</p>
                         </a>
                     </li>
+                    @endif
+                    @if(auth()->user()->hasPermission('reports_analytics'))
                     <li class="nav-item">
                         <a href="{{ route('products.reports') }}" class="nav-link {{ request()->is('products/reports*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-chart-line text-warning"></i>
                             <p>Report</p>
                         </a>
                     </li>
+                    @endif
+                    @if(auth()->user()->hasPermission('expenses'))
                     <li class="nav-item">
                         <a href="{{ route('expenses.index') }}" class="nav-link {{ request()->is('expenses*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-receipt text-danger"></i>
                             <p>Expenses</p>
                         </a>
                     </li>
-                    <li class="nav-item mb-2">
+                    @endif
+                    @if(auth()->user()->hasPermission('opening_closing_cash'))
+                    <li class="nav-item mb-1">
                         <a href="{{ route('cash-register.index') }}" class="nav-link {{ (request()->is('opening-closing-cash*') || request()->is('cash-register*')) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-coins text-success"></i>
                             <p>Opening & Closing Cash</p>
                         </a>
                     </li>
+                    @endif
+                    @endif
 
                     @if(auth()->user()->is_master_admin)
                     <li class="nav-header text-uppercase text-xs text-warning font-weight-bold mt-2">Platform Master</li>
@@ -468,22 +490,30 @@
             <i class="fas fa-chart-pie d-block"></i>
             <span>Dashboard</span>
         </a>
+        @if(auth()->user()->hasPermission('pos_terminal'))
         <a href="{{ route('pos.index') }}" class="nav-item text-center {{ request()->is('pos*') ? 'active' : '' }}">
             <i class="fas fa-cash-register d-block"></i>
             <span>POS Bill</span>
         </a>
+        @endif
+        @if(auth()->user()->hasPermission('products_pricing'))
         <a href="{{ route('products.index') }}" class="nav-item text-center {{ request()->is('products*') ? 'active' : '' }}">
             <i class="fas fa-boxes d-block"></i>
             <span>Items</span>
         </a>
+        @endif
+        @if(auth()->user()->hasPermission('expenses'))
         <a href="{{ route('expenses.index') }}" class="nav-item text-center {{ request()->is('expenses*') ? 'active' : '' }}">
             <i class="fas fa-receipt d-block"></i>
             <span>Expenses</span>
         </a>
+        @endif
+        @if(auth()->user()->hasPermission('sales_history'))
         <a href="{{ route('sales.index') }}" class="nav-item text-center {{ request()->is('sales*') ? 'active' : '' }}">
             <i class="fas fa-file-invoice d-block"></i>
             <span>Sales</span>
         </a>
+        @endif
         <a href="javascript:void(0)" onclick="toggleMobileLanguage()" class="nav-item text-center">
             <i class="fas fa-language d-block"></i>
             <span id="mobileLangLabel">தமிழ்</span>

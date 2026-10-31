@@ -13,10 +13,14 @@ class CheckPermission
         $user = $request->user();
 
         if (! $user || ! $user->hasPermission($permission)) {
-            if ($request->expectsJson()) {
-                return response()->json(['error' => 'Unauthorized action.'], 403);
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('pos/search') || $request->is('pos/checkout')) {
+                return response()->json([
+                    'error' => 'Access Denied',
+                    'message' => 'Unauthorized action: missing permission ['.$permission.']',
+                ], 403);
             }
-            abort(403, 'Unauthorized action: missing permission ['.$permission.']');
+
+            abort(403, 'Access Denied: You do not have permission to access this page.');
         }
 
         return $next($request);

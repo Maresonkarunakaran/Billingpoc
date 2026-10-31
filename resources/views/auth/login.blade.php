@@ -163,9 +163,6 @@
                     <h5 class="font-weight-bold text-dark mb-0">Sign In to POS</h5>
                     <p class="text-muted text-xs mb-0">Access your branch sales and ERP terminal.</p>
                 </div>
-                <a href="{{ route('register') }}" class="btn btn-sm btn-outline-primary font-weight-bold">
-                    <i class="fas fa-store mr-1"></i> Sign Up
-                </a>
             </div>
 
             @if(session('info'))
@@ -194,7 +191,7 @@
                         <div class="input-group-prepend">
                             <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
                         </div>
-                        <input type="text" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="e.g. CLT0001, admin@pos.com" required autofocus autocomplete="username">
+                        <input type="text" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="e.g. CLT0001, STF0001, admin@pos.com" required autofocus autocomplete="username">
                     </div>
                 </div>
 

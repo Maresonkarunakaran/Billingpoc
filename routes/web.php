@@ -72,7 +72,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // POS Terminal
-    Route::prefix('pos')->name('pos.')->group(function () {
+    Route::prefix('pos')->name('pos.')->middleware('perm:pos_terminal')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::get('/search', [PosController::class, 'searchProducts'])->name('search');
         Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
@@ -80,7 +80,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Sales & GST Invoices
-    Route::prefix('sales')->name('sales.')->group(function () {
+    Route::prefix('sales')->name('sales.')->middleware('perm:sales_history')->group(function () {
         Route::get('/', [SaleController::class, 'index'])->name('index');
         Route::get('/{id}', [SaleController::class, 'show'])->name('show');
         Route::get('/{id}/return', [SaleController::class, 'returnForm'])->name('return');
@@ -88,7 +88,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Purchases & Goods Receipts
-    Route::prefix('purchases')->name('purchases.')->group(function () {
+    Route::prefix('purchases')->name('purchases.')->middleware('perm:purchase_management')->group(function () {
         Route::get('/', [PurchaseController::class, 'index'])->name('index');
         Route::get('/create', [PurchaseController::class, 'create'])->name('create');
         Route::post('/', [PurchaseController::class, 'store'])->name('store');
@@ -96,7 +96,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Inventory & Stock Ledger
-    Route::prefix('inventory')->name('inventory.')->group(function () {
+    Route::prefix('inventory')->name('inventory.')->middleware('perm:inventory_balance')->group(function () {
         Route::get('/', [InventoryController::class, 'index'])->name('index');
         Route::get('/ledger', [InventoryController::class, 'ledger'])->name('ledger');
         Route::get('/adjust', [InventoryController::class, 'adjustForm'])->name('adjust');
@@ -104,7 +104,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Branch Transfers
-    Route::prefix('transfers')->name('transfers.')->group(function () {
+    Route::prefix('transfers')->name('transfers.')->middleware('perm:inventory_balance')->group(function () {
         Route::get('/', [TransferController::class, 'index'])->name('index');
         Route::get('/create', [TransferController::class, 'create'])->name('create');
         Route::post('/', [TransferController::class, 'store'])->name('store');
@@ -112,23 +112,30 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Catalog: Products, Categories, Units & Reports
-    Route::get('products/reports', [ProductReportController::class, 'index'])->name('products.reports');
-    Route::resource('products', ProductController::class);
-    Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
-    Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
-    Route::put('categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::get('units', [UnitController::class, 'index'])->name('units.index');
-    Route::post('units', [UnitController::class, 'store'])->name('units.store');
+    Route::middleware('perm:products_pricing')->group(function () {
+        Route::get('products/reports', [ProductReportController::class, 'index'])->name('products.reports');
+        Route::resource('products', ProductController::class);
+        Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+        Route::put('categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+        Route::get('units', [UnitController::class, 'index'])->name('units.index');
+        Route::post('units', [UnitController::class, 'store'])->name('units.store');
+    });
 
     // Contacts: Customers & Suppliers
-    Route::resource('customers', CustomerController::class);
-    Route::post('customers/{id}/payment', [CustomerController::class, 'recordPayment'])->name('customers.payment');
-    Route::resource('suppliers', SupplierController::class);
-    Route::post('suppliers/{id}/payment', [SupplierController::class, 'recordPayment'])->name('suppliers.payment');
+    Route::middleware('perm:customer_management')->group(function () {
+        Route::resource('customers', CustomerController::class);
+        Route::post('customers/{id}/payment', [CustomerController::class, 'recordPayment'])->name('customers.payment');
+    });
+
+    Route::middleware('perm:supplier_management')->group(function () {
+        Route::resource('suppliers', SupplierController::class);
+        Route::post('suppliers/{id}/payment', [SupplierController::class, 'recordPayment'])->name('suppliers.payment');
+    });
 
     // Operating Expenses
-    Route::prefix('expenses')->name('expenses.')->group(function () {
+    Route::prefix('expenses')->name('expenses.')->middleware('perm:expenses')->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::get('/create', [ExpenseController::class, 'create'])->name('create');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
@@ -141,43 +148,49 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Opening & Closing Cash Day Register
-    Route::prefix('opening-closing-cash')->name('cash-register.')->group(function () {
+    Route::prefix('opening-closing-cash')->name('cash-register.')->middleware('perm:opening_closing_cash')->group(function () {
         Route::get('/', [DailyCashController::class, 'index'])->name('index');
         Route::post('/save', [DailyCashController::class, 'storeOrUpdate'])->name('store');
     });
 
-    // Payments & Collections
-    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
-
     // Cash Shifts & Drawer Management
-    Route::prefix('shifts')->name('shifts.')->group(function () {
+    Route::prefix('shifts')->name('shifts.')->middleware('perm:opening_closing_cash')->group(function () {
         Route::get('/', [CashShiftController::class, 'index'])->name('index');
         Route::post('/open', [CashShiftController::class, 'open'])->name('open');
         Route::post('/{id}/close', [CashShiftController::class, 'close'])->name('close');
     });
 
     // Financial & Tax Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/profit-loss', [ReportController::class, 'profitAndLoss'])->name('profit_loss');
-        Route::get('/daily', [ReportController::class, 'daily'])->name('daily');
-        Route::get('/gst', [ReportController::class, 'gstReport'])->name('gst');
-        Route::get('/inventory', [ReportController::class, 'inventoryValuation'])->name('inventory');
+    Route::middleware('perm:reports_analytics')->group(function () {
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/profit-loss', [ReportController::class, 'profitAndLoss'])->name('profit_loss');
+            Route::get('/daily', [ReportController::class, 'daily'])->name('daily');
+            Route::get('/gst', [ReportController::class, 'gstReport'])->name('gst');
+            Route::get('/inventory', [ReportController::class, 'inventoryValuation'])->name('inventory');
+        });
+        Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     });
 
     // Settings & Audit Trail
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/', [SettingController::class, 'index'])->name('index');
-        Route::post('/business', [SettingController::class, 'updateBusiness'])->name('business');
-        Route::post('/branch', [SettingController::class, 'storeBranch'])->name('branch');
+    Route::middleware('perm:business_settings')->group(function () {
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [SettingController::class, 'index'])->name('index');
+            Route::post('/business', [SettingController::class, 'updateBusiness'])->name('business');
+            Route::post('/branch', [SettingController::class, 'storeBranch'])->name('branch');
+        });
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
     });
 
-    Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
-
-    // Admin Panel: User & Staff Management
-    Route::prefix('admin/users')->name('users.')->group(function () {
+    // Owner Staff Management
+    Route::prefix('admin/users')->name('users.')->middleware('perm:staff_management')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
         Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [UserController::class, 'edit'])->name('edit');
         Route::put('/{id}', [UserController::class, 'update'])->name('update');
         Route::patch('/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{id}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
     });
+
+    Route::redirect('users', 'admin/users');
 });

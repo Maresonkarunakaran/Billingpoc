@@ -148,18 +148,26 @@
     <!-- Quick Shortcuts -->
     <div class="col-lg-6 text-lg-right header-actions">
         <div class="d-flex flex-wrap justify-content-lg-end" style="gap: 6px;">
+            @if(auth()->user()->hasPermission('pos_terminal'))
             <a href="{{ route('pos.index') }}" class="btn btn-primary quick-action-btn shadow-sm">
                 <i class="fas fa-cash-register mr-1"></i> POS Billing
             </a>
+            @endif
+            @if(auth()->user()->hasPermission('products_pricing'))
             <a href="{{ route('products.create') }}" class="btn btn-outline-secondary quick-action-btn bg-white">
                 <i class="fas fa-plus mr-1"></i> Add Product
             </a>
+            @endif
+            @if(auth()->user()->hasPermission('expenses'))
             <a href="{{ route('expenses.index') }}" class="btn btn-outline-secondary quick-action-btn bg-white">
                 <i class="fas fa-receipt mr-1"></i> Expenses
             </a>
+            @endif
+            @if(auth()->user()->hasPermission('reports_analytics'))
             <a href="{{ route('reports.profit_loss') }}" class="btn btn-outline-info quick-action-btn bg-white">
                 <i class="fas fa-chart-pie mr-1"></i> P&L Report
             </a>
+            @endif
         </div>
     </div>
 </div>
@@ -558,7 +566,9 @@
                 </div>
                 <div class="kpi-icon bg-light text-warning"><i class="fas fa-exclamation-triangle"></i></div>
             </div>
+            @if(auth()->user()->hasPermission('inventory_balance'))
             <div class="kpi-sub"><a href="{{ route('inventory.index', ['low_stock' => 1]) }}" class="text-warning font-weight-bold">View Reorder List &rarr;</a></div>
+            @endif
         </div>
     </div>
 
@@ -572,7 +582,9 @@
                 </div>
                 <div class="kpi-icon bg-light text-info"><i class="fas fa-hand-holding-usd"></i></div>
             </div>
+            @if(auth()->user()->hasPermission('customer_management'))
             <div class="kpi-sub"><a href="{{ route('customers.index') }}" class="text-info font-weight-bold">Credit Customers &rarr;</a></div>
+            @endif
         </div>
     </div>
 
@@ -586,7 +598,9 @@
                 </div>
                 <div class="kpi-icon bg-light text-danger"><i class="fas fa-truck"></i></div>
             </div>
+            @if(auth()->user()->hasPermission('supplier_management'))
             <div class="kpi-sub"><a href="{{ route('suppliers.index') }}" class="text-danger font-weight-bold">Payable Bills &rarr;</a></div>
+            @endif
         </div>
     </div>
 </div>
