@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -265,6 +267,76 @@ class ProductReportController extends Controller
             ? Branch::where('business_id', $businessId)->get()
             : $user->branches;
 
+        // =========================================================================
+        // 4. OPERATING EXPENSES REPORT DATA (Accessible under Report Page)
+        // =========================================================================
+        $expenseCategoryFilter = $request->get('expense_category_id');
+        $expenseSearch = $request->get('expense_search');
+
+        $expenseBaseQuery = Expense::where('expenses.business_id', $businessId)
+            ->when($branchId, fn ($q) => $q->where('expenses.branch_id', $branchId))
+            ->when($expenseCategoryFilter, fn ($q) => $q->where('expenses.expense_category_id', $expenseCategoryFilter))
+            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
+                if ($startDate === $endDate) {
+                    $q->whereDate('expenses.expense_date', '=', $startDate);
+                } else {
+                    $q->whereDate('expenses.expense_date', '>=', $startDate)
+                        ->whereDate('expenses.expense_date', '<=', $endDate);
+                }
+            })
+            ->when($expenseSearch, function ($q) use ($expenseSearch) {
+                $q->where(function ($sub) use ($expenseSearch) {
+                    $sub->where('expenses.expense_number', 'like', "%{$expenseSearch}%")
+                        ->orWhere('expenses.description', 'like', "%{$expenseSearch}%")
+                        ->orWhere('expenses.reference_no', 'like', "%{$expenseSearch}%");
+                });
+            });
+
+        $totalOperatingExpenses = (float) (clone $expenseBaseQuery)->sum('amount');
+        $totalExpenseCount = (int) (clone $expenseBaseQuery)->count();
+
+        // Expenses grouped by Category
+        $expensesByCategory = (clone $expenseBaseQuery)
+            ->join('expense_categories', 'expenses.expense_category_id', '=', 'expense_categories.id')
+            ->selectRaw('
+                expense_categories.id as category_id,
+                expense_categories.name as category_name,
+                COUNT(expenses.id) as count,
+                SUM(expenses.amount) as total_amount
+            ')
+            ->groupBy('expense_categories.id', 'expense_categories.name')
+            ->orderByDesc('total_amount')
+            ->get()
+            ->map(function ($cat) use ($totalOperatingExpenses) {
+                $pct = $totalOperatingExpenses > 0 ? round(($cat->total_amount / $totalOperatingExpenses) * 100, 1) : 0.0;
+                return (object) [
+                    'category_id' => $cat->category_id,
+                    'category_name' => $cat->category_name,
+                    'count' => (int) $cat->count,
+                    'total_amount' => (float) $cat->total_amount,
+                    'percentage' => $pct,
+                ];
+            });
+
+        // Expenses grouped by Payment Mode
+        $expensesByPaymentMethod = (clone $expenseBaseQuery)
+            ->selectRaw('payment_method, COUNT(id) as count, SUM(amount) as total_amount')
+            ->groupBy('payment_method')
+            ->orderByDesc('total_amount')
+            ->get();
+
+        // Expenses line items list
+        $expenseItems = (clone $expenseBaseQuery)
+            ->with(['category', 'branch', 'user'])
+            ->orderByDesc('expense_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $expenseCategories = ExpenseCategory::where('business_id', $businessId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return view('products.reports', compact(
             'activeTab',
             'branchFilter',
@@ -294,7 +366,15 @@ class ProductReportController extends Controller
             'totalUnitsSold',
             'totalSoldRevenue',
             'totalSoldGrossProfit',
-            'overallSoldMarginPct'
+            'overallSoldMarginPct',
+            'totalOperatingExpenses',
+            'totalExpenseCount',
+            'expensesByCategory',
+            'expensesByPaymentMethod',
+            'expenseItems',
+            'expenseCategories',
+            'expenseCategoryFilter',
+            'expenseSearch'
         ));
     }
 

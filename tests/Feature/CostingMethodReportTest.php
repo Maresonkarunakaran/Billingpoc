@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Product;
 use App\Models\Role;
 use App\Models\Sale;
@@ -252,5 +254,39 @@ class CostingMethodReportTest extends TestCase
         $this->assertEquals(2100.00, $costingDatasets['fifo']['total']['closing_stock_value']);
         $this->assertEquals(1600.00, $costingDatasets['lifo']['total']['closing_stock_value']);
         $this->assertEquals(1866.66, $costingDatasets['moving_average']['total']['closing_stock_value']);
+    }
+
+    public function test_expenses_tab_under_report_page_renders_expenses_data_and_breakdown(): void
+    {
+        $expCat = ExpenseCategory::create([
+            'business_id' => $this->business->id,
+            'name' => 'Shop Electricity',
+            'code' => 'ELEC',
+            'is_active' => true,
+        ]);
+
+        Expense::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'expense_category_id' => $expCat->id,
+            'user_id' => $this->admin->id,
+            'expense_number' => 'EXP-2026-001',
+            'expense_date' => now()->toDateString(),
+            'amount' => 1250.00,
+            'payment_method' => 'upi',
+            'description' => 'Monthly electricity bill',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('products.reports', ['tab' => 'expenses']));
+
+        $response->assertStatus(200);
+        $response->assertViewHas('activeTab', 'expenses');
+        $response->assertViewHas('totalOperatingExpenses', 1250.00);
+        $response->assertViewHas('totalExpenseCount', 1);
+
+        $response->assertSee('Total Operating Expenses');
+        $response->assertSee('EXP-2026-001');
+        $response->assertSee('Shop Electricity');
+        $response->assertSee('1,250.00');
     }
 }

@@ -45,6 +45,9 @@
         <button onclick="window.print()" class="btn btn-outline-secondary btn-sm bg-white shadow-sm">
             <i class="fas fa-print mr-1"></i> Print Report
         </button>
+        <a href="{{ route('expenses.create') }}" class="btn btn-outline-danger btn-sm bg-white shadow-sm">
+            <i class="fas fa-receipt mr-1"></i> Record Expense
+        </a>
         <a href="{{ route('products.index') }}" class="btn btn-outline-primary btn-sm bg-white shadow-sm">
             <i class="fas fa-boxes mr-1"></i> Product Catalog
         </a>
@@ -59,6 +62,15 @@
                 <a class="nav-link text-center report-tab-btn {{ $activeTab === 'margin' ? 'active' : '' }}" 
                    id="tab-margin" data-toggle="pill" href="#pane-margin" role="tab">
                     <i class="fas fa-percentage mr-1"></i> Sales Margin Report
+                </a>
+            </li>
+            <li class="nav-item flex-fill">
+                <a class="nav-link text-center report-tab-btn {{ $activeTab === 'expenses' ? 'active' : '' }}" 
+                   id="tab-expenses" data-toggle="pill" href="#pane-expenses" role="tab">
+                    <i class="fas fa-receipt mr-1 text-danger"></i> Expenses
+                    @if($totalOperatingExpenses > 0)
+                        <span class="badge badge-light border ml-1 font-weight-normal">₹ {{ number_format($totalOperatingExpenses, 0) }}</span>
+                    @endif
                 </a>
             </li>
             <li class="nav-item flex-fill">
@@ -616,8 +628,370 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 2. LOW QUANTITY STOCK / REORDER ITEMS (< 5 QTY/KG) -->
+    <!-- 2. OPERATING EXPENSES REPORT (Requested by User under Report Page) -->
     <!-- ========================================================================= -->
+    <div class="tab-pane fade {{ $activeTab === 'expenses' ? 'show active' : '' }}" id="pane-expenses" role="tabpanel">
+
+        <!-- Top Header & Action Controls -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px; background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-left: 4px solid #ef4444 !important;">
+            <div class="card-body p-3">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">
+                            <i class="fas fa-receipt text-danger mr-1"></i> Operating Expenses & Overhead Audit
+                        </h6>
+                        <span class="text-muted text-sm">
+                            Track and analyze shop rent, electricity, salaries, transport, and branch operating overhead costs.
+                        </span>
+                    </div>
+                    <div class="mt-2 mt-md-0 d-flex align-items-center" style="gap: 8px;">
+                        <button type="button" class="btn btn-outline-secondary btn-sm bg-white font-weight-bold shadow-xs" data-toggle="modal" data-target="#addExpenseCategoryModal">
+                            <i class="fas fa-folder-plus mr-1"></i> Add Category
+                        </button>
+                        <a href="{{ route('expenses.create') }}" class="btn btn-danger btn-sm font-weight-bold shadow-sm">
+                            <i class="fas fa-plus mr-1"></i> Record Expense
+                        </a>
+                        <a href="{{ route('expenses.index') }}" class="btn btn-outline-primary btn-sm bg-white font-weight-bold shadow-xs" title="Open Dedicated Expenses Ledger">
+                            <i class="fas fa-external-link-alt mr-1"></i> Full Ledger
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Card: Presets, Date Pickers, Category & Branch -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+            <div class="card-header bg-white py-3 border-bottom">
+                <form action="{{ route('products.reports') }}" method="GET">
+                    <input type="hidden" name="tab" value="expenses">
+
+                    <!-- Presets -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'today', 'branch_id' => $branchFilter, 'expense_category_id' => $expenseCategoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'yesterday', 'branch_id' => $branchFilter, 'expense_category_id' => $expenseCategoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'this_month', 'branch_id' => $branchFilter, 'expense_category_id' => $expenseCategoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'this_month' || (!request('preset') && !request('start_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'last_month', 'branch_id' => $branchFilter, 'expense_category_id' => $expenseCategoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'last_month' ? 'btn-primary' : 'btn-outline-secondary' }}">Last Month</a>
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'all', 'branch_id' => $branchFilter, 'expense_category_id' => $expenseCategoryFilter]) }}" 
+                               class="btn {{ request('preset') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
+                        </div>
+
+                        <span class="text-xs text-muted">
+                            Active Period: <strong>{{ $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : 'Beginning' }}</strong> &rarr; <strong>{{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d M Y') : 'Present' }}</strong>
+                            @if($expenseCategoryFilter)
+                                &bull; Category: <strong class="text-danger">{{ $expenseCategories->firstWhere('id', $expenseCategoryFilter)?->name }}</strong>
+                            @endif
+                        </span>
+                    </div>
+
+                    <!-- Date Pickers & Filter Dropdowns -->
+                    <div class="row align-items-center">
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-alt text-muted"></i> From:</span></div>
+                                <input type="date" name="start_date" class="form-control" value="{{ $startDate }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-calendar-check text-muted"></i> To:</span></div>
+                                <input type="date" name="end_date" class="form-control" value="{{ $endDate }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-2 mb-md-0">
+                            <select name="expense_category_id" class="form-control form-control-sm font-weight-bold">
+                                <option value="">📁 All Expense Categories</option>
+                                @foreach($expenseCategories as $ec)
+                                    <option value="{{ $ec->id }}" {{ $expenseCategoryFilter == $ec->id ? 'selected' : '' }}>📂 {{ $ec->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2 mb-md-0">
+                            <select name="branch_id" class="form-control form-control-sm font-weight-bold">
+                                <option value="all" {{ $branchFilter === 'all' ? 'selected' : '' }}>🏢 All Branches</option>
+                                @foreach($branches as $b)
+                                    <option value="{{ $b->id }}" {{ $branchFilter == $b->id ? 'selected' : '' }}>🏬 {{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2 mb-md-0 d-flex align-items-center" style="gap: 6px;">
+                            <input type="text" name="expense_search" class="form-control form-control-sm" placeholder="Search #..." value="{{ $expenseSearch }}">
+                            <button type="submit" class="btn btn-primary btn-sm px-3 font-weight-bold">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <a href="{{ route('products.reports', ['tab' => 'expenses', 'preset' => 'this_month']) }}" class="btn btn-outline-secondary btn-sm" title="Reset Filters">
+                                <i class="fas fa-undo"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3 KPI Summary Cards -->
+        <div class="row mb-3">
+            <div class="col-12 col-md-4 mb-2 mb-md-0">
+                <div class="kpi-stat-card" style="border-left: 4px solid #ef4444;">
+                    <span class="text-xs font-weight-bold text-danger text-uppercase">Total Operating Expenses</span>
+                    <h3 class="font-weight-bold text-danger mb-0 mt-1">₹ {{ number_format($totalOperatingExpenses, 2) }}</h3>
+                    <small class="text-muted">Total shop overhead in selected period</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 mb-2 mb-md-0">
+                <div class="kpi-stat-card" style="border-left: 4px solid #3b82f6;">
+                    <span class="text-xs font-weight-bold text-muted text-uppercase">Expense Records</span>
+                    <h3 class="font-weight-bold text-primary mb-0 mt-1">{{ number_format($totalExpenseCount) }} <span class="text-sm font-weight-normal text-muted">Entries</span></h3>
+                    <small class="text-muted">Logged payment vouchers</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="kpi-stat-card" style="border-left: 4px solid #f59e0b;">
+                    <span class="text-xs font-weight-bold text-muted text-uppercase">Top Spending Category</span>
+                    <h3 class="font-weight-bold text-dark mb-0 mt-1 text-truncate" style="font-size: 1.3rem;">
+                        {{ $expensesByCategory->first()?->category_name ?? 'None' }}
+                    </h3>
+                    <small class="text-warning font-weight-bold">
+                        ₹ {{ number_format($expensesByCategory->first()?->total_amount ?? 0, 2) }}
+                        @if($totalOperatingExpenses > 0 && $expensesByCategory->first())
+                            ({{ $expensesByCategory->first()->percentage }}%)
+                        @endif
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row: Category-Wise Expense Distribution & Payment Method Summary -->
+        <div class="row mb-3">
+            <!-- Part A: Category-wise Breakdown -->
+            <div class="col-lg-7 mb-3 mb-lg-0">
+                <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="font-weight-bold text-dark mb-0">
+                            <i class="fas fa-chart-pie text-danger mr-1"></i> Expenses by Category
+                        </h6>
+                        <span class="badge badge-light border">{{ count($expensesByCategory) }} Categories</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Expense Category</th>
+                                        <th class="text-center">Entries</th>
+                                        <th class="text-right">Total Amount (₹)</th>
+                                        <th class="text-right" style="width: 140px;">% of Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($expensesByCategory as $cat)
+                                        <tr>
+                                            <td class="font-weight-bold text-dark">
+                                                <i class="fas fa-folder text-danger mr-1"></i> {{ $cat->category_name }}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge badge-light border">{{ $cat->count }}</span>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-danger">
+                                                ₹ {{ number_format($cat->total_amount, 2) }}
+                                            </td>
+                                            <td class="text-right align-middle">
+                                                <div class="d-flex align-items-center justify-content-end" style="gap: 6px;">
+                                                    <span class="text-xs font-weight-bold text-muted">{{ $cat->percentage }}%</span>
+                                                    <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
+                                                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ $cat->percentage }}%;"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted font-weight-bold">
+                                                THERE IS NO RECORD IN THIS DATE
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part B: Payment Methods Distribution -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="font-weight-bold text-dark mb-0">
+                            <i class="fas fa-wallet text-primary mr-1"></i> Payment Mode Breakdown
+                        </h6>
+                        <span class="badge badge-light border">{{ count($expensesByPaymentMethod) }} Modes</span>
+                    </div>
+                    <div class="card-body p-3">
+                        @forelse($expensesByPaymentMethod as $pm)
+                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center" style="gap: 10px;">
+                                    @if($pm->payment_method === 'cash')
+                                        <div class="p-2 bg-light rounded text-success"><i class="fas fa-money-bill-wave fa-lg"></i></div>
+                                    @elseif($pm->payment_method === 'upi')
+                                        <div class="p-2 bg-light rounded text-info"><i class="fas fa-qrcode fa-lg"></i></div>
+                                    @elseif($pm->payment_method === 'bank_transfer')
+                                        <div class="p-2 bg-light rounded text-primary"><i class="fas fa-university fa-lg"></i></div>
+                                    @elseif($pm->payment_method === 'card')
+                                        <div class="p-2 bg-light rounded text-warning"><i class="fas fa-credit-card fa-lg"></i></div>
+                                    @else
+                                        <div class="p-2 bg-light rounded text-secondary"><i class="fas fa-receipt fa-lg"></i></div>
+                                    @endif
+                                    <div>
+                                        <h6 class="font-weight-bold text-dark mb-0 text-capitalize">{{ str_replace('_', ' ', $pm->payment_method) }}</h6>
+                                        <small class="text-muted">{{ $pm->count }} transactions</small>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <h6 class="font-weight-bold text-dark mb-0">₹ {{ number_format($pm->total_amount, 2) }}</h6>
+                                    <small class="text-muted">
+                                        {{ $totalOperatingExpenses > 0 ? round(($pm->total_amount / $totalOperatingExpenses) * 100, 1) : 0 }}%
+                                    </small>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-4 text-muted font-weight-bold">
+                                THERE IS NO RECORD IN THIS DATE
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Expenses Table -->
+        <div class="card shadow-sm border-0 mb-3" style="border-radius: 12px;">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="font-weight-bold text-dark mb-0">
+                        <i class="fas fa-list text-danger mr-1"></i> Detailed Expense Entries
+                    </h6>
+                    <small class="text-muted">All operating expense transactions within the selected filter period</small>
+                </div>
+                <span class="badge badge-light border font-weight-bold">{{ count($expenseItems) }} Records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 table-custom">
+                        <thead>
+                            <tr>
+                                <th>Expense #</th>
+                                <th>Date</th>
+                                <th>Branch</th>
+                                <th>Category</th>
+                                <th>Payment Mode</th>
+                                <th>Description / Reference</th>
+                                <th class="text-right">Amount (₹)</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($expenseItems as $exp)
+                                <tr>
+                                    <td class="font-weight-bold text-dark">
+                                        <code>{{ $exp->expense_number }}</code>
+                                    </td>
+                                    <td>
+                                        {{ \Carbon\Carbon::parse($exp->expense_date)->format('d-M-Y') }}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light border">{{ $exp->branch?->name ?? $exp->branch_name ?? 'Main' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-danger px-2 py-1">{{ $exp->category?->name ?? $exp->category_name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light border text-capitalize">
+                                            <i class="fas {{ $exp->payment_method === 'cash' ? 'fa-money-bill-wave text-success' : ($exp->payment_method === 'upi' ? 'fa-qrcode text-info' : 'fa-credit-card text-primary') }} mr-1"></i>
+                                            {{ str_replace('_', ' ', $exp->payment_method) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="text-dark">{{ $exp->description ?: '—' }}</div>
+                                        @if($exp->reference_no)
+                                            <small class="text-muted">Ref: {{ $exp->reference_no }}</small>
+                                        @endif
+                                    </td>
+                                    <td class="text-right font-weight-bold text-danger" style="font-size: 1.05rem;">
+                                        ₹ {{ number_format($exp->amount, 2) }}
+                                    </td>
+                                    <td class="text-right">
+                                        <a href="{{ route('expenses.edit', $exp->id) }}" class="btn btn-xs btn-outline-secondary" title="Edit Expense">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted font-weight-bold">
+                                        <i class="fas fa-receipt fa-2x mb-2 d-block text-muted"></i>
+                                        THERE IS NO RECORD IN THIS DATE
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        @if(count($expenseItems) > 0)
+                            <tfoot>
+                                <tr class="font-weight-bold bg-light" style="font-size: 0.95rem; border-top: 2px solid #cbd5e1;">
+                                    <td colspan="6" class="text-right text-uppercase text-muted font-weight-bold">Total Operating Expenses:</td>
+                                    <td class="text-right font-weight-bold text-danger">₹ {{ number_format($totalOperatingExpenses, 2) }}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        @endif
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Quick Add Expense Category Modal -->
+    <div class="modal fade" id="addExpenseCategoryModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+                <form action="{{ route('expenses.categories.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-light py-3">
+                        <h6 class="modal-title font-weight-bold text-dark">
+                            <i class="fas fa-folder-plus text-danger mr-2"></i>Add Expense Category
+                        </h6>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="form-group">
+                            <label class="font-weight-bold text-sm">Category Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g. Rent, Electricity, Staff Wages, Transport" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold text-sm">Category Code <small class="text-muted">(Optional)</small></label>
+                            <input type="text" name="code" class="form-control" placeholder="e.g. RENT, UTIL, SALARY">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="font-weight-bold text-sm">Description <small class="text-muted">(Optional)</small></label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Brief note on what expenses fall under this category..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger btn-sm font-weight-bold px-3">
+                            <i class="fas fa-save mr-1"></i> Save Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <div class="tab-pane fade {{ $activeTab === 'low_stock' ? 'show active' : '' }}" id="pane-low-stock" role="tabpanel">
         
         <!-- Low Stock Alert Banner -->
@@ -1240,7 +1614,11 @@
         tab.addEventListener('shown.bs.tab', function(e) {
             const targetId = e.target.getAttribute('href').replace('#pane-', '');
             const url = new URL(window.location);
-            url.searchParams.set('tab', targetId === 'margin' ? 'margin' : (targetId === 'low-stock' ? 'low_stock' : 'sales_rank'));
+            var tabParam = 'margin';
+            if (targetId === 'expenses') tabParam = 'expenses';
+            else if (targetId === 'low-stock') tabParam = 'low_stock';
+            else if (targetId === 'sales-rank') tabParam = 'sales_rank';
+            url.searchParams.set('tab', tabParam);
             window.history.replaceState({}, '', url);
         });
     });
