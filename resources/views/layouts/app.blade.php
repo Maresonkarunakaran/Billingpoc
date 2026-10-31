@@ -506,7 +506,80 @@
             pwaInstallNav.style.display = 'none';
         }
     });
+
+    @if(!empty($shouldShowOpeningCashModal))
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof $ !== 'undefined') {
+            setTimeout(function() {
+                $('#autoOpeningCashModal').modal('show');
+            }, 300);
+        }
+    });
+    @endif
 </script>
+
+@if(!empty($shouldShowOpeningCashModal))
+<!-- Automatic Opening Cash Popup Modal (Prompted when opening app before first bill print) -->
+<div class="modal fade" id="autoOpeningCashModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
+            <div class="modal-header bg-success text-white py-3" style="border-top-left-radius: 14px; border-top-right-radius: 14px;">
+                <h5 class="modal-title font-weight-bold mb-0">
+                    <i class="fas fa-coins text-warning mr-2"></i>Daily Store Opening — Add Opening Cash
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 0.85;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ route('cash-register.store') }}" method="POST">
+                @csrf
+                <input type="hidden" name="branch_id" value="{{ $activeBranchId ?? session('active_branch_id', auth()->user()?->default_branch_id) }}">
+                <input type="hidden" name="register_date" value="{{ now()->toDateString() }}">
+                <input type="hidden" name="status" value="open">
+
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-3 text-sm">
+                        <i class="fas fa-info-circle text-primary mr-1"></i>
+                        Welcome! No bill has been printed yet today. Please enter today's opening cash float before printing your first bill.
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold text-dark text-sm">
+                            Opening Cash Amount (₹) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-light font-weight-bold">₹</span>
+                            </div>
+                            <input type="number" 
+                                   step="0.01" 
+                                   min="0" 
+                                   name="opening_cash" 
+                                   class="form-control font-weight-bold text-primary" 
+                                   value="{{ !empty($suggestedOpeningCash) && $suggestedOpeningCash > 0 ? number_format($suggestedOpeningCash, 2, '.', '') : '0.00' }}" 
+                                   required 
+                                   autofocus 
+                                   placeholder="0.00">
+                        </div>
+                        <small class="form-text text-muted">Initial cash drawer float for {{ now()->format('d M Y') }}.</small>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="font-weight-bold text-dark text-sm">Notes / Shift Remark <small class="text-muted">(Optional)</small></label>
+                        <input type="text" name="notes" class="form-control" placeholder="e.g. Morning counter cash float">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2" style="border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Later / Skip</button>
+                    <button type="submit" class="btn btn-success font-weight-bold px-3">
+                        <i class="fas fa-check-circle mr-1"></i> Save Opening Cash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 
 @stack('scripts')
 </body>

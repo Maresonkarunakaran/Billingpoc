@@ -3,301 +3,380 @@
 @section('content')
 <div class="container-fluid px-2 px-md-3">
 
-    <!-- Top Header & Filter Controls -->
+    <!-- Top Header -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
         <div>
             <h4 class="font-weight-bold text-dark mb-0">
                 <i class="fas fa-coins text-success mr-2"></i>Opening &amp; Closing Cash
             </h4>
             <span class="text-muted text-sm">
-                Day Cash Reconciliation: <strong>Opening Cash + Sales &minus; Expenses &minus; Other Expenses &minus; Purchases = Closing Cash</strong>
+                Daily cash reconciliation audit: <strong>Opening Cash + Sales &minus; Expenses &minus; Other Expenses &minus; Purchases = Closing Cash</strong>
             </span>
         </div>
         <div class="mt-2 mt-md-0 d-flex flex-wrap align-items-center" style="gap: 8px;">
-            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm bg-white shadow-xs" title="Print Daily Cash Reconciliation Sheet">
+            <button class="btn btn-success btn-sm font-weight-bold shadow-sm" data-toggle="modal" data-target="#editCashModal-{{ $date }}">
+                <i class="fas fa-plus-circle mr-1"></i> Set / Update Open Cash
+            </button>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm bg-white shadow-xs" title="Print Daily Cash Reconciliation Audit">
                 <i class="fas fa-print mr-1"></i> Print
             </button>
         </div>
     </div>
 
-    <!-- Date & Branch Filter Bar -->
+    <!-- Filter Card: Presets, Date Pickers & Branch (Exact pattern from Report page) -->
     <div class="card shadow-sm border-0 mb-3 bg-white" style="border-radius: 12px;">
         <div class="card-body p-3">
-            <form action="{{ route('cash-register.index') }}" method="GET" id="dateFilterForm">
-                <div class="d-flex flex-wrap align-items-center justify-content-between" style="gap: 10px;">
-                    <!-- Date Presets -->
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Date Presets">
-                        <a href="{{ route('cash-register.index', ['preset' => 'today', 'branch_id' => $branchId]) }}" 
-                           class="btn {{ $date === now()->toDateString() ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
-                            ☀️ Today ({{ now()->format('d M') }})
+            <form action="{{ route('cash-register.index') }}" method="GET" id="cashFilterForm">
+                <!-- Presets Row -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3" style="gap: 8px;">
+                    <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Date Presets">
+                        <a href="{{ route('cash-register.index', array_merge(request()->except('preset', 'start_date', 'end_date', 'date'), ['preset' => 'today'])) }}" 
+                           class="btn {{ $preset === 'today' || (request('date') === now()->toDateString() && !request('start_date')) ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
+                            ☀️ Today
                         </a>
-                        <a href="{{ route('cash-register.index', ['preset' => 'yesterday', 'branch_id' => $branchId]) }}" 
-                           class="btn {{ $date === now()->subDay()->toDateString() ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
-                            Yesterday ({{ now()->subDay()->format('d M') }})
+                        <a href="{{ route('cash-register.index', array_merge(request()->except('preset', 'start_date', 'end_date', 'date'), ['preset' => 'yesterday'])) }}" 
+                           class="btn {{ $preset === 'yesterday' ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
+                            Yesterday
+                        </a>
+                        <a href="{{ route('cash-register.index', array_merge(request()->except('preset', 'start_date', 'end_date', 'date'), ['preset' => 'this_month'])) }}" 
+                           class="btn {{ $preset === 'this_month' || (!request('start_date') && !request('end_date') && !request('preset') && !request('date')) ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
+                            📅 This Month
+                        </a>
+                        <a href="{{ route('cash-register.index', array_merge(request()->except('preset', 'start_date', 'end_date', 'date'), ['preset' => 'last_month'])) }}" 
+                           class="btn {{ $preset === 'last_month' ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
+                            Last Month
+                        </a>
+                        <a href="{{ route('cash-register.index', array_merge(request()->except('preset', 'start_date', 'end_date', 'date'), ['preset' => 'all'])) }}" 
+                           class="btn {{ $preset === 'all' ? 'btn-success font-weight-bold shadow-xs' : 'btn-outline-secondary bg-white' }}">
+                            All Time
                         </a>
                     </div>
 
-                    <!-- Date & Branch Pickers -->
-                    <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
-                        @if(isset($branches) && count($branches) > 1)
-                            <div class="input-group input-group-sm" style="width: 200px;">
-                                <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-store text-muted"></i></span></div>
-                                <select name="branch_id" class="form-control form-control-sm" onchange="this.form.submit()">
-                                    @foreach($branches as $b)
-                                        <option value="{{ $b->id }}" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @else
-                            <input type="hidden" name="branch_id" value="{{ $branchId }}">
-                        @endif
+                    <div class="d-flex align-items-center">
+                        <span class="badge badge-light border text-sm py-2 px-3 shadow-xs font-weight-normal">
+                            Filtered Closing Cash: 
+                            <strong class="ml-1 {{ $overallClosingCash >= 0 ? 'text-success' : 'text-danger' }}">
+                                ₹ {{ number_format($overallClosingCash, 2) }}
+                            </strong>
+                        </span>
+                    </div>
+                </div>
 
-                        <div class="input-group input-group-sm" style="width: 190px;">
+                <!-- Inputs Row -->
+                <div class="row align-items-center">
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <label class="text-xs text-muted font-weight-bold text-uppercase d-block mb-1">From Date</label>
+                        <div class="input-group input-group-sm">
                             <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-calendar-alt text-muted"></i></span></div>
-                            <input type="date" name="date" class="form-control" value="{{ $date }}" onchange="this.form.submit()">
+                            <input type="date" name="start_date" class="form-control" value="{{ $startDate }}" placeholder="YYYY-MM-DD">
                         </div>
-
-                        <button type="submit" class="btn btn-outline-primary btn-sm font-weight-bold shadow-xs">
-                            <i class="fas fa-sync-alt mr-1"></i> Load
-                        </button>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <label class="text-xs text-muted font-weight-bold text-uppercase d-block mb-1">To Date</label>
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend"><span class="input-group-text bg-light"><i class="fas fa-calendar-check text-muted"></i></span></div>
+                            <input type="date" name="end_date" class="form-control" value="{{ $endDate }}" placeholder="YYYY-MM-DD">
+                        </div>
                     </div>
 
-                    <!-- Register Status Pill -->
-                    <div>
-                        @if($register)
-                            <span class="badge badge-success py-2 px-3 text-sm shadow-xs font-weight-bold">
-                                <i class="fas fa-check-circle mr-1"></i> Register Saved ({{ ucfirst($register->status) }})
-                            </span>
-                        @else
-                            <span class="badge badge-warning py-2 px-3 text-sm shadow-xs font-weight-bold">
-                                <i class="fas fa-clock mr-1"></i> Open / Unsaved
-                            </span>
-                        @endif
+                    @if(isset($branches) && count($branches) > 1)
+                        <div class="col-8 col-md-4 mb-2 mb-md-0">
+                            <label class="text-xs text-muted font-weight-bold text-uppercase d-block mb-1">Branch</label>
+                            <select name="branch_id" class="form-control form-control-sm">
+                                @foreach($branches as $b)
+                                    <option value="{{ $b->id }}" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        <input type="hidden" name="branch_id" value="{{ $branchId }}">
+                    @endif
+
+                    <div class="col-4 col-md-2 mb-2 mb-md-0 text-right">
+                        <label class="text-xs text-muted font-weight-bold text-uppercase d-block mb-1">&nbsp;</label>
+                        <button type="submit" class="btn btn-success btn-sm btn-block font-weight-bold shadow-xs">
+                            <i class="fas fa-filter mr-1"></i> Filter
+                        </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Main Reconciliation Table Card -->
+    <!-- MAIN TABLE: Opening & Closing Cash List & Daily Audit (Similar to Sales Margin List in Report page) -->
     <div class="card shadow-sm border-0 mb-4 bg-white" style="border-radius: 12px;">
-        <div class="card-header bg-white py-3 px-3 d-flex justify-content-between align-items-center border-bottom">
-            <h6 class="font-weight-bold text-dark mb-0">
-                <i class="fas fa-table text-success mr-2"></i>Daily Cash Reconciliation Table
-            </h6>
-            <span class="badge badge-light border text-sm font-weight-normal">
-                Date: <strong>{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</strong>
-            </span>
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="font-weight-bold text-dark mb-0">
+                    <i class="fas fa-calendar-alt text-primary mr-1"></i> Opening &amp; Closing Cash List &amp; Daily Audit
+                </h6>
+                <small class="text-muted">
+                    Daily audit of Opening Cash, Total Sales, Operating Expenses, Other Exp., Purchases, and Closing Cash
+                </small>
+            </div>
+            <div class="d-flex align-items-center" style="gap: 8px;">
+                <span class="badge badge-light border font-weight-normal">
+                    <span>{{ count($dailyCashMargins) }}</span> Active Dates
+                </span>
+            </div>
         </div>
 
-        <form action="{{ route('cash-register.store') }}" method="POST" id="cashRegisterForm">
-            @csrf
-            <input type="hidden" name="branch_id" value="{{ $branchId }}">
-            <input type="hidden" name="register_date" value="{{ $date }}">
-            <input type="hidden" name="status" value="closed">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 table-custom">
+                    <thead class="bg-light text-muted text-uppercase text-xs">
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-right">Opening Cash</th>
+                            <th class="text-right text-success">Total Sales</th>
+                            <th class="text-right text-danger">Expenses</th>
+                            <th class="text-right text-warning">Other Exp.</th>
+                            <th class="text-right" style="color: #8b5cf6;">Purchases</th>
+                            <th class="text-right">Closing Cash</th>
+                            <th class="text-center" style="width: 100px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($dailyCashMargins as $row)
+                            <tr>
+                                <!-- Date -->
+                                <td class="font-weight-bold text-dark align-middle">
+                                    {{ $row->date_formatted }}
+                                    <small class="text-muted font-weight-normal">({{ $row->year }})</small>
+                                </td>
 
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover mb-0 align-middle" style="font-size: 0.95rem;">
-                        <thead class="bg-light text-muted text-uppercase text-xs">
-                            <tr>
-                                <th style="width: 60px;" class="text-center">#</th>
-                                <th style="width: 32%;">Particulars</th>
-                                <th>Details / Source</th>
-                                <th style="width: 28%;" class="text-right">Amount (₹)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- 1. Opening Cash -->
-                            <tr>
-                                <td class="text-center font-weight-bold text-muted align-middle">1</td>
-                                <td class="align-middle">
-                                    <strong class="text-primary font-weight-bold" style="font-size: 1rem;">
-                                        <i class="fas fa-coins text-primary mr-2"></i>Opening Cash
-                                    </strong>
-                                </td>
-                                <td class="align-middle">
-                                    <span class="text-muted text-sm font-weight-medium">Manual start cash</span>
-                                </td>
+                                <!-- 1. Opening Cash -->
                                 <td class="text-right align-middle">
-                                    <div class="d-inline-flex align-items-center justify-content-end" style="gap: 6px;">
-                                        <span class="font-weight-bold text-primary mr-1" style="font-size: 1.05rem;">+ ₹</span>
-                                        <input type="number" 
-                                               step="0.01" 
-                                               min="0" 
-                                               name="opening_cash" 
-                                               id="inputOpeningCash" 
-                                               class="form-control form-control-sm font-weight-bold text-primary text-right" 
-                                               style="max-width: 170px; font-size: 1.05rem;" 
-                                               value="{{ old('opening_cash', $openingCash) }}" 
-                                               required 
-                                               placeholder="0.00"
-                                               oninput="recalculateCash()">
+                                    <span class="font-weight-bold text-primary" style="font-size: 0.98rem;">
+                                        + ₹ {{ number_format($row->opening_cash, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">Manual start cash</small>
+                                </td>
+
+                                <!-- 2. Total Sales -->
+                                <td class="text-right align-middle">
+                                    <span class="font-weight-bold text-success" style="font-size: 0.98rem;">
+                                        + ₹ {{ number_format($row->sales, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">
+                                        {{ $row->sales_count }} invoices from Sales
+                                    </small>
+                                </td>
+
+                                <!-- 3. Expenses -->
+                                <td class="text-right align-middle">
+                                    <span class="font-weight-bold text-danger" style="font-size: 0.98rem;">
+                                        &minus; ₹ {{ number_format($row->expenses, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">
+                                        {{ $row->expenses_count }} vouchers from Expenses
+                                    </small>
+                                </td>
+
+                                <!-- 4. Other Exp. -->
+                                <td class="text-right align-middle">
+                                    <span class="font-weight-bold text-warning" style="font-size: 0.98rem;">
+                                        &minus; ₹ {{ number_format($row->other_expenses, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">
+                                        {{ $row->other_expenses_note ?: 'Manual / optional' }}
+                                    </small>
+                                </td>
+
+                                <!-- 5. Purchases -->
+                                <td class="text-right align-middle">
+                                    <span class="font-weight-bold" style="color: #8b5cf6; font-size: 0.98rem;">
+                                        &minus; ₹ {{ number_format($row->purchases, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">
+                                        {{ $row->purchases_count }} orders from Purchases
+                                    </small>
+                                </td>
+
+                                <!-- 6. Closing Cash -->
+                                <td class="text-right align-middle font-weight-bold">
+                                    <span class="{{ $row->closing_cash >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.05rem;">
+                                        ₹ {{ number_format($row->closing_cash, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">Calculated Day Cash</small>
+                                </td>
+
+                                <!-- Action: Edit Cash Modal Trigger -->
+                                <td class="text-center align-middle">
+                                    <button type="button" 
+                                            class="btn btn-xs btn-outline-primary font-weight-bold shadow-xs py-1 px-2"
+                                            data-toggle="modal" 
+                                            data-target="#editCashModal-{{ $row->date }}"
+                                            title="Edit Opening Cash or Other Expenses for {{ $row->date_formatted }}">
+                                        <i class="fas fa-edit mr-1"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- Edit Modal for this specific Date -->
+                            <div class="modal fade" id="editCashModal-{{ $row->date }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+                                        <div class="modal-header bg-success text-white py-3" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                                            <h6 class="modal-title font-weight-bold mb-0">
+                                                <i class="fas fa-coins text-warning mr-2"></i>Day Cash Entry — {{ \Carbon\Carbon::parse($row->date)->format('d M Y') }}
+                                            </h6>
+                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 0.85;">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <form action="{{ route('cash-register.store') }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="branch_id" value="{{ $branchId }}">
+                                            <input type="hidden" name="register_date" value="{{ $row->date }}">
+
+                                            <div class="modal-body p-4">
+                                                <!-- Opening Cash -->
+                                                <div class="form-group mb-3">
+                                                    <label class="font-weight-bold text-sm text-dark d-flex justify-content-between">
+                                                        <span>1. Opening Cash <span class="text-danger">*</span></span>
+                                                        <small class="text-muted font-weight-normal">(Manual start cash)</small>
+                                                    </label>
+                                                    <div class="input-group">
+                                                        <div class="input-group-prepend"><span class="input-group-text bg-light font-weight-bold">₹</span></div>
+                                                        <input type="number" 
+                                                               step="0.01" 
+                                                               min="0" 
+                                                               name="opening_cash" 
+                                                               class="form-control font-weight-bold text-primary" 
+                                                               value="{{ number_format($row->opening_cash, 2, '.', '') }}" 
+                                                               required 
+                                                               placeholder="0.00">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Auto-fetched info display -->
+                                                <div class="p-2 mb-3 bg-light rounded border text-xs">
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span class="text-muted">2. Total Sales:</span>
+                                                        <span class="font-weight-bold text-success">+ ₹ {{ number_format($row->sales, 2) }}</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span class="text-muted">3. Operating Expenses:</span>
+                                                        <span class="font-weight-bold text-danger">&minus; ₹ {{ number_format($row->expenses, 2) }}</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted">5. Purchases Data:</span>
+                                                        <span class="font-weight-bold" style="color: #8b5cf6;">&minus; ₹ {{ number_format($row->purchases, 2) }}</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Other Expenses -->
+                                                <div class="form-group mb-3">
+                                                    <label class="font-weight-bold text-sm text-dark d-flex justify-content-between">
+                                                        <span>4. Other Expenses</span>
+                                                        <small class="text-muted font-weight-normal">(Manual / optional)</small>
+                                                    </label>
+                                                    <div class="input-group mb-2">
+                                                        <div class="input-group-prepend"><span class="input-group-text bg-light font-weight-bold">₹</span></div>
+                                                        <input type="number" 
+                                                               step="0.01" 
+                                                               min="0" 
+                                                               name="other_expenses" 
+                                                               class="form-control font-weight-bold text-warning" 
+                                                               value="{{ number_format($row->other_expenses, 2, '.', '') }}" 
+                                                               placeholder="0.00">
+                                                    </div>
+                                                    <input type="text" 
+                                                           name="other_expenses_note" 
+                                                           class="form-control form-control-sm" 
+                                                           placeholder="Optional reason for other expense (e.g. Tea, emergency courier)..." 
+                                                           value="{{ $row->other_expenses_note }}">
+                                                </div>
+
+                                                <div class="form-group mb-0">
+                                                    <label class="font-weight-bold text-xs text-uppercase text-muted">Notes / Closing Remarks</label>
+                                                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional notes" value="{{ $row->notes }}">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer bg-light py-2" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-success btn-sm font-weight-bold px-3">
+                                                    <i class="fas fa-save mr-1"></i> Save Cash Register
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
-                                </td>
-                            </tr>
-
-                            <!-- 2. Total Sales -->
-                            <tr class="bg-white">
-                                <td class="text-center font-weight-bold text-muted align-middle">2</td>
-                                <td class="align-middle">
-                                    <strong class="text-success font-weight-bold" style="font-size: 1rem;">
-                                        <i class="fas fa-plus text-success mr-2"></i>Total Sales
-                                    </strong>
-                                </td>
-                                <td class="align-middle">
-                                    <span class="text-muted text-sm font-weight-medium">
-                                        {{ $totalSalesCount }} invoices from Sales
-                                    </span>
-                                </td>
-                                <td class="text-right align-middle">
-                                    <span class="font-weight-bold text-success" style="font-size: 1.15rem;">
-                                        + ₹ {{ number_format($totalSales, 2) }}
-                                    </span>
-                                </td>
-                            </tr>
-
-                            <!-- 3. Expenses -->
-                            <tr class="bg-white">
-                                <td class="text-center font-weight-bold text-muted align-middle">3</td>
-                                <td class="align-middle">
-                                    <strong class="text-danger font-weight-bold" style="font-size: 1rem;">
-                                        <i class="fas fa-minus text-danger mr-2"></i>Expenses
-                                    </strong>
-                                </td>
-                                <td class="align-middle">
-                                    <span class="text-muted text-sm font-weight-medium">
-                                        {{ $totalExpensesCount }} vouchers from Expenses
-                                    </span>
-                                </td>
-                                <td class="text-right align-middle">
-                                    <span class="font-weight-bold text-danger" style="font-size: 1.15rem;">
-                                        &minus; ₹ {{ number_format($totalExpenses, 2) }}
-                                    </span>
-                                </td>
-                            </tr>
-
-                            <!-- 4. Other Exp. -->
+                                </div>
+                            </div>
+                        @empty
                             <tr>
-                                <td class="text-center font-weight-bold text-muted align-middle">4</td>
-                                <td class="align-middle">
-                                    <strong class="text-warning font-weight-bold" style="font-size: 1rem;">
-                                        <i class="fas fa-minus text-warning mr-2"></i>Other Exp.
-                                    </strong>
-                                </td>
-                                <td class="align-middle">
-                                    <span class="text-muted text-sm font-weight-medium d-block">Manual / optional</span>
-                                    <input type="text" 
-                                           name="other_expenses_note" 
-                                           id="inputOtherExpensesNote" 
-                                           class="form-control form-control-sm mt-1" 
-                                           placeholder="Optional reason for other expense..." 
-                                           value="{{ old('other_expenses_note', $otherExpensesNote) }}">
-                                </td>
-                                <td class="text-right align-middle">
-                                    <div class="d-inline-flex align-items-center justify-content-end" style="gap: 6px;">
-                                        <span class="font-weight-bold text-warning mr-1" style="font-size: 1.05rem;">&minus; ₹</span>
-                                        <input type="number" 
-                                               step="0.01" 
-                                               min="0" 
-                                               name="other_expenses" 
-                                               id="inputOtherExpenses" 
-                                               class="form-control form-control-sm font-weight-bold text-warning text-right" 
-                                               style="max-width: 170px; font-size: 1.05rem;" 
-                                               value="{{ old('other_expenses', $otherExpenses) }}" 
-                                               placeholder="0.00"
-                                               oninput="recalculateCash()">
-                                    </div>
+                                <td colspan="8" class="text-center py-5 text-muted font-weight-bold">
+                                    <i class="fas fa-search fa-2x mb-2 d-block text-muted"></i>
+                                    THERE IS NO RECORD IN THIS DATE
                                 </td>
                             </tr>
+                        @endforelse
+                    </tbody>
 
-                            <!-- 5. Purchases -->
-                            <tr class="bg-white">
-                                <td class="text-center font-weight-bold text-muted align-middle">5</td>
-                                <td class="align-middle">
-                                    <strong class="font-weight-bold" style="color: #8b5cf6; font-size: 1rem;">
-                                        <i class="fas fa-minus mr-2" style="color: #8b5cf6;"></i>Purchases
-                                    </strong>
+                    <!-- Total Row (Exact match to Sales Margin List tfoot) -->
+                    @if(count($dailyCashMargins) > 0)
+                        <tfoot>
+                            <tr class="font-weight-bold bg-light" style="font-size: 0.95rem; border-top: 2px solid #cbd5e1;">
+                                <td class="font-weight-bold text-dark">Total</td>
+                                <td class="text-right font-weight-bold text-primary">
+                                    ₹ {{ number_format($totalDailyOpeningCash, 2) }}
                                 </td>
-                                <td class="align-middle">
-                                    <span class="text-muted text-sm font-weight-medium">
-                                        {{ $totalPurchasesCount }} orders from Purchases
-                                    </span>
+                                <td class="text-right font-weight-bold text-success">
+                                    + ₹ {{ number_format($totalDailySales, 2) }}
                                 </td>
-                                <td class="text-right align-middle">
-                                    <span class="font-weight-bold" style="color: #8b5cf6; font-size: 1.15rem;">
-                                        &minus; ₹ {{ number_format($totalPurchases, 2) }}
-                                    </span>
+                                <td class="text-right font-weight-bold text-danger">
+                                    &minus; ₹ {{ number_format($totalDailyExpenses, 2) }}
                                 </td>
+                                <td class="text-right font-weight-bold text-warning">
+                                    &minus; ₹ {{ number_format($totalDailyOtherExpenses, 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold" style="color: #8b5cf6;">
+                                    &minus; ₹ {{ number_format($totalDailyPurchases, 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold {{ $overallClosingCash >= 0 ? 'text-success' : 'text-danger' }}">
+                                    ₹ {{ number_format($overallClosingCash, 2) }}
+                                </td>
+                                <td></td>
                             </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+        </div>
 
-                            <!-- 6. Closing Cash (Grand Total Row) -->
-                            <tr class="table-active" style="background-color: #f1f5f9; border-top: 2px solid #cbd5e1;">
-                                <td class="text-center font-weight-bold text-dark align-middle py-3" style="font-size: 1.1rem;">6</td>
-                                <td class="align-middle py-3">
-                                    <strong class="text-dark font-weight-bold" style="font-size: 1.15rem;">
-                                        <i class="fas fa-equals text-success mr-2"></i>Closing Cash
-                                    </strong>
-                                </td>
-                                <td class="align-middle py-3">
-                                    <span class="text-muted text-sm font-weight-semibold">Calculated Day Cash</span>
-                                    <small class="text-muted d-block font-italic text-xs">(Opening Cash + Sales &minus; Expenses &minus; Other Exp &minus; Purchases)</small>
-                                </td>
-                                <td class="text-right align-middle py-3">
-                                    <span class="font-weight-bold {{ $closingCash >= 0 ? 'text-success' : 'text-danger' }}" 
-                                          id="closingCashDisplay" 
-                                          style="font-size: 1.45rem;">
-                                        ₹ {{ number_format($closingCash, 2) }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- Footer Summary Row (Exact match to lines 350-365 in report page) -->
+        @if(count($dailyCashMargins) > 0)
+            <div class="card-footer bg-white border-top py-2 px-3">
+                <div class="row text-center text-md-left align-items-center">
+                    <div class="col-md-4 mb-1 mb-md-0">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Total Gross Sales:</span>
+                        <span class="font-weight-bold ml-2 text-success" style="font-size: 1.1rem;">
+                            + ₹ {{ number_format($totalDailySales, 2) }}
+                        </span>
+                    </div>
+                    <div class="col-md-4 mb-1 mb-md-0 text-center">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Total Outflow (Exp + Purch):</span>
+                        <span class="font-weight-bold ml-2 text-danger" style="font-size: 1.1rem;">
+                            &minus; ₹ {{ number_format($totalCashOutflow, 2) }}
+                        </span>
+                    </div>
+                    <div class="col-md-4 text-md-right">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Overall Closing Cash:</span>
+                        <span class="font-weight-bold ml-2 {{ $overallClosingCash >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.15rem;">
+                            ₹ {{ number_format($overallClosingCash, 2) }}
+                        </span>
+                    </div>
                 </div>
             </div>
-
-            <!-- Card Footer: Save Button -->
-            <div class="card-footer bg-white py-3 border-top d-flex justify-content-between align-items-center">
-                <span class="text-muted text-xs">
-                    <i class="fas fa-info-circle mr-1 text-primary"></i>
-                    Amounts update dynamically on screen when changing Opening Cash or Other Expenses.
-                </span>
-                <button type="submit" class="btn btn-success font-weight-bold px-4 py-2 shadow-sm">
-                    <i class="fas fa-save mr-1"></i> Save Day Cash Register
-                </button>
-            </div>
-        </form>
+        @endif
     </div>
 
 </div>
 
-<!-- Real-time Dynamic Recalculation Script -->
-<script>
-    const fixedSales = {{ (float) $totalSales }};
-    const fixedExpenses = {{ (float) $totalExpenses }};
-    const fixedPurchases = {{ (float) $totalPurchases }};
-
-    function recalculateCash() {
-        const opening = parseFloat(document.getElementById('inputOpeningCash').value) || 0;
-        const otherExp = parseFloat(document.getElementById('inputOtherExpenses').value) || 0;
-
-        // Formula: Closing Cash = (Opening Cash + Sales) - (Expenses + Other Expenses + Purchases)
-        const closing = opening + fixedSales - fixedExpenses - otherExp - fixedPurchases;
-        const formatINR = (val) => val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        const displayEl = document.getElementById('closingCashDisplay');
-        displayEl.innerText = '₹ ' + formatINR(closing);
-        if (closing >= 0) {
-            displayEl.className = 'font-weight-bold text-success';
-        } else {
-            displayEl.className = 'font-weight-bold text-danger';
-        }
-    }
-</script>
-
 <style>
 @media print {
-    .main-sidebar, .main-header, .btn, .card-footer, form#dateFilterForm, input[type="date"] {
+    .main-sidebar, .main-header, .btn, .card-footer, form#cashFilterForm, .badge {
         display: none !important;
     }
     .content-wrapper {
@@ -307,11 +386,6 @@
     }
     .card {
         border: 1px solid #ddd !important;
-        box-shadow: none !important;
-    }
-    input[type="number"], input[type="text"] {
-        border: none !important;
-        background: transparent !important;
         box-shadow: none !important;
     }
 }

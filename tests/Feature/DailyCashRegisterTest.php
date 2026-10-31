@@ -66,7 +66,7 @@ class DailyCashRegisterTest extends TestCase
         $this->admin->branches()->attach($this->branch->id);
     }
 
-    public function test_opening_closing_cash_page_is_rendered_and_formula_is_accurate(): void
+    public function test_opening_closing_cash_page_is_rendered_similar_to_sales_margin_daily_audit(): void
     {
         $today = now()->toDateString();
 
@@ -157,9 +157,8 @@ class DailyCashRegisterTest extends TestCase
         $this->assertEquals(2000.00, $expectedClosing);
         $response->assertViewHas('closingCash', 2000.00);
 
-        // Verify page content in table format
-        $response->assertSee('Opening &amp; Closing Cash', false);
-        $response->assertSee('Daily Cash Reconciliation Table');
+        // Verify table layout similar to Sales Margin List & Daily Audit in report page
+        $response->assertSee('Opening &amp; Closing Cash List &amp; Daily Audit', false);
         $response->assertSee('Opening Cash');
         $response->assertSee('Manual start cash');
         $response->assertSee('Total Sales');
@@ -167,7 +166,7 @@ class DailyCashRegisterTest extends TestCase
         $response->assertSee('Expenses');
         $response->assertSee('1 vouchers from Expenses');
         $response->assertSee('Other Exp.');
-        $response->assertSee('Manual / optional');
+        $response->assertSee('Staff evening tea and biscuits');
         $response->assertSee('Purchases');
         $response->assertSee('1 orders from Purchases');
         $response->assertSee('Closing Cash');
@@ -176,6 +175,9 @@ class DailyCashRegisterTest extends TestCase
         $response->assertSee('350.00');
         $response->assertSee('1,200.00');
         $response->assertSee('2,000.00');
+        $response->assertSee('Total Gross Sales:');
+        $response->assertSee('Total Outflow (Exp + Purch):');
+        $response->assertSee('Overall Closing Cash:');
     }
 
     public function test_user_can_save_day_cash_register_and_persist_closing_cash(): void
@@ -208,5 +210,60 @@ class DailyCashRegisterTest extends TestCase
         $this->assertEquals(100.00, $register->other_expenses);
         $this->assertEquals(1400.00, $register->closing_cash); // 1500 + 0 - 0 - 100 - 0 = 1400
         $this->assertEquals('closed', $register->status);
+    }
+
+    public function test_auto_popup_message_appears_on_first_app_open_when_no_bills_printed(): void
+    {
+        // When opening the app for the first time when there is NO bill printed
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertViewHas('shouldShowOpeningCashModal', true);
+        $response->assertSee('id="autoOpeningCashModal"', false);
+        $response->assertSee('Daily Store Opening — Add Opening Cash');
+    }
+
+    public function test_auto_popup_message_does_not_appear_once_one_bill_is_printed(): void
+    {
+        // 1 bill is printed today
+        Sale::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->admin->id,
+            'invoice_number' => 'INV-2026-TODAY-01',
+            'invoice_date' => now()->toDateString(),
+            'subtotal' => 100.00,
+            'total_tax' => 5.00,
+            'final_amount' => 105.00,
+            'paid_amount' => 105.00,
+            'payment_status' => 'paid',
+            'invoice_status' => 'finalized',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertViewHas('shouldShowOpeningCashModal', false);
+        $response->assertDontSee('id="autoOpeningCashModal"', false);
+    }
+
+    public function test_auto_popup_message_does_not_appear_if_opening_cash_already_added(): void
+    {
+        // User already added opening cash today
+        DailyCashRegister::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->admin->id,
+            'register_date' => now()->toDateString(),
+            'opening_cash' => 2000.00,
+            'closing_cash' => 2000.00,
+            'status' => 'open',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertViewHas('shouldShowOpeningCashModal', false);
+        $response->assertDontSee('id="autoOpeningCashModal"', false);
     }
 }
