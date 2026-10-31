@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashShiftController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DailyCashController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
@@ -104,6 +105,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/categories', [ExpenseController::class, 'storeCategory'])->name('categories.store');
         Route::put('/categories/{id}', [ExpenseController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{id}', [ExpenseController::class, 'destroyCategory'])->name('categories.destroy');
+    });
+
+    // Opening & Closing Cash Day Register
+    Route::prefix('opening-closing-cash')->name('cash-register.')->group(function () {
+        Route::get('/', [DailyCashController::class, 'index'])->name('index');
+        Route::post('/save', [DailyCashController::class, 'storeOrUpdate'])->name('store');
     });
 
     // Payments & Collections

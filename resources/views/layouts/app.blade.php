@@ -346,10 +346,16 @@
                             <p>Report</p>
                         </a>
                     </li>
-                    <li class="nav-item mb-4">
+                    <li class="nav-item">
                         <a href="{{ route('expenses.index') }}" class="nav-link {{ request()->is('expenses*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-receipt text-danger"></i>
                             <p>Expenses</p>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-4">
+                        <a href="{{ route('cash-register.index') }}" class="nav-link {{ (request()->is('opening-closing-cash*') || request()->is('cash-register*')) ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-coins text-success"></i>
+                            <p>Opening & Closing Cash</p>
                         </a>
                     </li>
                 </ul>
