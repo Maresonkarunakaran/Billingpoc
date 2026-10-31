@@ -20,6 +20,37 @@ class DashboardController extends Controller
             return redirect()->route('master-admin.dashboard');
         }
 
+        // Dashboard is not visible to the billing person: redirect directly to POS terminal
+        if (! $user->canAccessDashboard()) {
+            if ($user->hasPermission('pos_terminal')) {
+                return redirect()->route('pos.index');
+            }
+
+            $allowedKeys = $user->getAllowedPermissionKeys();
+            $routeMap = [
+                'pos_terminal' => 'pos.index',
+                'sales_history' => 'sales.index',
+                'purchase_management' => 'purchases.index',
+                'inventory_balance' => 'inventory.index',
+                'products_pricing' => 'products.index',
+                'expenses' => 'expenses.index',
+                'opening_closing_cash' => 'cash-register.index',
+                'customer_management' => 'customers.index',
+                'supplier_management' => 'suppliers.index',
+                'reports_analytics' => 'products.reports',
+                'business_settings' => 'settings.index',
+                'staff_management' => 'users.index',
+            ];
+
+            foreach ($allowedKeys as $key) {
+                if (isset($routeMap[$key])) {
+                    return redirect()->route($routeMap[$key]);
+                }
+            }
+
+            return redirect()->route('pos.index');
+        }
+
         $businessId = $user->business_id;
 
         $filterRange = $request->get('period', 'this_month');

@@ -304,7 +304,7 @@
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-2">
         <!-- Brand Logo -->
-        <a href="{{ route('dashboard') }}" class="brand-link d-flex align-items-center px-3">
+        <a href="{{ auth()->user()?->canAccessDashboard() ? route('dashboard') : (auth()->user()?->hasPermission('pos_terminal') ? route('pos.index') : '#') }}" class="brand-link d-flex align-items-center px-3">
             <i class="fas fa-cubes text-info fa-2x mr-2"></i>
             <div>
                 <span class="brand-text text-white font-weight-bold d-block" style="line-height:1.2;">BILLINGPOC</span>
@@ -316,12 +316,14 @@
         <div class="sidebar">
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu">
+                    @if(auth()->user()?->canAccessDashboard())
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}" class="nav-link {{ request()->is('dashboard') || request()->is('/') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-chart-pie"></i>
                             <p>Dashboard</p>
                         </a>
                     </li>
+                    @endif
 
                     @if(auth()->user()->hasPermission('pos_terminal') || auth()->user()->hasPermission('sales_history'))
                     <li class="nav-header text-uppercase text-xs text-muted font-weight-bold mt-2">Sales</li>
@@ -486,10 +488,12 @@
 <!-- Mobile Bottom Navigation Bar (Visible on mobile phones) -->
 <nav class="mobile-bottom-nav d-block d-md-none border-top shadow-lg">
     <div class="d-flex justify-content-around py-2">
+        @if(auth()->user()?->canAccessDashboard())
         <a href="{{ route('dashboard') }}" class="nav-item text-center {{ request()->is('dashboard') || request()->is('/') ? 'active' : '' }}">
             <i class="fas fa-chart-pie d-block"></i>
             <span>Dashboard</span>
         </a>
+        @endif
         @if(auth()->user()->hasPermission('pos_terminal'))
         <a href="{{ route('pos.index') }}" class="nav-item text-center {{ request()->is('pos*') ? 'active' : '' }}">
             <i class="fas fa-cash-register d-block"></i>

@@ -44,9 +44,11 @@
 
                 <div class="d-flex justify-content-center flex-wrap gap-2">
                     @if(auth()->check())
-                        <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary font-weight-bold px-3 py-2 mr-2">
-                            <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
-                        </a>
+                        @if(auth()->user()->canAccessDashboard())
+                            <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary font-weight-bold px-3 py-2 mr-2">
+                                <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
+                            </a>
+                        @endif
                         @if(auth()->user()->hasPermission('pos_terminal'))
                             <a href="{{ route('pos.index') }}" class="btn btn-success font-weight-bold px-4 py-2">
                                 <i class="fas fa-cash-register mr-1"></i> Open POS Terminal

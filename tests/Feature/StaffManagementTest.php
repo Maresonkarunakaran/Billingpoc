@@ -361,4 +361,59 @@ class StaffManagementTest extends TestCase
         $loginNewPwd->assertRedirect();
         $this->assertAuthenticatedAs($staff);
     }
+
+    public function test_dashboard_is_not_visible_to_billing_staff_and_redirects_to_pos_terminal(): void
+    {
+        $billingStaff = User::create([
+            'business_id' => $this->business->id,
+            'role_id' => $this->staffRole->id,
+            'default_branch_id' => $this->branch->id,
+            'staff_id' => 'STF0006',
+            'client_id' => 'STF0006',
+            'name' => 'Kavitha Billing',
+            'username' => 'kavitha_billing',
+            'email' => 'kavitha@abc.com',
+            'password' => Hash::make('SecretPass#123'),
+            'is_active' => true,
+        ]);
+        $billingStaff->branches()->attach($this->branch->id);
+        $billingStaff->syncPermissions(['pos_terminal', 'opening_closing_cash', 'sales_history']);
+
+        // 1. Direct visit to /dashboard or / must redirect billing staff to POS Terminal
+        $dashResponse = $this->actingAs($billingStaff)->get(route('dashboard'));
+        $dashResponse->assertRedirect(route('pos.index'));
+
+        $rootResponse = $this->actingAs($billingStaff)->get('/');
+        $rootResponse->assertRedirect(route('pos.index'));
+
+        // 2. Billing staff login redirects directly to POS terminal
+        $this->post(route('logout'));
+        $loginResponse = $this->post(route('login.post'), [
+            'email' => 'kavitha@abc.com',
+            'password' => 'SecretPass#123',
+        ]);
+        $loginResponse->assertRedirect(route('pos.index'));
+
+        // 3. In the rendered navigation for billing staff, the Dashboard link is completely hidden
+        $posPage = $this->actingAs($billingStaff)->get(route('pos.index'));
+        $posPage->assertOk();
+        
+        // Extract sidebar content
+        preg_match('/<aside class="main-sidebar sidebar-dark-primary elevation-2">(.*?)<\/aside>/s', $posPage->getContent(), $sidebarMatches);
+        $this->assertCount(2, $sidebarMatches);
+        $sidebarContent = $sidebarMatches[1];
+
+        // Ensure Dashboard link is NOT present in sidebar for billing person
+        $this->assertStringNotContainsString('href="'.route('dashboard').'"', $sidebarContent);
+        $this->assertStringNotContainsString('<p>Dashboard</p>', $sidebarContent);
+
+        // But POS Terminal link IS present
+        $this->assertStringContainsString('href="'.route('pos.index').'"', $sidebarContent);
+        $this->assertStringContainsString('<p>POS Terminal</p>', $sidebarContent);
+
+        // 4. Shop Owner CAN access and see dashboard
+        $ownerDash = $this->actingAs($this->owner)->get(route('dashboard'));
+        $ownerDash->assertOk();
+        $ownerDash->assertSee('Dashboard');
+    }
 }

@@ -20,6 +20,10 @@ class AuthController extends Controller
                 return redirect()->route('master-admin.dashboard');
             }
 
+            if (! Auth::user()->canAccessDashboard()) {
+                return redirect()->route('pos.index');
+            }
+
             return redirect()->route('dashboard');
         }
 
@@ -225,6 +229,10 @@ class AuthController extends Controller
 
         if ($user->must_change_password) {
             return redirect()->route('password.change')->with('warning', 'Please set a new secure password for your account to continue.');
+        }
+
+        if (! $user->canAccessDashboard()) {
+            return redirect()->intended(route('pos.index'));
         }
 
         return redirect()->intended(route('dashboard'));

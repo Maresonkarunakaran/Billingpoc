@@ -86,6 +86,29 @@ class User extends Authenticatable
         return $this->hasMany(StaffPermission::class);
     }
 
+    public function canAccessDashboard(): bool
+    {
+        if ($this->is_master_admin) {
+            return false;
+        }
+
+        if ($this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
+            return true;
+        }
+
+        // Billing staff cannot access the business financial dashboard
+        if ($this->role?->slug === 'billing-staff') {
+            return false;
+        }
+
+        // Any staff account with explicit permissions managed by shop owner cannot access dashboard
+        if ($this->relationLoaded('staffPermissions') ? $this->staffPermissions->isNotEmpty() : $this->staffPermissions()->exists()) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function hasPermission(string $permissionSlug): bool
     {
         if ($this->is_master_admin || $this->role?->slug === 'super-admin' || $this->role?->slug === 'business-owner') {
