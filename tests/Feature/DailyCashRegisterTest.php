@@ -157,11 +157,21 @@ class DailyCashRegisterTest extends TestCase
         $this->assertEquals(2000.00, $expectedClosing);
         $response->assertViewHas('closingCash', 2000.00);
 
-        // Verify page content
+        // Verify page content in table format
         $response->assertSee('Opening &amp; Closing Cash', false);
-        $response->assertSee('INV-2026-101');
-        $response->assertSee('EXP-2026-001');
-        $response->assertSee('PO-2026-001');
+        $response->assertSee('Daily Cash Reconciliation Table');
+        $response->assertSee('Opening Cash');
+        $response->assertSee('Manual start cash');
+        $response->assertSee('Total Sales');
+        $response->assertSee('1 invoices from Sales');
+        $response->assertSee('Expenses');
+        $response->assertSee('1 vouchers from Expenses');
+        $response->assertSee('Other Exp.');
+        $response->assertSee('Manual / optional');
+        $response->assertSee('Purchases');
+        $response->assertSee('1 orders from Purchases');
+        $response->assertSee('Closing Cash');
+        $response->assertSee('Calculated Day Cash');
         $response->assertSee('2,625.00');
         $response->assertSee('350.00');
         $response->assertSee('1,200.00');
