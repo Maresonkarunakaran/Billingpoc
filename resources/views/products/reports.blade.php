@@ -93,19 +93,20 @@
             <div class="card-header bg-white py-3 border-bottom">
                 <form action="{{ route('products.reports') }}" method="GET">
                     <input type="hidden" name="tab" value="margin">
+                    <input type="hidden" name="costing_method" id="filterCostingMethod" value="{{ $selectedCostingMethod }}">
 
                     <!-- Presets -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between mb-2" style="gap: 8px;">
                         <div class="btn-group btn-group-sm" role="group">
-                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'today', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'today', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}">☀️ Today</a>
-                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'yesterday', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'yesterday', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
-                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'this_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'this_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'this_month' || (!request('preset') && !request('start_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
-                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'last_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'last_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'last_month' ? 'btn-primary' : 'btn-outline-secondary' }}">Last Month</a>
-                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'all', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter]) }}" 
+                            <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'all', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
                         </div>
 
@@ -163,30 +164,30 @@
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
                 <div class="kpi-stat-card" style="border-left: 4px solid #3b82f6;">
                     <span class="text-xs font-weight-bold text-muted text-uppercase">Total Sales Revenue</span>
-                    <h3 class="font-weight-bold text-primary mb-0 mt-1">₹ {{ number_format($totalDailySales, 2) }}</h3>
+                    <h3 class="font-weight-bold text-primary mb-0 mt-1" id="kpiTotalSales">₹ {{ number_format($totalDailySales, 2) }}</h3>
                     <small class="text-muted">Total billing in date range</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
                 <div class="kpi-stat-card" style="border-left: 4px solid #64748b;">
                     <span class="text-xs font-weight-bold text-muted text-uppercase">Total COGS</span>
-                    <h3 class="font-weight-bold text-dark mb-0 mt-1">₹ {{ number_format($totalDailyCogs, 2) }}</h3>
-                    <small class="text-muted">Cost of Goods Sold (Moving Avg)</small>
+                    <h3 class="font-weight-bold text-dark mb-0 mt-1" id="kpiTotalCogs">₹ {{ number_format($totalDailyCogs, 2) }}</h3>
+                    <small class="text-muted" id="kpiCogsSubtitle">Cost of Goods Sold ({{ $selectedCostingMethod === 'fifo' ? 'FIFO' : ($selectedCostingMethod === 'lifo' ? 'LIFO' : 'Moving Avg') }})</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card" style="border-left: 4px solid {{ $totalDailyGrossProfit >= 0 ? '#10b981' : '#ef4444' }};">
-                    <span class="text-xs font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} text-uppercase">Total Gross Profit</span>
-                    <h3 class="font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1">
+                <div class="kpi-stat-card" style="border-left: 4px solid {{ $totalDailyGrossProfit >= 0 ? '#10b981' : '#ef4444' }};" id="kpiGrossProfitCard">
+                    <span class="text-xs font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} text-uppercase" id="kpiGrossProfitLabel">Total Gross Profit</span>
+                    <h3 class="font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1" id="kpiTotalGrossProfit">
                         {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
                     </h3>
                     <small class="text-muted">Sales Revenue − COGS</small>
                 </div>
             </div>
             <div class="col-6 col-lg-3 mb-2 mb-lg-0">
-                <div class="kpi-stat-card" style="border-left: 4px solid {{ $overallDailyMarginPct >= 0 ? '#10b981' : '#ef4444' }};">
-                    <span class="text-xs font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} text-uppercase">Overall Gross Margin</span>
-                    <h3 class="font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1">
+                <div class="kpi-stat-card" style="border-left: 4px solid {{ $overallDailyMarginPct >= 0 ? '#10b981' : '#ef4444' }};" id="kpiGrossMarginCard">
+                    <span class="text-xs font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} text-uppercase" id="kpiGrossMarginLabel">Overall Gross Margin</span>
+                    <h3 class="font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }} mb-0 mt-1" id="kpiOverallMarginPct">
                         {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
                     </h3>
                     <small class="text-muted">(Gross Profit / Sales) × 100</small>
@@ -201,10 +202,21 @@
                     <h6 class="font-weight-bold text-dark mb-0">
                         <i class="fas fa-calendar-alt text-primary mr-1"></i> Sales Margin List & Daily Audit
                     </h6>
-                    <small class="text-muted">Daily breakdown of Sold Qty, Sales, COGS, Gross Profit/Loss, and Margin %</small>
+                    <small class="text-muted">
+                        Daily breakdown of Sold Qty, Sales, COGS, Gross Profit/Loss, and Margin %
+                        (Calculated using: <strong class="text-primary" id="costingMethodSubHeader">
+                            @if($selectedCostingMethod === 'fifo')
+                                FIFO (First In, First Out)
+                            @elseif($selectedCostingMethod === 'lifo')
+                                LIFO (Last In, First Out)
+                            @else
+                                Moving Average
+                            @endif
+                        </strong>)
+                    </small>
                 </div>
                 <div class="d-flex align-items-center" style="gap: 8px;">
-                    <span class="badge badge-light border">{{ count($dailySalesMargins) }} Active Dates</span>
+                    <span class="badge badge-light border"><span id="activeDatesCount">{{ count($dailySalesMargins) }}</span> Active Dates</span>
                     <button class="btn btn-xs btn-outline-info" type="button" data-toggle="collapse" data-target="#formulaBox" aria-expanded="false">
                         <i class="fas fa-calculator mr-1"></i> View Formulas
                     </button>
@@ -220,10 +232,56 @@
                                 <th class="text-right">Sales</th>
                                 <th class="text-right">COGS</th>
                                 <th class="text-right">Gross P/L</th>
-                                <th class="text-right">Margin %</th>
+                                <th class="text-right" style="min-width: 220px;">
+                                    <div class="d-inline-flex align-items-center justify-content-end" style="gap: 6px;">
+                                        <span>Margin %</span>
+                                        <!-- Dropdown button in right side of table near margin% -->
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-xs btn-outline-primary dropdown-toggle font-weight-bold shadow-xs py-1 px-2"
+                                                    type="button"
+                                                    id="costingDropdownBtn"
+                                                    data-toggle="dropdown"
+                                                    aria-haspopup="true"
+                                                    aria-expanded="false"
+                                                    style="border-radius: 6px; font-size: 0.76rem; border-color: #cbd5e1; background: #fff;">
+                                                <i class="fas fa-layer-group text-primary mr-1"></i>
+                                                <span id="costingDropdownLabel">
+                                                    @if($selectedCostingMethod === 'fifo')
+                                                        FIFO
+                                                    @elseif($selectedCostingMethod === 'lifo')
+                                                        LIFO
+                                                    @else
+                                                        Moving Average
+                                                    @endif
+                                                </span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="costingDropdownBtn">
+                                                <h6 class="dropdown-header text-uppercase text-xs font-weight-bold text-muted">Costing Method</h6>
+                                                <a class="dropdown-item costing-option {{ $selectedCostingMethod === 'moving_average' ? 'active font-weight-bold' : '' }}" 
+                                                   href="javascript:void(0)" 
+                                                   data-method="moving_average"
+                                                   onclick="switchCostingMethod('moving_average')">
+                                                    <i class="fas fa-chart-line text-primary mr-2"></i> Moving Average
+                                                </a>
+                                                <a class="dropdown-item costing-option {{ $selectedCostingMethod === 'fifo' ? 'active font-weight-bold' : '' }}" 
+                                                   href="javascript:void(0)" 
+                                                   data-method="fifo"
+                                                   onclick="switchCostingMethod('fifo')">
+                                                    <i class="fas fa-sort-amount-down text-success mr-2"></i> FIFO
+                                                </a>
+                                                <a class="dropdown-item costing-option {{ $selectedCostingMethod === 'lifo' ? 'active font-weight-bold' : '' }}" 
+                                                   href="javascript:void(0)" 
+                                                   data-method="lifo"
+                                                   onclick="switchCostingMethod('lifo')">
+                                                    <i class="fas fa-sort-amount-up text-warning mr-2"></i> LIFO
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="dailySalesMarginTbody">
                             @forelse($dailySalesMargins as $row)
                                 <tr>
                                     <td class="font-weight-bold text-dark">
@@ -263,49 +321,45 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                        @if(count($dailySalesMargins) > 0)
-                            <tfoot>
-                                <tr class="font-weight-bold bg-light" style="font-size: 0.95rem; border-top: 2px solid #cbd5e1;">
-                                    <td class="font-weight-bold text-dark">Total</td>
-                                    <td class="text-right font-weight-bold">
-                                        {{ number_format($totalDailySoldQty, 2) }} {{ $dailySalesMargins->first()?->unit ?? 'kg' }}
-                                    </td>
-                                    <td class="text-right font-weight-bold text-primary">
-                                        ₹ {{ number_format($totalDailySales, 2) }}
-                                    </td>
-                                    <td class="text-right font-weight-bold text-muted">
-                                        ₹ {{ number_format($totalDailyCogs, 2) }}
-                                    </td>
-                                    <td class="text-right font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
-                                    </td>
-                                    <td class="text-right font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        @endif
+                        <tfoot id="dailySalesMarginTfoot" style="{{ count($dailySalesMargins) > 0 ? '' : 'display:none;' }}">
+                            <tr class="font-weight-bold bg-light" style="font-size: 0.95rem; border-top: 2px solid #cbd5e1;">
+                                <td class="font-weight-bold text-dark">Total</td>
+                                <td class="text-right font-weight-bold" id="totalSoldQtyCell">
+                                    {{ number_format($totalDailySoldQty, 2) }} {{ $dailySalesMargins->first()?->unit ?? 'kg' }}
+                                </td>
+                                <td class="text-right font-weight-bold text-primary" id="totalSalesCell">
+                                    ₹ {{ number_format($totalDailySales, 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold text-muted" id="totalCogsCell">
+                                    ₹ {{ number_format($totalDailyCogs, 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}" id="totalGrossProfitCell">
+                                    {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}" id="totalMarginPctCell">
+                                    {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
-            @if(count($dailySalesMargins) > 0)
-                <div class="card-footer bg-white border-top py-2 px-3">
-                    <div class="row text-center text-md-left align-items-center">
-                        <div class="col-md-6 mb-1 mb-md-0">
-                            <span class="text-xs text-muted text-uppercase font-weight-bold">Total gross profit:</span>
-                            <span class="font-weight-bold ml-2 {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.1rem;">
-                                {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
-                            </span>
-                        </div>
-                        <div class="col-md-6 text-md-right">
-                            <span class="text-xs text-muted text-uppercase font-weight-bold">Overall gross margin:</span>
-                            <span class="font-weight-bold ml-2 {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.1rem;">
-                                {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
-                            </span>
-                        </div>
+            <div class="card-footer bg-white border-top py-2 px-3" id="salesMarginFooterSummary">
+                <div class="row text-center text-md-left align-items-center">
+                    <div class="col-md-6 mb-1 mb-md-0">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Total gross profit:</span>
+                        <span class="font-weight-bold ml-2 {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}" id="summaryGrossProfit" style="font-size: 1.1rem;">
+                            {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
+                        </span>
+                    </div>
+                    <div class="col-md-6 text-md-right">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Overall gross margin:</span>
+                        <span class="font-weight-bold ml-2 {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}" id="summaryGrossMargin" style="font-size: 1.1rem;">
+                            {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
+                        </span>
                     </div>
                 </div>
-            @endif
+            </div>
         </div>
 
         <!-- 2. CATEGORY-WISE SALES MARGIN BREAKDOWN (Formula applied for all categories) -->
@@ -315,10 +369,10 @@
                     <h6 class="font-weight-bold text-dark mb-0">
                         <i class="fas fa-tags text-primary mr-1"></i> Category-Wise Sales Margin Breakdown
                     </h6>
-                    <small class="text-muted">Formula applied across all item categories using actual sold volume and moving average COGS</small>
+                    <small class="text-muted">Formula applied across all item categories using actual sold volume and <span id="categoryCostingMethodSpan">@if($selectedCostingMethod === 'fifo')FIFO @elseif($selectedCostingMethod === 'lifo')LIFO @else Moving Average @endif</span> COGS</small>
                 </div>
                 <div class="d-flex align-items-center" style="gap: 10px;">
-                    <span class="badge badge-light border">{{ count($categorySalesMargins) }} Categories</span>
+                    <span class="badge badge-light border"><span id="categoryCountBadge">{{ count($categorySalesMargins) }}</span> Categories</span>
                     <!-- ON / OFF Toggle Button -->
                     <button type="button" 
                             id="btnCategoryBreakdownToggle" 
@@ -346,7 +400,7 @@
                                 <th class="text-center">Performance</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="categoryBreakdownTbody">
                             @forelse($categorySalesMargins as $catRow)
                                 <tr>
                                     <td class="font-weight-bold text-dark">
@@ -400,57 +454,83 @@
             </div>
         </div>
 
-        <!-- 3. FORMULA & METHODOLOGY INFORMATION CARD -->
+        <!-- 3. FORMULA & METHODOLOGY INFORMATION CARD (Moving Average, FIFO, LIFO) -->
         <div class="collapse mb-3" id="formulaBox">
             <div class="card shadow-sm border-0" style="border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0 !important;">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="font-weight-bold text-dark mb-0">
-                        <i class="fas fa-calculator text-info mr-1"></i> Moving Weighted Average Cost (MAC) & Sales Margin Formulas
+                        <i class="fas fa-calculator text-info mr-1"></i> Inventory Valuation & Costing Formulas (Moving Average, FIFO, LIFO)
                     </h6>
                     <button type="button" class="close" data-toggle="collapse" data-target="#formulaBox">&times;</button>
                 </div>
                 <div class="card-body p-3">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="p-3 bg-white rounded border h-100">
-                                <span class="badge badge-primary mb-2">Formula 1</span>
-                                <h6 class="font-weight-bold text-dark mb-1">Average Purchase Cost (Perpetual Moving Average)</h6>
-                                <p class="text-muted text-xs mb-2">Applies immediately after each purchase, using the stock quantity and value remaining just before that purchase.</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-primary">
-                                    AverageCost/kg = (OpeningStockValue + PurchaseValue) / (OpeningQty + PurchaseQty)
+                        <!-- Option 1: Moving Average -->
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 bg-white rounded border h-100 shadow-xs">
+                                <span class="badge badge-primary mb-2">Option 1</span>
+                                <h6 class="font-weight-bold text-dark mb-1">Moving Average (MAC)</h6>
+                                <p class="text-muted text-xs mb-2">Perpetual moving weighted average recalculated immediately after each purchase/receipt.</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-primary">
+                                    AverageCost/unit = (OpeningStockValue + PurchaseValue) / (OpeningQty + PurchaseQty)
+                                </div>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
+                                    COGS = Sold Qty × Average Cost per unit
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="p-3 bg-white rounded border h-100">
-                                <span class="badge badge-info mb-2">Formula 2</span>
-                                <h6 class="font-weight-bold text-dark mb-1">Cost of Goods Sold (COGS)</h6>
-                                <p class="text-muted text-xs mb-2">Inventory cost valuation assigned to each unit sold during POS checkout.</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-info">
-                                    COGS = Sold Qty × Average Cost per kg
+
+                        <!-- Option 2: FIFO -->
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 bg-white rounded border h-100 shadow-xs">
+                                <span class="badge badge-success mb-2">Option 2</span>
+                                <h6 class="font-weight-bold text-dark mb-1">FIFO (First In, First Out)</h6>
+                                <p class="text-muted text-xs mb-2">Inbound inventory batches are consumed chronologically (oldest available stock sold first).</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-success">
+                                    Batch Consumption = Chronological Order (Oldest &rarr; Newest)
+                                </div>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
+                                    COGS = Σ (Sold Qty from Oldest Batch × Batch Unit Cost)
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <div class="p-3 bg-white rounded border h-100">
-                                <span class="badge badge-success mb-2">Formula 3</span>
-                                <h6 class="font-weight-bold text-dark mb-1">Gross Profit or Loss (Gross P/L)</h6>
-                                <p class="text-muted text-xs mb-2">Net financial margin generated after landed stock cost is recovered.</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-success">
-                                    GrossProfit = SalesAmount − COGS
+
+                        <!-- Option 3: LIFO -->
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 bg-white rounded border h-100 shadow-xs">
+                                <span class="badge badge-warning mb-2">Option 3</span>
+                                <h6 class="font-weight-bold text-dark mb-1">LIFO (Last In, First Out)</h6>
+                                <p class="text-muted text-xs mb-2">Inbound inventory batches are consumed in reverse chronological order (newest stock sold first).</p>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-warning">
+                                    Batch Consumption = Reverse Order (Newest &rarr; Oldest)
+                                </div>
+                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
+                                    COGS = Σ (Sold Qty from Newest Batch × Batch Unit Cost)
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-white rounded border h-100">
-                                <span class="badge badge-warning mb-2">Formula 4</span>
-                                <h6 class="font-weight-bold text-dark mb-1">Gross Margin Percentage & Closing Stock Value</h6>
-                                <p class="text-muted text-xs mb-2">Profitability ratio against total sales turnover and remaining balance.</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-1 text-warning">
-                                    Gross Margin % = (Gross Profit / Sales Amount) × 100
-                                </div>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-secondary">
-                                    Closing Value = Closing Qty × Average Cost per kg
+
+                        <!-- Universal Formulas -->
+                        <div class="col-12">
+                            <div class="p-3 bg-white rounded border shadow-xs">
+                                <span class="badge badge-secondary mb-2">Standard Calculations</span>
+                                <h6 class="font-weight-bold text-dark mb-2">Gross Profit, Margin Percentage & Closing Stock Value</h6>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2 mb-md-0">
+                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-success">
+                                            Gross Profit = Sales Amount − COGS
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2 mb-md-0">
+                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-info">
+                                            Gross Margin % = (Gross Profit / Sales Amount) × 100
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-secondary">
+                                            Closing Value = Closing Qty × Unit Cost
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -838,6 +918,272 @@
 
 @push('scripts')
 <script>
+    // Precomputed Costing Datasets for 0ms reactive instant switching
+    var costingDatasets = @json($costingDatasets);
+    var currentCostingMethod = @json($selectedCostingMethod);
+
+    function formatMoney(num) {
+        return Number(num || 0).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function switchCostingMethod(method) {
+        if (!costingDatasets || !costingDatasets[method]) return;
+        currentCostingMethod = method;
+
+        var methodNames = {
+            'moving_average': 'Moving Average',
+            'fifo': 'FIFO',
+            'lifo': 'LIFO'
+        };
+        var methodFullNames = {
+            'moving_average': 'Moving Average',
+            'fifo': 'FIFO (First In, First Out)',
+            'lifo': 'LIFO (Last In, First Out)'
+        };
+        var cogsSubtitles = {
+            'moving_average': 'Cost of Goods Sold (Moving Avg)',
+            'fifo': 'Cost of Goods Sold (FIFO)',
+            'lifo': 'Cost of Goods Sold (LIFO)'
+        };
+
+        var label = methodNames[method] || method;
+        var fullName = methodFullNames[method] || method;
+        var data = costingDatasets[method];
+
+        // 1. Update dropdown label
+        var dropdownLabel = document.getElementById('costingDropdownLabel');
+        if (dropdownLabel) dropdownLabel.textContent = label;
+
+        // 2. Update active dropdown item
+        document.querySelectorAll('.costing-option').forEach(function(el) {
+            if (el.getAttribute('data-method') === method) {
+                el.classList.add('active', 'font-weight-bold');
+            } else {
+                el.classList.remove('active', 'font-weight-bold');
+            }
+        });
+
+        // 3. Update table subtitle & category span
+        var subHeader = document.getElementById('costingMethodSubHeader');
+        if (subHeader) subHeader.textContent = fullName;
+        var catSpan = document.getElementById('categoryCostingMethodSpan');
+        if (catSpan) catSpan.textContent = label;
+
+        // 4. Update hidden input for form filters
+        var hiddenInput = document.getElementById('filterCostingMethod');
+        if (hiddenInput) hiddenInput.value = method;
+
+        // 5. Update browser URL without reload
+        try {
+            var url = new URL(window.location);
+            url.searchParams.set('costing_method', method);
+            window.history.replaceState({}, '', url);
+        } catch(e) {}
+
+        // 6. Update 4 KPI Stat Cards
+        var kpiCogs = document.getElementById('kpiTotalCogs');
+        if (kpiCogs) kpiCogs.textContent = '₹ ' + formatMoney(data.total.cogs);
+
+        var kpiCogsSub = document.getElementById('kpiCogsSubtitle');
+        if (kpiCogsSub) kpiCogsSub.textContent = cogsSubtitles[method] || 'Cost of Goods Sold';
+
+        var kpiGrossProfit = document.getElementById('kpiTotalGrossProfit');
+        var kpiGrossProfitCard = document.getElementById('kpiGrossProfitCard');
+        var kpiGrossProfitLabel = document.getElementById('kpiGrossProfitLabel');
+        if (kpiGrossProfit) {
+            if (data.total.gross_profit >= 0) {
+                kpiGrossProfit.textContent = '₹ ' + formatMoney(data.total.gross_profit);
+                kpiGrossProfit.className = 'font-weight-bold text-success mb-0 mt-1';
+                if (kpiGrossProfitCard) kpiGrossProfitCard.style.borderLeftColor = '#10b981';
+                if (kpiGrossProfitLabel) kpiGrossProfitLabel.className = 'text-xs font-weight-bold text-success text-uppercase';
+            } else {
+                kpiGrossProfit.textContent = '− ₹ ' + formatMoney(Math.abs(data.total.gross_profit));
+                kpiGrossProfit.className = 'font-weight-bold text-danger mb-0 mt-1';
+                if (kpiGrossProfitCard) kpiGrossProfitCard.style.borderLeftColor = '#ef4444';
+                if (kpiGrossProfitLabel) kpiGrossProfitLabel.className = 'text-xs font-weight-bold text-danger text-uppercase';
+            }
+        }
+
+        var kpiMarginPct = document.getElementById('kpiOverallMarginPct');
+        var kpiGrossMarginCard = document.getElementById('kpiGrossMarginCard');
+        var kpiGrossMarginLabel = document.getElementById('kpiGrossMarginLabel');
+        if (kpiMarginPct) {
+            if (data.total.margin_pct >= 0) {
+                kpiMarginPct.textContent = formatMoney(data.total.margin_pct) + '%';
+                kpiMarginPct.className = 'font-weight-bold text-success mb-0 mt-1';
+                if (kpiGrossMarginCard) kpiGrossMarginCard.style.borderLeftColor = '#10b981';
+                if (kpiGrossMarginLabel) kpiGrossMarginLabel.className = 'text-xs font-weight-bold text-success text-uppercase';
+            } else {
+                kpiMarginPct.textContent = '−' + formatMoney(Math.abs(data.total.margin_pct)) + '%';
+                kpiMarginPct.className = 'font-weight-bold text-danger mb-0 mt-1';
+                if (kpiGrossMarginCard) kpiGrossMarginCard.style.borderLeftColor = '#ef4444';
+                if (kpiGrossMarginLabel) kpiGrossMarginLabel.className = 'text-xs font-weight-bold text-danger text-uppercase';
+            }
+        }
+
+        // 7. Update Daily Sales Margin Table Rows
+        var dailyTbody = document.getElementById('dailySalesMarginTbody');
+        if (dailyTbody) {
+            if (data.daily && data.daily.length > 0) {
+                var rowsHtml = '';
+                data.daily.forEach(function(row) {
+                    var gpClass = row.gross_profit >= 0 ? 'text-success' : 'text-danger';
+                    var gpText = row.gross_profit >= 0
+                        ? '₹ ' + formatMoney(row.gross_profit)
+                        : '− ₹ ' + formatMoney(Math.abs(row.gross_profit));
+                    var marginBadge = row.margin_pct >= 0
+                        ? '<span class="badge badge-success px-2 py-1">' + formatMoney(row.margin_pct) + '%</span>'
+                        : '<span class="badge badge-danger px-2 py-1">−' + formatMoney(Math.abs(row.margin_pct)) + '%</span>';
+
+                    rowsHtml += '<tr>' +
+                        '<td class="font-weight-bold text-dark">' +
+                            row.date_formatted + ' <small class="text-muted font-weight-normal">(' + row.year + ')</small>' +
+                        '</td>' +
+                        '<td class="text-right font-weight-bold">' +
+                            formatMoney(row.sold_qty) + ' ' + (row.unit || 'kg') +
+                        '</td>' +
+                        '<td class="text-right font-weight-bold text-dark">₹ ' +
+                            formatMoney(row.sales) +
+                        '</td>' +
+                        '<td class="text-right text-muted font-weight-medium">₹ ' +
+                            formatMoney(row.cogs) +
+                        '</td>' +
+                        '<td class="text-right font-weight-bold ' + gpClass + '">' +
+                            gpText +
+                        '</td>' +
+                        '<td class="text-right font-weight-bold">' +
+                            marginBadge +
+                        '</td>' +
+                    '</tr>';
+                });
+                dailyTbody.innerHTML = rowsHtml;
+            } else {
+                dailyTbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted font-weight-bold">' +
+                    '<i class="fas fa-search fa-2x mb-2 d-block text-muted"></i>THERE IS NO RECORD IN THIS DATE</td></tr>';
+            }
+        }
+
+        // 8. Update Daily Table Footer (Totals)
+        var tfoot = document.getElementById('dailySalesMarginTfoot');
+        if (tfoot) {
+            if (data.daily && data.daily.length > 0) {
+                tfoot.style.display = '';
+                var totalSoldQtyCell = document.getElementById('totalSoldQtyCell');
+                if (totalSoldQtyCell) totalSoldQtyCell.textContent = formatMoney(data.total.sold_qty) + ' ' + (data.total.unit || 'kg');
+
+                var totalSalesCell = document.getElementById('totalSalesCell');
+                if (totalSalesCell) totalSalesCell.textContent = '₹ ' + formatMoney(data.total.sales);
+
+                var totalCogsCell = document.getElementById('totalCogsCell');
+                if (totalCogsCell) totalCogsCell.textContent = '₹ ' + formatMoney(data.total.cogs);
+
+                var totalGrossProfitCell = document.getElementById('totalGrossProfitCell');
+                if (totalGrossProfitCell) {
+                    if (data.total.gross_profit >= 0) {
+                        totalGrossProfitCell.textContent = '₹ ' + formatMoney(data.total.gross_profit);
+                        totalGrossProfitCell.className = 'text-right font-weight-bold text-success';
+                    } else {
+                        totalGrossProfitCell.textContent = '− ₹ ' + formatMoney(Math.abs(data.total.gross_profit));
+                        totalGrossProfitCell.className = 'text-right font-weight-bold text-danger';
+                    }
+                }
+
+                var totalMarginPctCell = document.getElementById('totalMarginPctCell');
+                if (totalMarginPctCell) {
+                    if (data.total.margin_pct >= 0) {
+                        totalMarginPctCell.textContent = formatMoney(data.total.margin_pct) + '%';
+                        totalMarginPctCell.className = 'text-right font-weight-bold text-success';
+                    } else {
+                        totalMarginPctCell.textContent = '−' + formatMoney(Math.abs(data.total.margin_pct)) + '%';
+                        totalMarginPctCell.className = 'text-right font-weight-bold text-danger';
+                    }
+                }
+            } else {
+                tfoot.style.display = 'none';
+            }
+        }
+
+        // 9. Update Card Footer Summary
+        var summaryGrossProfit = document.getElementById('summaryGrossProfit');
+        if (summaryGrossProfit) {
+            if (data.total.gross_profit >= 0) {
+                summaryGrossProfit.textContent = '₹ ' + formatMoney(data.total.gross_profit);
+                summaryGrossProfit.className = 'font-weight-bold ml-2 text-success';
+            } else {
+                summaryGrossProfit.textContent = '− ₹ ' + formatMoney(Math.abs(data.total.gross_profit));
+                summaryGrossProfit.className = 'font-weight-bold ml-2 text-danger';
+            }
+        }
+
+        var summaryGrossMargin = document.getElementById('summaryGrossMargin');
+        if (summaryGrossMargin) {
+            if (data.total.margin_pct >= 0) {
+                summaryGrossMargin.textContent = formatMoney(data.total.margin_pct) + '%';
+                summaryGrossMargin.className = 'font-weight-bold ml-2 text-success';
+            } else {
+                summaryGrossMargin.textContent = '−' + formatMoney(Math.abs(data.total.margin_pct)) + '%';
+                summaryGrossMargin.className = 'font-weight-bold ml-2 text-danger';
+            }
+        }
+
+        // 10. Update Active Dates Badge
+        var datesCount = document.getElementById('activeDatesCount');
+        if (datesCount) datesCount.textContent = (data.daily ? data.daily.length : 0);
+
+        // 11. Update Category Breakdown Table Rows
+        var catTbody = document.getElementById('categoryBreakdownTbody');
+        if (catTbody) {
+            if (data.categories && data.categories.length > 0) {
+                var catHtml = '';
+                data.categories.forEach(function(cat) {
+                    var gpClass = cat.gross_profit >= 0 ? 'text-success' : 'text-danger';
+                    var gpText = cat.gross_profit >= 0
+                        ? '+ ₹ ' + formatMoney(cat.gross_profit)
+                        : '− ₹ ' + formatMoney(Math.abs(cat.gross_profit));
+
+                    var marginBadge = cat.margin_pct >= 0
+                        ? '<span class="badge badge-success px-2 py-1">' + formatMoney(cat.margin_pct) + '%</span>'
+                        : '<span class="badge badge-danger px-2 py-1">−' + formatMoney(Math.abs(cat.margin_pct)) + '%</span>';
+
+                    var perfBadge = '';
+                    if (cat.margin_pct >= 25) {
+                        perfBadge = '<span class="badge badge-success px-2 py-1"><i class="fas fa-arrow-up mr-1"></i> High Margin</span>';
+                    } else if (cat.margin_pct >= 15) {
+                        perfBadge = '<span class="badge badge-primary px-2 py-1">Healthy</span>';
+                    } else if (cat.margin_pct > 0) {
+                        perfBadge = '<span class="badge badge-warning px-2 py-1">Thin Margin</span>';
+                    } else {
+                        perfBadge = '<span class="badge badge-danger px-2 py-1">Loss Making</span>';
+                    }
+
+                    catHtml += '<tr>' +
+                        '<td class="font-weight-bold text-dark"><i class="fas fa-folder text-muted mr-1"></i> ' + cat.category + '</td>' +
+                        '<td class="text-right font-weight-medium">' + formatMoney(cat.sold_qty) + ' ' + (cat.unit || 'kg') + '</td>' +
+                        '<td class="text-right font-weight-bold text-primary">₹ ' + formatMoney(cat.sales) + '</td>' +
+                        '<td class="text-right text-muted font-weight-medium">₹ ' + formatMoney(cat.cogs) + '</td>' +
+                        '<td class="text-right font-weight-bold ' + gpClass + '">' + gpText + '</td>' +
+                        '<td class="text-right font-weight-bold">' + marginBadge + '</td>' +
+                        '<td class="text-center">' + perfBadge + '</td>' +
+                    '</tr>';
+                });
+                catTbody.innerHTML = catHtml;
+            } else {
+                catTbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">THERE IS NO RECORD IN THIS DATE</td></tr>';
+            }
+        }
+
+        // 12. If Tamil translation is active, translate newly rendered DOM nodes
+        if (window.AppLanguage && typeof window.AppLanguage.getLanguage === 'function' && window.AppLanguage.getLanguage() === 'ta') {
+            var paneMargin = document.getElementById('pane-margin');
+            if (paneMargin && typeof window.AppLanguage.translateSubtree === 'function') {
+                window.AppLanguage.translateSubtree(paneMargin, 'ta');
+            }
+        }
+    }
+
     // Toggle Category-Wise Sales Margin Breakdown Table ON / OFF
     function toggleCategoryBreakdown() {
         var content = document.getElementById('categoryBreakdownContent');

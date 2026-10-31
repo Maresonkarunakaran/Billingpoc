@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -58,92 +59,32 @@ class ProductReportController extends Controller
             }
         }
 
+        // Costing method (Moving Average, FIFO, LIFO)
+        $costingMethod = strtolower($request->get('costing_method', 'moving_average'));
+        if (! in_array($costingMethod, ['moving_average', 'fifo', 'lifo'])) {
+            $costingMethod = 'moving_average';
+        }
+        $selectedCostingMethod = $costingMethod;
+
         // =========================================================================
-        // 1. SALES MARGIN REPORT (MOVING AVERAGE COST COGS & DAILY MARGINS)
+        // 1. SALES MARGIN REPORT (MOVING AVERAGE, FIFO & LIFO COGS & MARGINS)
         // =========================================================================
-        $salesMarginQuery = DB::table('sale_items')
-            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-            ->join('products', 'sale_items.product_id', '=', 'products.id')
-            ->join('units', 'sale_items.unit_id', '=', 'units.id')
-            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-            ->where('sales.business_id', $businessId)
-            ->where('sales.invoice_status', 'finalized')
-            ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
-            ->when($categoryId, fn ($q) => $q->where('products.category_id', $categoryId))
-            ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
-                if ($startDate === $endDate) {
-                    $q->whereDate('sales.invoice_date', '=', $startDate);
-                } else {
-                    $q->whereDate('sales.invoice_date', '>=', $startDate)
-                        ->whereDate('sales.invoice_date', '<=', $endDate);
-                }
-            });
+        $costingDatasets = $this->computeCostingDatasets(
+            $businessId,
+            $branchId,
+            $categoryId,
+            $startDate,
+            $endDate
+        );
 
-        // Date-wise timeline breakdown
-        $dailySalesMargins = (clone $salesMarginQuery)
-            ->groupBy('sales.invoice_date')
-            ->selectRaw('
-                sales.invoice_date,
-                SUM(sale_items.quantity) as sold_qty,
-                SUM(sale_items.total_amount) as total_sales,
-                SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END) as total_cogs,
-                (SUM(sale_items.total_amount) - SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END)) as gross_profit,
-                MAX(units.code) as primary_unit
-            ')
-            ->orderBy('sales.invoice_date', 'desc')
-            ->get()
-            ->map(function ($row) {
-                $sales = (float) $row->total_sales;
-                $cogs = (float) $row->total_cogs;
-                $profit = (float) $row->gross_profit;
-                $marginPct = $sales > 0 ? round(($profit / $sales) * 100, 2) : 0.0;
-
-                return (object) [
-                    'date' => $row->invoice_date,
-                    'sold_qty' => (float) $row->sold_qty,
-                    'unit' => $row->primary_unit ?: 'kg',
-                    'sales' => $sales,
-                    'cogs' => $cogs,
-                    'gross_profit' => $profit,
-                    'margin_pct' => $marginPct,
-                ];
-            });
-
-        $totalDailySoldQty = (float) $dailySalesMargins->sum('sold_qty');
-        $totalDailySales = (float) $dailySalesMargins->sum('sales');
-        $totalDailyCogs = (float) $dailySalesMargins->sum('cogs');
-        $totalDailyGrossProfit = $totalDailySales - $totalDailyCogs;
-        $overallDailyMarginPct = $totalDailySales > 0 ? round(($totalDailyGrossProfit / $totalDailySales) * 100, 2) : 0.0;
-
-        // Category-wise Sales Margin Breakdown (Formula for all categories)
-        $categorySalesMargins = (clone $salesMarginQuery)
-            ->groupBy('categories.id', 'categories.name')
-            ->selectRaw('
-                COALESCE(categories.name, "Uncategorized") as category_name,
-                SUM(sale_items.quantity) as sold_qty,
-                SUM(sale_items.total_amount) as total_sales,
-                SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END) as total_cogs,
-                (SUM(sale_items.total_amount) - SUM(sale_items.quantity * CASE WHEN sale_items.cost_price > 0 THEN sale_items.cost_price ELSE products.purchase_price END)) as gross_profit,
-                MAX(units.code) as primary_unit
-            ')
-            ->orderByDesc('total_sales')
-            ->get()
-            ->map(function ($row) {
-                $sales = (float) $row->total_sales;
-                $cogs = (float) $row->total_cogs;
-                $profit = (float) $row->gross_profit;
-                $marginPct = $sales > 0 ? round(($profit / $sales) * 100, 2) : 0.0;
-
-                return (object) [
-                    'category' => $row->category_name,
-                    'sold_qty' => (float) $row->sold_qty,
-                    'unit' => $row->primary_unit ?: 'kg',
-                    'sales' => $sales,
-                    'cogs' => $cogs,
-                    'gross_profit' => $profit,
-                    'margin_pct' => $marginPct,
-                ];
-            });
+        $activeCostingData = $costingDatasets[$selectedCostingMethod];
+        $dailySalesMargins = $activeCostingData['daily'];
+        $totalDailySoldQty = $activeCostingData['total']['sold_qty'];
+        $totalDailySales = $activeCostingData['total']['sales'];
+        $totalDailyCogs = $activeCostingData['total']['cogs'];
+        $totalDailyGrossProfit = $activeCostingData['total']['gross_profit'];
+        $overallDailyMarginPct = $activeCostingData['total']['margin_pct'];
+        $categorySalesMargins = $activeCostingData['categories'];
 
         // Fetch all products with latest landed PO unit cost (from purchase_items) or base purchase_price
         $latestPoCosts = DB::table('purchase_items')
@@ -330,6 +271,8 @@ class ProductReportController extends Controller
             'categories',
             'startDate',
             'endDate',
+            'selectedCostingMethod',
+            'costingDatasets',
             'dailySalesMargins',
             'totalDailySoldQty',
             'totalDailySales',
@@ -349,5 +292,220 @@ class ProductReportController extends Controller
             'totalSoldGrossProfit',
             'overallSoldMarginPct'
         ));
+    }
+
+    /**
+     * Compute Sales Margin Report across all three costing methods:
+     * 1) Moving Average (Perpetual Moving Weighted Average)
+     * 2) FIFO (First In, First Out)
+     * 3) LIFO (Last In, First Out)
+     */
+    private function computeCostingDatasets($businessId, $branchId, $categoryId, $startDate, $endDate): array
+    {
+        $products = DB::table('products')
+            ->where('business_id', $businessId)
+            ->select('id', 'name', 'purchase_price', 'category_id')
+            ->get()
+            ->keyBy('id');
+
+        $inflows = DB::table('stock_movements')
+            ->where('business_id', $businessId)
+            ->whereIn('movement_type', ['purchase_receive', 'opening_stock', 'adjustment'])
+            ->where('quantity_change', '>', 0)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $fifoBatches = [];
+        $lifoBatches = [];
+        foreach ($inflows as $inf) {
+            $pId = $inf->product_id;
+            $cost = (float) $inf->unit_cost > 0 ? (float) $inf->unit_cost : (float) ($products[$pId]->purchase_price ?? 0);
+            $batch = [
+                'qty' => (float) $inf->quantity_change,
+                'cost' => $cost,
+                'date' => $inf->created_at,
+            ];
+            $fifoBatches[$pId][] = $batch;
+            $lifoBatches[$pId][] = $batch;
+        }
+
+        $allSales = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->join('units', 'sale_items.unit_id', '=', 'units.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->where('sales.business_id', $businessId)
+            ->where('sales.invoice_status', 'finalized')
+            ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
+            ->select(
+                'sale_items.id as sale_item_id',
+                'sale_items.sale_id',
+                'sale_items.product_id',
+                'sale_items.quantity',
+                'sale_items.cost_price as mac_cost_price',
+                'sale_items.total_amount',
+                'sales.invoice_date',
+                'sales.created_at as sale_created_at',
+                'products.purchase_price',
+                'products.category_id',
+                'categories.name as category_name',
+                'units.code as unit_code'
+            )
+            ->orderBy('sales.invoice_date', 'asc')
+            ->orderBy('sales.created_at', 'asc')
+            ->orderBy('sale_items.id', 'asc')
+            ->get();
+
+        $processedItems = [];
+        foreach ($allSales as $s) {
+            $pId = $s->product_id;
+            $soldQty = (float) $s->quantity;
+            $fallbackCost = (float) ($products[$pId]->purchase_price ?? 0);
+
+            // Effective sale timestamp: if invoice_date is earlier than created_at (e.g. backdated sale),
+            // use the end of invoice_date so the sale does not consume future inventory.
+            $saleEffectiveTime = $s->sale_created_at;
+            if ($s->invoice_date) {
+                $invDateStr = Carbon::parse($s->invoice_date)->toDateString();
+                $createdDateStr = Carbon::parse($s->sale_created_at)->toDateString();
+                if ($invDateStr < $createdDateStr) {
+                    $saleEffectiveTime = Carbon::parse($s->invoice_date)->endOfDay()->toDateTimeString();
+                }
+            }
+
+            // 1. Moving Average Cost COGS
+            $macUnitCost = (float) $s->mac_cost_price > 0 ? (float) $s->mac_cost_price : $fallbackCost;
+            $macCogs = round($soldQty * $macUnitCost, 2);
+
+            // 2. FIFO COGS (oldest received batch available at sale time)
+            $fifoCogs = 0.0;
+            $remFifo = $soldQty;
+            if (isset($fifoBatches[$pId])) {
+                foreach ($fifoBatches[$pId] as &$b) {
+                    if ($b['qty'] <= 0) continue;
+                    if ($b['date'] > $saleEffectiveTime) continue;
+                    $take = min($remFifo, $b['qty']);
+                    $fifoCogs += ($take * $b['cost']);
+                    $b['qty'] -= $take;
+                    $remFifo -= $take;
+                    if ($remFifo <= 0.00001) break;
+                }
+                unset($b);
+            }
+            if ($remFifo > 0.00001) {
+                $fifoCogs += ($remFifo * $fallbackCost);
+            }
+            $fifoCogs = round($fifoCogs, 2);
+
+            // 3. LIFO COGS (newest received batch available at sale time)
+            $lifoCogs = 0.0;
+            $remLifo = $soldQty;
+            if (isset($lifoBatches[$pId])) {
+                for ($i = count($lifoBatches[$pId]) - 1; $i >= 0; $i--) {
+                    if ($lifoBatches[$pId][$i]['qty'] <= 0) continue;
+                    if ($lifoBatches[$pId][$i]['date'] > $saleEffectiveTime) continue;
+                    $take = min($remLifo, $lifoBatches[$pId][$i]['qty']);
+                    $lifoCogs += ($take * $lifoBatches[$pId][$i]['cost']);
+                    $lifoBatches[$pId][$i]['qty'] -= $take;
+                    $remLifo -= $take;
+                    if ($remLifo <= 0.00001) break;
+                }
+            }
+            if ($remLifo > 0.00001) {
+                $lifoCogs += ($remLifo * $fallbackCost);
+            }
+            $lifoCogs = round($lifoCogs, 2);
+
+            $processedItems[] = (object) [
+                'sale_item_id' => $s->sale_item_id,
+                'product_id' => $s->product_id,
+                'category_id' => $s->category_id,
+                'category_name' => $s->category_name ?: 'Uncategorized',
+                'invoice_date' => $s->invoice_date,
+                'sold_qty' => $soldQty,
+                'unit' => $s->unit_code ?: 'kg',
+                'sales' => (float) $s->total_amount,
+                'cogs_moving_average' => $macCogs,
+                'cogs_fifo' => $fifoCogs,
+                'cogs_lifo' => $lifoCogs,
+            ];
+        }
+
+        $filteredItems = collect($processedItems)->filter(function ($item) use ($categoryId, $startDate, $endDate) {
+            if ($categoryId && $item->category_id != $categoryId) return false;
+            if ($startDate && $item->invoice_date < $startDate) return false;
+            if ($endDate && $item->invoice_date > $endDate) return false;
+            return true;
+        });
+
+        $datasets = [];
+        $methods = ['moving_average', 'fifo', 'lifo'];
+
+        foreach ($methods as $m) {
+            $cogsKey = 'cogs_' . $m;
+
+            // Daily timeline breakdown
+            $daily = $filteredItems->groupBy('invoice_date')->map(function ($items, $date) use ($cogsKey) {
+                $soldQty = (float) $items->sum('sold_qty');
+                $sales = (float) $items->sum('sales');
+                $cogs = (float) $items->sum($cogsKey);
+                $grossProfit = round($sales - $cogs, 2);
+                $marginPct = $sales > 0 ? round(($grossProfit / $sales) * 100, 2) : 0.0;
+
+                return (object) [
+                    'date' => $date,
+                    'date_formatted' => \Carbon\Carbon::parse($date)->format('d-M'),
+                    'year' => \Carbon\Carbon::parse($date)->format('Y'),
+                    'sold_qty' => $soldQty,
+                    'unit' => $items->first()?->unit ?? 'kg',
+                    'sales' => $sales,
+                    'cogs' => $cogs,
+                    'gross_profit' => $grossProfit,
+                    'margin_pct' => $marginPct,
+                ];
+            })->sortByDesc('date')->values();
+
+            $totalSoldQty = (float) $daily->sum('sold_qty');
+            $totalSales = (float) $daily->sum('sales');
+            $totalCogs = (float) $daily->sum('cogs');
+            $totalGrossProfit = round($totalSales - $totalCogs, 2);
+            $overallMarginPct = $totalSales > 0 ? round(($totalGrossProfit / $totalSales) * 100, 2) : 0.0;
+
+            // Category-wise Sales Margin Breakdown
+            $categories = $filteredItems->groupBy('category_name')->map(function ($items, $catName) use ($cogsKey) {
+                $soldQty = (float) $items->sum('sold_qty');
+                $sales = (float) $items->sum('sales');
+                $cogs = (float) $items->sum($cogsKey);
+                $grossProfit = round($sales - $cogs, 2);
+                $marginPct = $sales > 0 ? round(($grossProfit / $sales) * 100, 2) : 0.0;
+
+                return (object) [
+                    'category' => $catName,
+                    'sold_qty' => $soldQty,
+                    'unit' => $items->first()?->unit ?? 'kg',
+                    'sales' => $sales,
+                    'cogs' => $cogs,
+                    'gross_profit' => $grossProfit,
+                    'margin_pct' => $marginPct,
+                ];
+            })->sortByDesc('sales')->values();
+
+            $datasets[$m] = [
+                'daily' => $daily,
+                'total' => [
+                    'sold_qty' => $totalSoldQty,
+                    'unit' => $daily->first()?->unit ?? 'kg',
+                    'sales' => $totalSales,
+                    'cogs' => $totalCogs,
+                    'gross_profit' => $totalGrossProfit,
+                    'margin_pct' => $overallMarginPct,
+                ],
+                'categories' => $categories,
+            ];
+        }
+
+        return $datasets;
     }
 }

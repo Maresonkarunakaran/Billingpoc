@@ -213,6 +213,21 @@
         'Category-Wise Sales Margin Breakdown': 'வகை வாரியான விற்பனை லாப விளிம்பு விவரம்',
         'Toggle Category Breakdown': 'வகை வாரியான அட்டவணையை காட்ட/மறைக்க',
         'Moving Weighted Average Cost': 'நகரும் சராசரி கொள்முதல் அடக்க விலை',
+        'Costing Method': 'சரக்கு மதிப்பீட்டு முறை',
+        'Costing Method:': 'சரக்கு மதிப்பீட்டு முறை:',
+        'Moving Average': 'நகரும் சராசரி (Moving Average)',
+        'FIFO': 'முதலில் வந்தது முதலில் (FIFO)',
+        'LIFO': 'கடைசியில் வந்தது முதலில் (LIFO)',
+        'FIFO (First In, First Out)': 'முதலில் வந்தது முதலில் வெளியேறும் (FIFO)',
+        'LIFO (Last In, First Out)': 'கடைசியில் வந்தது முதலில் வெளியேறும் (LIFO)',
+        'First In, First Out': 'முதலில் வந்தது முதலில் வெளியேறும்',
+        'Last In, First Out': 'கடைசியில் வந்தது முதலில் வெளியேறும்',
+        'View Formulas': 'சூத்திரங்களை பார்க்க',
+        'Inventory Valuation & Costing Formulas': 'சரக்கு மதிப்பீடு & செலவு கணக்கீட்டு சூத்திரங்கள்',
+        'Cost of Goods Sold (Moving Avg)': 'விற்ற பொருட்களின் அடக்கம் (நகரும் சராசரி)',
+        'Cost of Goods Sold (FIFO)': 'விற்ற பொருட்களின் அடக்கம் (FIFO)',
+        'Cost of Goods Sold (LIFO)': 'விற்ற பொருட்களின் அடக்கம் (LIFO)',
+        'Active Dates': 'செயல்பட்ட நாட்கள்',
         'Reorder Alert (< 5 Qty)': 'மறுஆர்டர் எச்சரிக்கை (< 5 இருப்பு)',
         'Alert': 'எச்சரிக்கை',
         'Landed Cost': 'கொள்முதல் அடக்க விலை',
@@ -717,6 +732,12 @@
         var current = getSavedLanguage();
         var next = (current === 'ta') ? 'en' : 'ta';
         window.switchLanguage(next);
+    };
+
+    window.AppLanguage = {
+        getLanguage: getSavedLanguage,
+        translateSubtree: translateSubtree,
+        switchLanguage: window.switchLanguage
     };
 
     // =========================================================================
