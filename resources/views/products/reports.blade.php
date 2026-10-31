@@ -346,17 +346,24 @@
             </div>
             <div class="card-footer bg-white border-top py-2 px-3" id="salesMarginFooterSummary">
                 <div class="row text-center text-md-left align-items-center">
-                    <div class="col-md-6 mb-1 mb-md-0">
+                    <div class="col-md-4 mb-1 mb-md-0">
                         <span class="text-xs text-muted text-uppercase font-weight-bold">Total gross profit:</span>
                         <span class="font-weight-bold ml-2 {{ $totalDailyGrossProfit >= 0 ? 'text-success' : 'text-danger' }}" id="summaryGrossProfit" style="font-size: 1.1rem;">
                             {{ $totalDailyGrossProfit >= 0 ? '₹ ' . number_format($totalDailyGrossProfit, 2) : '− ₹ ' . number_format(abs($totalDailyGrossProfit), 2) }}
                         </span>
                     </div>
-                    <div class="col-md-6 text-md-right">
+                    <div class="col-md-4 mb-1 mb-md-0 text-center">
                         <span class="text-xs text-muted text-uppercase font-weight-bold">Overall gross margin:</span>
                         <span class="font-weight-bold ml-2 {{ $overallDailyMarginPct >= 0 ? 'text-success' : 'text-danger' }}" id="summaryGrossMargin" style="font-size: 1.1rem;">
                             {{ $overallDailyMarginPct >= 0 ? number_format($overallDailyMarginPct, 2) . '%' : '−' . number_format(abs($overallDailyMarginPct), 2) . '%' }}
                         </span>
+                    </div>
+                    <div class="col-md-4 text-md-right">
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Ending Stock Value:</span>
+                        <span class="font-weight-bold text-dark ml-2" id="summaryClosingValue" style="font-size: 1.1rem;">
+                            ₹ {{ number_format($closingStockValue, 2) }}
+                        </span>
+                        <small class="text-muted font-weight-normal ml-1" id="summaryClosingQty">({{ number_format($closingStockQty, 2) }} in hand)</small>
                     </div>
                 </div>
             </div>
@@ -1127,6 +1134,15 @@
                 summaryGrossMargin.textContent = '−' + formatMoney(Math.abs(data.total.margin_pct)) + '%';
                 summaryGrossMargin.className = 'font-weight-bold ml-2 text-danger';
             }
+        }
+
+        var summaryClosingVal = document.getElementById('summaryClosingValue');
+        if (summaryClosingVal) {
+            summaryClosingVal.textContent = '₹ ' + formatMoney(data.total.closing_stock_value || 0);
+        }
+        var summaryClosingQty = document.getElementById('summaryClosingQty');
+        if (summaryClosingQty) {
+            summaryClosingQty.textContent = '(' + formatMoney(data.total.closing_stock_qty || 0) + ' in hand)';
         }
 
         // 10. Update Active Dates Badge

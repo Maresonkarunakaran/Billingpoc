@@ -242,5 +242,15 @@ class CostingMethodReportTest extends TestCase
         $this->assertEquals(1800.00, $costingDatasets['lifo']['total']['gross_profit']);
         // Moving Average Gross Profit = 5200 - 3133.34 = 2066.66
         $this->assertEquals(2066.66, $costingDatasets['moving_average']['total']['gross_profit']);
+
+        // Check Ending Inventory: 200 kg inbound - 130 kg sold = 70 kg remaining
+        $this->assertEquals(70.00, $costingDatasets['fifo']['total']['closing_stock_qty']);
+        $this->assertEquals(70.00, $costingDatasets['lifo']['total']['closing_stock_qty']);
+        $this->assertEquals(70.00, $costingDatasets['moving_average']['total']['closing_stock_qty']);
+
+        // Ending Inventory Valuation (reconciles with Total Inbound: 5000.00 = COGS + Ending Value)
+        $this->assertEquals(2100.00, $costingDatasets['fifo']['total']['closing_stock_value']);
+        $this->assertEquals(1600.00, $costingDatasets['lifo']['total']['closing_stock_value']);
+        $this->assertEquals(1866.66, $costingDatasets['moving_average']['total']['closing_stock_value']);
     }
 }

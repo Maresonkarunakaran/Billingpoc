@@ -84,6 +84,8 @@ class ProductReportController extends Controller
         $totalDailyCogs = $activeCostingData['total']['cogs'];
         $totalDailyGrossProfit = $activeCostingData['total']['gross_profit'];
         $overallDailyMarginPct = $activeCostingData['total']['margin_pct'];
+        $closingStockQty = $activeCostingData['total']['closing_stock_qty'] ?? 0.0;
+        $closingStockValue = $activeCostingData['total']['closing_stock_value'] ?? 0.0;
         $categorySalesMargins = $activeCostingData['categories'];
 
         // Fetch all products with latest landed PO unit cost (from purchase_items) or base purchase_price
@@ -279,6 +281,8 @@ class ProductReportController extends Controller
             'totalDailyCogs',
             'totalDailyGrossProfit',
             'overallDailyMarginPct',
+            'closingStockQty',
+            'closingStockValue',
             'categorySalesMargins',
             'productsMargin',
             'categoryMarginSummary',
@@ -300,7 +304,7 @@ class ProductReportController extends Controller
      * 2) FIFO (First In, First Out)
      * 3) LIFO (Last In, First Out)
      */
-    private function computeCostingDatasets($businessId, $branchId, $categoryId, $startDate, $endDate): array
+    public function computeCostingDatasets($businessId, $branchId, $categoryId, $startDate, $endDate): array
     {
         $products = DB::table('products')
             ->where('business_id', $businessId)
@@ -440,6 +444,56 @@ class ProductReportController extends Controller
             return true;
         });
 
+        // Compute Total Inbound Quantity & Valuation for Closing Inventory
+        $totalInboundQty = 0.0;
+        $totalInboundVal = 0.0;
+        foreach ($inflows as $inf) {
+            $pId = $inf->product_id;
+            if ($categoryId && isset($products[$pId]) && $products[$pId]->category_id != $categoryId) {
+                continue;
+            }
+            $cost = (float) $inf->unit_cost > 0 ? (float) $inf->unit_cost : (float) ($products[$pId]->purchase_price ?? 0);
+            $qty = (float) $inf->quantity_change;
+            $totalInboundQty += $qty;
+            $totalInboundVal += ($qty * $cost);
+        }
+
+        // Unsold FIFO inventory batches & ending value
+        $fifoEndingQty = 0.0;
+        $fifoEndingVal = 0.0;
+        foreach ($fifoBatches as $pId => $batches) {
+            if ($categoryId && isset($products[$pId]) && $products[$pId]->category_id != $categoryId) {
+                continue;
+            }
+            foreach ($batches as $b) {
+                if ($b['qty'] > 0.00001) {
+                    $fifoEndingQty += $b['qty'];
+                    $fifoEndingVal += ($b['qty'] * $b['cost']);
+                }
+            }
+        }
+
+        // Unsold LIFO inventory batches & ending value
+        $lifoEndingQty = 0.0;
+        $lifoEndingVal = 0.0;
+        foreach ($lifoBatches as $pId => $batches) {
+            if ($categoryId && isset($products[$pId]) && $products[$pId]->category_id != $categoryId) {
+                continue;
+            }
+            foreach ($batches as $b) {
+                if ($b['qty'] > 0.00001) {
+                    $lifoEndingQty += $b['qty'];
+                    $lifoEndingVal += ($b['qty'] * $b['cost']);
+                }
+            }
+        }
+
+        // Moving Average ending stock: remaining stock and value
+        $allSoldQty = (float) collect($processedItems)->sum('sold_qty');
+        $allMacCogs = (float) collect($processedItems)->sum('cogs_moving_average');
+        $macEndingQty = max(0.0, $totalInboundQty - $allSoldQty);
+        $macEndingVal = max(0.0, $totalInboundVal - $allMacCogs);
+
         $datasets = [];
         $methods = ['moving_average', 'fifo', 'lifo'];
 
@@ -492,6 +546,17 @@ class ProductReportController extends Controller
                 ];
             })->sortByDesc('sales')->values();
 
+            $endingQty = match($m) {
+                'fifo' => $fifoEndingQty,
+                'lifo' => $lifoEndingQty,
+                default => $macEndingQty,
+            };
+            $endingVal = match($m) {
+                'fifo' => $fifoEndingVal,
+                'lifo' => $lifoEndingVal,
+                default => $macEndingVal,
+            };
+
             $datasets[$m] = [
                 'daily' => $daily,
                 'total' => [
@@ -501,6 +566,8 @@ class ProductReportController extends Controller
                     'cogs' => $totalCogs,
                     'gross_profit' => $totalGrossProfit,
                     'margin_pct' => $overallMarginPct,
+                    'closing_stock_qty' => round($endingQty, 2),
+                    'closing_stock_value' => round($endingVal, 2),
                 ],
                 'categories' => $categories,
             ];
