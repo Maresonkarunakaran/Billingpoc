@@ -17,6 +17,7 @@ class User extends Authenticatable
         'business_id',
         'role_id',
         'default_branch_id',
+        'client_id',
         'name',
         'email',
         'phone',
@@ -24,6 +25,9 @@ class User extends Authenticatable
         'secondary_password',
         'is_active',
         'is_master_admin',
+        'must_change_password',
+        'last_login_at',
+        'admin_notes',
     ];
 
     protected $hidden = [
@@ -40,6 +44,8 @@ class User extends Authenticatable
             'secondary_password' => 'hashed',
             'is_active' => 'boolean',
             'is_master_admin' => 'boolean',
+            'must_change_password' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -85,6 +91,30 @@ class User extends Authenticatable
     public function isMasterAdmin(): bool
     {
         return (bool) $this->is_master_admin;
+    }
+
+    public static function generateNextClientId(): string
+    {
+        $lastUser = static::whereNotNull('client_id')
+            ->where('client_id', 'like', 'CLT%')
+            ->orderByRaw('CAST(SUBSTRING(client_id, 4) AS UNSIGNED) DESC')
+            ->first();
+
+        $nextNum = 1;
+        if ($lastUser && preg_match('/CLT(\d+)/', (string) $lastUser->client_id, $matches)) {
+            $nextNum = ((int) $matches[1]) + 1;
+        } else {
+            $nextNum = max(1, static::where('is_master_admin', false)->count() + 1);
+        }
+
+        $candidate = sprintf('CLT%04d', $nextNum);
+
+        while (static::where('client_id', $candidate)->exists()) {
+            $nextNum++;
+            $candidate = sprintf('CLT%04d', $nextNum);
+        }
+
+        return $candidate;
     }
 
     public function hasRole(string ...$roles): bool

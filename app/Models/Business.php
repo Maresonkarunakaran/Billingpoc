@@ -27,6 +27,8 @@ class Business extends Model
         'city',
         'pincode',
         'logo_path',
+        'store_type',
+        'admin_notes',
         'is_active',
     ];
 

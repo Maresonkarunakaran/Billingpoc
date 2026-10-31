@@ -74,9 +74,9 @@ class LanguageSwitchTest extends TestCase
         $response->assertSee('html.lang-tamil:not(.lang-ready) body', false);
     }
 
-    public function test_tamil_is_rendered_from_first_byte_on_register_page(): void
+    public function test_tamil_is_rendered_from_first_byte_on_auth_page(): void
     {
-        $response = $this->withUnencryptedCookie('app_language', 'ta')->get(route('register'));
+        $response = $this->withUnencryptedCookie('app_language', 'ta')->get(route('login'));
 
         $response->assertStatus(200);
         $response->assertSee('<html lang="ta" class="lang-tamil translating-tamil">', false);

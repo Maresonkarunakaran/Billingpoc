@@ -69,6 +69,7 @@ class RegistrationService
             $business = Business::create([
                 'name' => $businessName,
                 'legal_name' => $businessName,
+                'store_type' => $data['store_type'] ?? 'shop',
                 'gstin' => $gstin,
                 'email' => $data['email'],
                 'phone' => $data['phone'],
@@ -77,7 +78,8 @@ class RegistrationService
                 'state_code' => $stateCode,
                 'state_name' => $stateName,
                 'city' => $city,
-                'is_active' => true,
+                'admin_notes' => $data['admin_notes'] ?? null,
+                'is_active' => $data['is_active'] ?? true,
             ]);
 
             // 2. Create Initial Branch
@@ -177,11 +179,15 @@ class RegistrationService
                 'business_id' => $business->id,
                 'role_id' => $role->id,
                 'default_branch_id' => $branch->id,
+                'client_id' => $data['client_id'] ?? User::generateNextClientId(),
                 'name' => trim($data['name']),
                 'email' => strtolower(trim($data['email'])),
                 'phone' => trim($data['phone']),
                 'password' => $data['password'], // cast 'password' => 'hashed' in User model
-                'is_active' => true,
+                'is_active' => $data['is_active'] ?? true,
+                'must_change_password' => (bool) ($data['must_change_password'] ?? false),
+                'admin_notes' => $data['admin_notes'] ?? null,
+                'is_master_admin' => false,
             ]);
 
             // Attach user to branch

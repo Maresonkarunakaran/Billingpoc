@@ -168,6 +168,18 @@
                 </a>
             </div>
 
+            @if(session('info'))
+                <div class="alert alert-info py-2 text-sm mb-3">
+                    <i class="fas fa-info-circle mr-1"></i> {{ session('info') }}
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="alert alert-success py-2 text-sm mb-3">
+                    <i class="fas fa-check-circle mr-1"></i> {{ session('success') }}
+                </div>
+            @endif
+
             @if($errors->any())
                 <div class="alert alert-danger py-2 text-sm mb-3">
                     <i class="fas fa-exclamation-circle mr-1"></i> {{ $errors->first() }}
@@ -177,12 +189,12 @@
             <form id="loginForm" action="{{ route('login.post') }}" method="POST">
                 @csrf
                 <div class="form-group mb-3">
-                    <label class="text-xs font-weight-bold text-uppercase text-muted">User Login ID / Email</label>
+                    <label class="text-xs font-weight-bold text-uppercase text-muted">User ID / Client ID / Email</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
                         </div>
-                        <input type="text" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="admin@pos.com or User ID" required autofocus autocomplete="username">
+                        <input type="text" name="email" id="emailInput" class="form-control" value="{{ old('email') }}" placeholder="e.g. CLT0001, admin@pos.com" required autofocus autocomplete="username">
                     </div>
                 </div>
 
@@ -212,13 +224,9 @@
             </form>
 
             <div class="text-center mt-3 pt-2 border-top">
-                <span class="text-xs text-muted">Need a new business POS setup?</span>
-                <a href="{{ route('register') }}" class="text-xs font-weight-bold ml-1 text-primary">
-                    <i class="fas fa-user-plus mr-1"></i> Register New Business / Sign Up
-                </a>
-                <div class="text-xs text-muted mt-1">
-                    <i class="fas fa-lock text-secondary mr-1"></i> Client access: User IDs & passwords are created & assigned by the Software Administrator.
-                </div>
+                <span class="text-xs text-muted">
+                    <i class="fas fa-lock text-secondary mr-1"></i> Authorized Client Access Only &bull; User IDs & passwords are created & assigned by the Software Administrator.
+                </span>
             </div>
         </div>
     </div>
@@ -330,11 +338,16 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 pt-0 px-4 pb-4">
-                    <button type="button" class="btn btn-sm btn-outline-secondary text-light" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning font-weight-bold px-4 text-dark shadow-sm">
-                        <i class="fas fa-unlock-alt mr-1"></i> Access Master Panel
-                    </button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 d-flex justify-content-between align-items-center">
+                    <a href="{{ route('master-admin.login') }}" class="text-xs text-warning" title="Open Master Admin in Full Page">
+                        <i class="fas fa-external-link-alt mr-1"></i> Dedicated Full Page
+                    </a>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary text-light mr-1" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning font-weight-bold px-3 text-dark shadow-sm">
+                            <i class="fas fa-unlock-alt mr-1"></i> Access Master Panel
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

@@ -249,7 +249,7 @@
             <!-- Master Admin Button -->
             @if(auth()->user()->is_master_admin)
             <li class="nav-item mr-2">
-                <a href="{{ route('master-admin.index') }}" class="btn btn-warning btn-sm px-2 font-weight-bold text-dark shadow-sm" title="Software Master Admin Portal">
+                <a href="{{ route('master-admin.dashboard') }}" class="btn btn-warning btn-sm px-2 font-weight-bold text-dark shadow-sm" title="Software Master Admin Portal">
                     <i class="fas fa-shield-alt mr-1"></i> <span class="d-none d-md-inline">Master Admin</span>
                 </a>
             </li>
@@ -278,7 +278,7 @@
                     </div>
                     @if(auth()->user()->is_master_admin)
                         <div class="dropdown-divider"></div>
-                        <a href="{{ route('master-admin.index') }}" class="dropdown-item text-warning font-weight-bold">
+                        <a href="{{ route('master-admin.dashboard') }}" class="dropdown-item text-warning font-weight-bold">
                             <i class="fas fa-shield-alt mr-2 text-warning"></i> Software Master Admin Portal
                         </a>
                     @endif
@@ -392,7 +392,7 @@
                     @if(auth()->user()->is_master_admin)
                     <li class="nav-header text-uppercase text-xs text-warning font-weight-bold mt-2">Platform Master</li>
                     <li class="nav-item mb-4">
-                        <a href="{{ route('master-admin.index') }}" class="nav-link {{ request()->is('master-admin*') ? 'active' : '' }}" style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b;">
+                        <a href="{{ route('master-admin.dashboard') }}" class="nav-link {{ request()->is('master-admin*') ? 'active' : '' }}" style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #f59e0b;">
                             <i class="nav-icon fas fa-shield-alt text-warning"></i>
                             <p class="font-weight-bold text-warning">Master Admin Panel</p>
                         </a>

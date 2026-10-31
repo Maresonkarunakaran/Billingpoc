@@ -2,118 +2,114 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_signup_page_is_accessible(): void
+    public function test_public_signup_pages_are_disabled_and_redirect_to_login(): void
     {
         $response = $this->get(route('register'));
-        $response->assertOk();
-        $response->assertSee('Register Your Business');
-        $response->assertSee('Store Information');
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('info', 'Public registration is disabled. Client accounts are provisioned exclusively by the Software Administrator.');
 
         $signupAlias = $this->get(route('signup'));
-        $signupAlias->assertOk();
+        $signupAlias->assertRedirect(route('login'));
+        $signupAlias->assertSessionHas('info');
     }
 
-    public function test_login_page_contains_link_to_signup(): void
+    public function test_login_page_does_not_contain_public_signup_link(): void
     {
         $response = $this->get(route('login'));
         $response->assertOk();
-        $response->assertSee(route('register'));
-        $response->assertSee('Sign Up');
-        $response->assertSee('Register New Business');
+        $response->assertDontSee('Register New Business');
+        $response->assertDontSee('Sign Up to Terminal');
+        $response->assertSee('User ID / Client ID / Email');
+        $response->assertSee('Authorized Client Access Only');
     }
 
-    public function test_user_can_register_new_business_and_store(): void
+    public function test_public_registration_endpoint_is_blocked_with_forbidden(): void
     {
-        $this->seed(DatabaseSeeder::class);
-
         $payload = [
-            'business_name' => 'Kavitha Supermarket',
-            'branch_name' => 'Kavitha Main Bazaar Shop',
-            'branch_type' => 'shop',
-            'state_code' => '33',
-            'city' => 'Madurai',
-            'gstin' => '33AABCK1234F1Z1',
-            'name' => 'Kavitha Devi',
-            'email' => 'kavitha@supermarket.in',
-            'phone' => '9843322110',
+            'business_name' => 'Unauthorized Attacker Shop',
+            'name' => 'Hacker',
+            'email' => 'hacker@store.com',
             'password' => 'secret123',
-            'password_confirmation' => 'secret123',
         ];
 
         $response = $this->post(route('register.post'), $payload);
 
-        $response->assertRedirect(route('dashboard'));
-
-        $user = User::where('email', 'kavitha@supermarket.in')->firstOrFail();
-        $this->assertAuthenticatedAs($user);
-
-        $this->assertDatabaseHas('businesses', [
-            'name' => 'Kavitha Supermarket',
-            'state_code' => '33',
-            'city' => 'Madurai',
-        ]);
-
-        $this->assertDatabaseHas('branches', [
-            'name' => 'Kavitha Main Bazaar Shop',
-            'business_id' => $user->business_id,
-        ]);
-
-        $this->assertDatabaseHas('tax_configurations', [
-            'business_id' => $user->business_id,
-            'name' => 'GST 18%',
-        ]);
-
-        $this->assertDatabaseHas('units', [
-            'business_id' => $user->business_id,
-            'code' => 'PCS',
-        ]);
-
-        $this->assertDatabaseHas('customers', [
-            'business_id' => $user->business_id,
-            'name' => 'Walk-in Retail Customer',
-        ]);
-
-        $this->assertTrue($user->hasRole('super-admin'));
-        $this->assertEquals($user->default_branch_id, session('active_branch_id'));
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('users', ['email' => 'hacker@store.com']);
+        $this->assertGuest();
     }
 
-    public function test_registration_validates_required_fields_and_unique_email(): void
+    public function test_only_master_admin_can_provision_client_account(): void
     {
-        $this->seed(DatabaseSeeder::class);
-
-        // Try registering with existing admin email
-        $payload = [
-            'business_name' => '',
-            'branch_type' => 'invalid_type',
-            'state_code' => '',
-            'name' => '',
-            'email' => 'admin@pos.com',
-            'phone' => '',
-            'password' => '123',
-            'password_confirmation' => 'mismatch',
-        ];
-
-        $response = $this->post(route('register.post'), $payload);
-
-        $response->assertSessionHasErrors([
-            'business_name',
-            'branch_type',
-            'state_code',
-            'name',
-            'email',
-            'phone',
-            'password',
+        $role = Role::create([
+            'name' => 'Super Administrator',
+            'slug' => 'super-admin',
+            'permissions' => ['*'],
         ]);
 
-        $this->assertGuest();
+        $masterAdmin = User::create([
+            'name' => 'Software Master Admin',
+            'email' => 'master@admin.com',
+            'password' => Hash::make('MasterAdmin#2026'),
+            'secondary_password' => Hash::make('SoftwareDev@2026'),
+            'is_active' => true,
+            'is_master_admin' => true,
+        ]);
+
+        // Regular guest cannot provision client
+        $guestResponse = $this->post(route('master-admin.clients.store'), [
+            'business_name' => 'Kavitha Supermarket',
+            'store_type' => 'shop',
+            'branch_name' => 'Main Bazaar',
+            'state_code' => '33',
+            'city' => 'Madurai',
+            'client_name' => 'Kavitha Devi',
+            'phone' => '9843322110',
+            'email' => 'kavitha@supermarket.in',
+            'password' => 'secret123',
+            'status' => 'active',
+        ]);
+        $guestResponse->assertRedirect(route('login'));
+
+        // Master admin can provision client
+        $adminResponse = $this->actingAs($masterAdmin)->post(route('master-admin.clients.store'), [
+            'business_name' => 'Kavitha Supermarket',
+            'store_type' => 'shop',
+            'branch_name' => 'Main Bazaar',
+            'state_code' => '33',
+            'city' => 'Madurai',
+            'client_name' => 'Kavitha Devi',
+            'phone' => '9843322110',
+            'email' => 'kavitha@supermarket.in',
+            'password' => 'secret123',
+            'status' => 'active',
+        ]);
+
+        $adminResponse->assertRedirect(route('master-admin.clients.index'));
+        $adminResponse->assertSessionHas('new_client_credentials');
+
+        $this->assertDatabaseHas('businesses', ['name' => 'Kavitha Supermarket']);
+        $user = User::where('email', 'kavitha@supermarket.in')->firstOrFail();
+        $this->assertNotNull($user->client_id);
+        $this->assertEquals('Kavitha Devi', $user->name);
+
+        // Provisioned client can now log in via standard login page using their email or Client ID
+        $this->post(route('logout'));
+        $loginResponse = $this->post(route('login.post'), [
+            'email' => $user->client_id,
+            'password' => 'secret123',
+        ]);
+        $loginResponse->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
     }
 }

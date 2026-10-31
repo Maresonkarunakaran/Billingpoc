@@ -28,25 +28,44 @@ use Illuminate\Support\Facades\Route;
 // Authentication
 Route::get('login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->name('login.post');
-Route::post('master-admin/login', [AuthController::class, 'masterLogin'])->name('master-admin.login');
-Route::get('master-admin/login', fn () => redirect()->route('login')->with('open_master_modal', true));
-Route::get('register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::get('signup', [RegisterController::class, 'showRegistrationForm'])->name('signup');
-Route::post('register', [RegisterController::class, 'register'])->name('register.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-// Software Master Admin Portal Routes (Restricted to Software Owner)
-Route::middleware(['auth', 'active', 'master.admin'])->prefix('master-admin')->name('master-admin.')->group(function () {
-    Route::get('/', [MasterAdminController::class, 'index'])->name('index');
-    Route::post('/clients', [MasterAdminController::class, 'storeClient'])->name('clients.store');
-    Route::post('/users', [MasterAdminController::class, 'storeUser'])->name('users.store');
-    Route::post('/users/{user}/password', [MasterAdminController::class, 'updatePassword'])->name('users.password');
-    Route::post('/users/{user}/toggle-status', [MasterAdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
-    Route::post('/businesses/{business}/toggle-status', [MasterAdminController::class, 'toggleBusinessStatus'])->name('businesses.toggle-status');
+// Public Registration is Disabled - Client Accounts are Created Exclusively by Master Admin
+Route::get('register', fn () => redirect()->route('login')->with('info', 'Public registration is disabled. Client accounts are provisioned exclusively by the Software Administrator.'))->name('register');
+Route::get('signup', fn () => redirect()->route('login')->with('info', 'Public registration is disabled. Client accounts are provisioned exclusively by the Software Administrator.'))->name('signup');
+Route::post('register', fn () => abort(403, 'Public self-registration is disabled. Please contact the Software Administrator for account provisioning.'))->name('register.post');
+
+// Dedicated Software Master Admin Portal Routes (Restricted to Software Owner)
+Route::prefix('master-admin')->name('master-admin.')->group(function () {
+    Route::get('login', [AuthController::class, 'showMasterLogin'])->name('login');
+    Route::post('login', [AuthController::class, 'masterLogin'])->name('login.post');
+
+    Route::middleware(['auth', 'active', 'master.admin'])->group(function () {
+        Route::get('/', [MasterAdminController::class, 'dashboard'])->name('home');
+        Route::get('dashboard', [MasterAdminController::class, 'dashboard'])->name('dashboard');
+
+        // Client Management
+        Route::get('clients', [MasterAdminController::class, 'index'])->name('clients.index');
+        Route::get('clients/create', [MasterAdminController::class, 'create'])->name('clients.create');
+        Route::post('clients', [MasterAdminController::class, 'storeClient'])->name('clients.store');
+        Route::get('clients/{id}', [MasterAdminController::class, 'show'])->name('clients.show');
+        Route::get('clients/{id}/edit', [MasterAdminController::class, 'edit'])->name('clients.edit');
+        Route::put('clients/{id}', [MasterAdminController::class, 'update'])->name('clients.update');
+        Route::post('clients/{id}/password', [MasterAdminController::class, 'updatePassword'])->name('clients.password');
+        Route::post('clients/{id}/toggle-status', [MasterAdminController::class, 'toggleUserStatus'])->name('clients.toggle-status');
+
+        // Staff Users Management under Clients
+        Route::post('users', [MasterAdminController::class, 'storeUser'])->name('users.store');
+
+        // Audit Activity Logs
+        Route::get('audit-logs', [MasterAdminController::class, 'auditLogs'])->name('audit-logs');
+    });
 });
 
 // Authenticated Application Routes
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('change-password', [AuthController::class, 'showChangePassword'])->name('password.change');
+    Route::post('change-password', [AuthController::class, 'updateChangePassword'])->name('password.change.update');
     Route::post('branch/switch', [AuthController::class, 'switchBranch'])->name('branch.switch');
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

@@ -9,16 +9,34 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
         if (Auth::check()) {
+            if (Auth::user()->is_master_admin) {
+                return redirect()->route('master-admin.dashboard');
+            }
+
             return redirect()->route('dashboard');
         }
 
         return view('auth.login');
+    }
+
+    public function showMasterLogin(): View|RedirectResponse
+    {
+        if (Auth::check()) {
+            if (Auth::user()->is_master_admin) {
+                return redirect()->route('master-admin.dashboard');
+            }
+
+            return redirect()->route('dashboard');
+        }
+
+        return view('auth.master_login');
     }
 
     public function login(Request $request)
@@ -31,13 +49,21 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        $remember = $request->boolean('remember');
+
+        // Check 1: User entered a Client ID (e.g. CLT0001, CLT0002...)
+        $userByClientId = User::where('client_id', strtoupper($loginInput))->first();
+        if ($userByClientId && Hash::check($inputPassword, $userByClientId->password)) {
+            Auth::login($userByClientId, $remember);
+
+            return $this->completeLogin($request, $userByClientId);
+        }
+
         $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
         $credentials = [
             $isEmail ? 'email' : 'phone' => $isEmail ? strtolower($loginInput) : $loginInput,
             'password' => $inputPassword,
         ];
-
-        $remember = $request->boolean('remember');
 
         // Attempt 1: Exact credentials
         $attempted = Auth::attempt($credentials, $remember);
@@ -79,7 +105,7 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Invalid email or password provided. Please verify the email and password.',
+            'email' => 'Invalid Client ID, email, or password provided. Please verify your credentials.',
         ])->onlyInput('email');
     }
 
@@ -124,6 +150,37 @@ class AuthController extends Controller
             ->with('open_master_modal', true);
     }
 
+    public function showChangePassword(): View|RedirectResponse
+    {
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        return view('auth.change_password', ['user' => Auth::user()]);
+    }
+
+    public function updateChangePassword(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        if (! Hash::check($request->input('current_password'), $user->password)) {
+            return back()->withErrors(['current_password' => 'Current temporary password does not match.']);
+        }
+
+        $user->password = $request->input('password');
+        $user->must_change_password = false;
+        $user->save();
+
+        AuditLog::log('user_changed_password', $user);
+
+        return redirect()->route('dashboard')->with('success', 'Your password has been updated successfully! Welcome to your terminal.');
+    }
+
     private function completeLogin(Request $request, User $user): RedirectResponse
     {
         $request->session()->regenerate();
@@ -138,6 +195,8 @@ class AuthController extends Controller
             ]);
         }
 
+        $user->update(['last_login_at' => now()]);
+
         $branch = $user->defaultBranch
             ?? $user->branches()->first()
             ?? Branch::where('business_id', $user->business_id)->first();
@@ -149,7 +208,11 @@ class AuthController extends Controller
         AuditLog::log('user_logged_in', $user);
 
         if ($user->is_master_admin) {
-            return redirect()->intended(route('master-admin.index'));
+            return redirect()->intended(route('master-admin.dashboard'));
+        }
+
+        if ($user->must_change_password) {
+            return redirect()->route('password.change')->with('warning', 'Please set a new secure password for your account to continue.');
         }
 
         return redirect()->intended(route('dashboard'));
