@@ -83,18 +83,27 @@
                             <td class="text-center font-weight-bold {{ $stock <= 0 ? 'text-danger' : ($stock <= $p->alert_quantity ? 'text-warning' : 'text-success') }}">
                                 {{ number_format($stock, 2) }} {{ $p->baseUnit->code }}
                             </td>
-                            <td class="text-right">
+                            <td class="text-right text-nowrap">
                                 @if($p->is_active)
-                                    <a href="{{ route('inventory.adjust', ['product_id' => $p->id]) }}" class="btn btn-xs btn-outline-success" title="Add stock to active branch">
+                                    <a href="{{ route('inventory.adjust', ['product_id' => $p->id]) }}" class="btn btn-xs btn-outline-success mr-1" title="Add stock to active branch">
                                         <i class="fas fa-plus mr-1"></i> Add Stock
                                     </a>
                                 @endif
-                                <a href="{{ route('products.edit', $p->id) }}" class="btn btn-xs btn-outline-primary" title="Edit Product"><i class="fas fa-edit"></i></a>
-                                <form action="{{ route('products.destroy', $p->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Toggle active status?')">
+                                <a href="{{ route('products.edit', $p->id) }}" class="btn btn-xs btn-outline-primary mr-1" title="Edit Product">
+                                    <i class="fas fa-edit mr-1"></i> Edit
+                                </a>
+                                <form action="{{ route('products.toggle-status', $p->id) }}" method="POST" class="d-inline mr-1" onsubmit="return confirm('{{ $p->is_active ? 'Deactivate' : 'Activate' }} product \'{{ addslashes($p->name) }}\'?');">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-xs {{ $p->is_active ? 'btn-outline-warning' : 'btn-outline-secondary' }}" title="{{ $p->is_active ? 'Deactivate Product' : 'Activate Product' }}">
+                                        <i class="fas {{ $p->is_active ? 'fa-ban' : 'fa-check' }}"></i>
+                                    </button>
+                                </form>
+                                <form action="{{ route('products.destroy', $p->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete product \'{{ addslashes($p->name) }}\'? This action cannot be undone.');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-xs {{ $p->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}" title="Toggle Status">
-                                        <i class="fas {{ $p->is_active ? 'fa-ban' : 'fa-check' }}"></i>
+                                    <button type="submit" class="btn btn-xs btn-outline-danger font-weight-bold" title="Delete Product">
+                                        <i class="fas fa-trash-alt mr-1"></i> Delete
                                     </button>
                                 </form>
                             </td>

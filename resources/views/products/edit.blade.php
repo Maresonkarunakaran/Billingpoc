@@ -152,9 +152,19 @@
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm mb-4">
-        <i class="fas fa-save mr-1"></i> Update Product Details
-    </button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <button type="submit" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm">
+            <i class="fas fa-save mr-1"></i> Update Product Details
+        </button>
+        <button type="button" class="btn btn-outline-danger font-weight-bold px-3 py-2 shadow-sm" onclick="if(confirm('Are you sure you want to delete product \'{{ addslashes($product->name) }}\'? This action cannot be undone.')) { document.getElementById('delete-product-form-{{ $product->id }}').submit(); }">
+            <i class="fas fa-trash-alt mr-1"></i> Delete Product
+        </button>
+    </div>
+</form>
+
+<form id="delete-product-form-{{ $product->id }}" action="{{ route('products.destroy', $product->id) }}" method="POST" class="d-none">
+    @csrf
+    @method('DELETE')
 </form>
 
 @push('scripts')

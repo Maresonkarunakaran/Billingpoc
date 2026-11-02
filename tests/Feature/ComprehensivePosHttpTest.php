@@ -15,6 +15,7 @@ use App\Services\CheckoutService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -665,5 +666,147 @@ class ComprehensivePosHttpTest extends TestCase
 
         $expenseResponse->assertOk();
         $expenseResponse->assertSee('THERE IS NO RECORD IN THIS DATE');
+    }
+
+    public function test_product_catalog_and_edit_page_display_delete_option(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products');
+
+        $response->assertOk()
+            ->assertSee('action="'.route('products.destroy', $this->product->id).'"', false)
+            ->assertSee('fa-trash-alt')
+            ->assertSee('Delete');
+
+        $editResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products/'.$this->product->id.'/edit');
+
+        $editResponse->assertOk()
+            ->assertSee('action="'.route('products.destroy', $this->product->id).'"', false)
+            ->assertSee('Delete Product');
+    }
+
+    public function test_admin_can_permanently_delete_product_without_sales_history(): void
+    {
+        $cleanProduct = Product::create([
+            'business_id' => $this->admin->business_id,
+            'name' => 'Temporary Product For Deletion',
+            'sku' => 'TEMP-DEL-999',
+            'barcode' => '8901234567899',
+            'base_unit_id' => $this->product->base_unit_id,
+            'purchase_price' => 50,
+            'retail_price' => 100,
+            'wholesale_price' => 80,
+            'gst_rate' => 18,
+            'tax_type' => 'exclusive',
+            'is_active' => true,
+        ]);
+
+        InventoryBalance::create([
+            'business_id' => $this->admin->business_id,
+            'branch_id' => $this->shop->id,
+            'product_id' => $cleanProduct->id,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->delete('/products/'.$cleanProduct->id);
+
+        $response->assertRedirect('/products')
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('products', ['id' => $cleanProduct->id]);
+        $this->assertDatabaseMissing('inventory_balances', ['product_id' => $cleanProduct->id]);
+    }
+
+    public function test_deleting_product_with_sales_history_deactivates_and_archives_product(): void
+    {
+        $billedProduct = Product::create([
+            'business_id' => $this->admin->business_id,
+            'name' => 'Billed Historical Product',
+            'sku' => 'HIST-BILL-001',
+            'barcode' => '8909876543211',
+            'base_unit_id' => $this->product->base_unit_id,
+            'purchase_price' => 40,
+            'retail_price' => 90,
+            'wholesale_price' => 70,
+            'gst_rate' => 5,
+            'tax_type' => 'inclusive',
+            'is_active' => true,
+        ]);
+
+        $sale = Sale::create([
+            'business_id' => $this->admin->business_id,
+            'branch_id' => $this->shop->id,
+            'customer_id' => $this->customer->id,
+            'user_id' => $this->admin->id,
+            'invoice_number' => 'INV-TEST-DEL-01',
+            'invoice_date' => now()->toDateString(),
+            'pricing_type' => 'retail',
+            'status' => 'completed',
+            'subtotal' => 90,
+            'discount_amount' => 0,
+            'tax_amount' => 4.29,
+            'round_off' => 0,
+            'total_amount' => 90,
+            'paid_amount' => 90,
+            'balance_amount' => 0,
+            'is_interstate' => false,
+        ]);
+
+        DB::table('sale_items')->insert([
+            'sale_id' => $sale->id,
+            'product_id' => $billedProduct->id,
+            'unit_id' => $billedProduct->base_unit_id,
+            'quantity' => 1,
+            'unit_price' => 90,
+            'cost_price' => 40,
+            'discount_amount' => 0,
+            'taxable_amount' => 85.71,
+            'gst_rate' => 5,
+            'cgst_rate' => 2.5,
+            'sgst_rate' => 2.5,
+            'igst_rate' => 0,
+            'cgst_amount' => 2.14,
+            'sgst_amount' => 2.14,
+            'igst_amount' => 0,
+            'total_amount' => 90,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->delete('/products/'.$billedProduct->id);
+
+        $response->assertRedirect('/products')
+            ->assertSessionHas('info');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $billedProduct->id,
+            'is_active' => 0,
+        ]);
+    }
+
+    public function test_admin_can_toggle_product_status(): void
+    {
+        $this->assertTrue((bool) $this->product->is_active);
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->patch('/products/'.$this->product->id.'/toggle-status');
+
+        $response->assertSessionHas('success');
+        $this->assertFalse((bool) $this->product->fresh()->is_active);
+
+        $response2 = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->patch('/products/'.$this->product->id.'/toggle-status');
+
+        $response2->assertSessionHas('success');
+        $this->assertTrue((bool) $this->product->fresh()->is_active);
     }
 }

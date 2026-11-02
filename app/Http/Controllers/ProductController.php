@@ -172,14 +172,68 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated successfully!');
     }
 
-    public function destroy(int $id)
+    public function toggleStatus(int $id)
     {
         $user = Auth::user();
         $product = Product::where('business_id', $user->business_id)->findOrFail($id);
         $product->is_active = ! $product->is_active;
         $product->save();
 
-        return back()->with('success', 'Product status updated.');
+        $statusText = $product->is_active ? 'activated' : 'deactivated';
+
+        AuditLog::log("product_{$statusText}", $product, null, [
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'status' => $statusText,
+        ]);
+
+        return back()->with('success', "Product '{$product->name}' {$statusText} successfully.");
+    }
+
+    public function destroy(int $id)
+    {
+        $user = Auth::user();
+        $product = Product::where('business_id', $user->business_id)->findOrFail($id);
+
+        // Check if product is referenced in existing sales, purchases, or transfers
+        $hasSales = DB::table('sale_items')->where('product_id', $product->id)->exists()
+            || DB::table('sale_return_items')->where('product_id', $product->id)->exists();
+        $hasPurchases = DB::table('purchase_items')->where('product_id', $product->id)->exists()
+            || DB::table('purchase_return_items')->where('product_id', $product->id)->exists();
+        $hasTransfers = DB::table('stock_transfer_items')->where('product_id', $product->id)->exists();
+
+        if ($hasSales || $hasPurchases || $hasTransfers) {
+            // Cannot hard-delete due to foreign key integrity & GST invoice history
+            $product->is_active = false;
+            $product->save();
+
+            AuditLog::log('product_archived', $product, null, [
+                'sku' => $product->sku,
+                'name' => $product->name,
+                'reason' => 'Product has historical sales/purchases; deactivated from POS billing.',
+            ]);
+
+            return redirect()->route('products.index')->with('info', "Product '{$product->name}' is linked to previous sales/purchase invoices (required for GST invoice compliance). It has been deactivated and removed from active POS billing.");
+        }
+
+        $productName = $product->name;
+        $imagePath = $product->image_path;
+
+        AuditLog::log('product_deleted', $product, $product->toArray(), null);
+
+        DB::transaction(function () use ($product) {
+            $product->unitConversions()->delete();
+            $product->branchSettings()->delete();
+            $product->stockMovements()->delete();
+            $product->inventoryBalances()->delete();
+            $product->delete();
+        });
+
+        if ($imagePath) {
+            $this->deleteProductImage($imagePath);
+        }
+
+        return redirect()->route('products.index')->with('success', "Product '{$productName}' deleted successfully.");
     }
 
     private function storeProductImage(ProductRequest $request): ?string
