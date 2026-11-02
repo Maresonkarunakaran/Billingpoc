@@ -99,6 +99,9 @@ class InventoryController extends Controller
             'type' => 'required|in:add,deduct',
             'quantity' => 'required|integer|min:1',
             'reason' => 'required|string|max:255',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'retail_price' => 'nullable|numeric|min:0',
+            'wholesale_price' => 'nullable|numeric|min:0',
         ]);
 
         $product = Product::where('business_id', $user->business_id)
@@ -106,13 +109,53 @@ class InventoryController extends Controller
             ->findOrFail((int) $validated['product_id']);
         $qty = (float) $validated['quantity'];
 
+        $newCost = isset($validated['purchase_price']) && $validated['purchase_price'] !== null && $validated['purchase_price'] !== ''
+            ? (float) $validated['purchase_price']
+            : (float) $product->purchase_price;
+
+        $newRetail = isset($validated['retail_price']) && $validated['retail_price'] !== null && $validated['retail_price'] !== ''
+            ? (float) $validated['retail_price']
+            : (float) $product->retail_price;
+
+        $newWholesale = isset($validated['wholesale_price']) && $validated['wholesale_price'] !== null && $validated['wholesale_price'] !== ''
+            ? (float) $validated['wholesale_price']
+            : (float) $product->wholesale_price;
+
+        // Update product pricing if base price, retail price, or wholesale price were modified
+        if (
+            abs($newCost - (float) $product->purchase_price) > 0.0001 ||
+            abs($newRetail - (float) $product->retail_price) > 0.0001 ||
+            abs($newWholesale - (float) $product->wholesale_price) > 0.0001
+        ) {
+            $oldPrices = [
+                'purchase_price' => (float) $product->purchase_price,
+                'retail_price' => (float) $product->retail_price,
+                'wholesale_price' => (float) $product->wholesale_price,
+            ];
+
+            $product->update([
+                'purchase_price' => $newCost,
+                'retail_price' => $newRetail,
+                'wholesale_price' => $newWholesale,
+            ]);
+
+            AuditLog::log('product_price_updated_via_reconciliation', $product, $oldPrices, [
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'new_purchase_price' => $newCost,
+                'new_retail_price' => $newRetail,
+                'new_wholesale_price' => $newWholesale,
+                'branch' => $branch->name,
+            ]);
+        }
+
         if ($validated['type'] === 'add') {
             $this->inventoryService->addStock(
                 $user->business_id,
                 $branch->id,
                 $product->id,
                 $qty,
-                (float) $product->purchase_price,
+                $newCost,
                 'adjustment',
                 'ManualAdjustment',
                 null,
