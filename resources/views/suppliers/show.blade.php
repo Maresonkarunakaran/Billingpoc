@@ -147,7 +147,7 @@
                     <div class="form-group mb-3">
                         <label class="font-weight-bold text-sm">Settlement Amount (₹) *</label>
                         <input type="number" name="amount" class="form-control form-control-lg font-weight-bold text-primary" 
-                               value="{{ $supplier->current_balance > 0 ? $supplier->current_balance : 0 }}" required min="0.01" step="0.5">
+                               value="{{ $supplier->current_balance > 0 ? number_format($supplier->current_balance, 2, '.', '') : '0.00' }}" required min="0.01" step="0.01" placeholder="0.00">
                     </div>
 
                     <div class="row">

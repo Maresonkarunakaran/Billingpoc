@@ -139,7 +139,7 @@
 
                     <div class="form-group mb-2">
                         <label class="text-xs font-weight-bold text-uppercase text-muted">Initial Paid Amount (₹)</label>
-                        <input type="number" name="paid_amount" id="paidAmountInput" class="form-control form-control-sm" value="0.00" min="0" step="0.5">
+                        <input type="number" name="paid_amount" id="paidAmountInput" class="form-control form-control-sm" value="0.00" min="0" step="0.01" placeholder="0.00">
                     </div>
 
                     <div class="form-group mb-3">

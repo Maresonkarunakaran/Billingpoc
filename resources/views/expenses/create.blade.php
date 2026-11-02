@@ -33,7 +33,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">Expense Amount (₹) *</label>
-                            <input type="number" name="amount" class="form-control form-control-lg font-weight-bold text-danger" required min="0.01" step="0.5" placeholder="0.00">
+                            <input type="number" name="amount" class="form-control form-control-lg font-weight-bold text-danger" required min="0.01" step="0.01" placeholder="0.00">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">Expense Date *</label>

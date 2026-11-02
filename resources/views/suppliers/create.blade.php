@@ -69,7 +69,7 @@
 
                     <div class="form-group mb-4">
                         <label class="font-weight-bold text-sm">Opening Balance Owed to Supplier (₹)</label>
-                        <input type="number" name="opening_balance" class="form-control" value="{{ old('opening_balance', 0) }}" step="0.5">
+                        <input type="number" name="opening_balance" class="form-control" value="{{ old('opening_balance', '0.00') }}" step="0.01" placeholder="0.00">
                     </div>
 
                     <button type="submit" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm">

@@ -359,7 +359,7 @@
                         <!-- Tendered Amount (For Cash & Change Calculation) -->
                         <div class="form-group mb-3">
                             <label class="font-weight-bold">Amount Tendered (₹)</label>
-                            <input type="number" id="tenderAmount" class="form-control form-control-lg font-weight-bold text-primary" step="0.5">
+                            <input type="number" id="tenderAmount" class="form-control form-control-lg font-weight-bold text-primary" step="0.01" placeholder="0.00">
                         </div>
 
                         <!-- Quick Cash Helper Buttons -->

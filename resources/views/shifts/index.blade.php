@@ -149,7 +149,7 @@
 
                     <div class="form-group mb-3">
                         <label class="font-weight-bold text-sm">Physical Cash Counted in Drawer (₹) *</label>
-                        <input type="number" name="closing_cash_physical" class="form-control form-control-lg font-weight-bold text-primary" required min="0" step="0.5" placeholder="0.00">
+                        <input type="number" name="closing_cash_physical" class="form-control form-control-lg font-weight-bold text-primary" required min="0" step="0.01" placeholder="0.00">
                         <small class="text-muted">Count physical currency notes & coins and input exact total.</small>
                     </div>
 
@@ -182,7 +182,7 @@
                 <div class="modal-body">
                     <div class="form-group mb-3">
                         <label class="font-weight-bold">Opening Cash Float (₹) *</label>
-                        <input type="number" name="opening_cash" class="form-control form-control-lg font-weight-bold" value="2000.00" required min="0" step="10">
+                        <input type="number" name="opening_cash" class="form-control form-control-lg font-weight-bold" value="2000.00" required min="0" step="0.01" placeholder="0.00">
                     </div>
                     <div class="form-group mb-0">
                         <label class="text-sm">Notes</label>

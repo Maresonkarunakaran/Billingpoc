@@ -59,11 +59,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">Credit Limit Allowed (₹)</label>
-                            <input type="number" name="credit_limit" class="form-control" value="{{ old('credit_limit', 0) }}" min="0" step="100">
+                            <input type="number" name="credit_limit" class="form-control" value="{{ old('credit_limit', '0.00') }}" min="0" step="0.01" placeholder="0.00">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">Opening Outstanding Balance (₹)</label>
-                            <input type="number" name="opening_balance" class="form-control" value="{{ old('opening_balance', 0) }}" step="0.5">
+                            <input type="number" name="opening_balance" class="form-control" value="{{ old('opening_balance', '0.00') }}" step="0.01" placeholder="0.00">
                         </div>
                     </div>
 

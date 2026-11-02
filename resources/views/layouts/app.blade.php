@@ -590,6 +590,157 @@
         }
     });
     @endif
+
+    // =========================================================================
+    // SMART FINANCIAL & CURRENCY INPUT ENGINE
+    // 1. Auto-Hide default 0.00 when user starts typing (prevents 0.005 or 50.00)
+    // 2. Auto-Convert whole numbers to 2-decimal floats (e.g. 500 -> 500.00, 75 -> 75.00)
+    // =========================================================================
+    (function() {
+        function isCurrencyOrPriceField(input) {
+            if (!input || !(input instanceof HTMLInputElement)) return false;
+            if (input.type !== 'number' && input.type !== 'text') return false;
+
+            const name = (input.name || '').toLowerCase();
+            const id = (input.id || '').toLowerCase();
+            const classes = (input.className || '').toLowerCase();
+
+            // Strict exclusions: quantities, barcodes, phones, HSN, SKUs, dates
+            if (name.includes('qty') || name.includes('quantity') || name.includes('stock') ||
+                name.includes('barcode') || name.includes('phone') || name.includes('mobile') ||
+                name.includes('hsn') || name.includes('sku') || name.includes('date') ||
+                id.includes('barcode') || id.includes('phone') || classes.includes('cart-qty-input')) {
+                return false;
+            }
+
+            // Explicit matches for monetary / price / cash fields
+            if (
+                name === 'opening_cash' ||
+                name === 'closing_cash' ||
+                name === 'closing_cash_physical' ||
+                name === 'other_expenses' ||
+                name === 'amount' ||
+                name === 'purchase_price' ||
+                name === 'retail_price' ||
+                name === 'wholesale_price' ||
+                name === 'paid_amount' ||
+                name === 'opening_balance' ||
+                name === 'credit_limit' ||
+                name.endsWith('[retail_price]') ||
+                name.endsWith('[wholesale_price]') ||
+                name.endsWith('[unit_cost]') ||
+                id === 'tenderamount' ||
+                classes.includes('row-cost') ||
+                classes.includes('currency-amount-input') ||
+                classes.includes('currency-input') ||
+                classes.includes('price-input') ||
+                input.dataset.type === 'currency'
+            ) {
+                return true;
+            }
+
+            // Check if inside an input-group with a Rupee symbol
+            const inputGroup = input.closest('.input-group');
+            if (inputGroup) {
+                const groupText = inputGroup.textContent || '';
+                if (groupText.includes('₹') || groupText.includes('Rs')) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // 1. Focusin: When user focuses an input with 0 or 0.00,
+        // clear it so the placeholder "0.00" shows and typed numbers start fresh without concatenating
+        document.addEventListener('focusin', function(e) {
+            const input = e.target;
+            if (!isCurrencyOrPriceField(input)) return;
+
+            const val = input.value.trim();
+            if (val === '0' || val === '0.00' || val === '0.0' || parseFloat(val) === 0) {
+                input.dataset.autoClearedZero = 'true';
+                input.value = '';
+            } else if (val !== '') {
+                setTimeout(() => {
+                    if (document.activeElement === input) {
+                        input.select();
+                    }
+                }, 50);
+            }
+        });
+
+        // 2. Keydown guard: If user presses a digit or dot while field holds '0.00' or '0',
+        // clear it immediately before the key is entered
+        document.addEventListener('keydown', function(e) {
+            const input = e.target;
+            if (!isCurrencyOrPriceField(input)) return;
+
+            if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+                const val = input.value.trim();
+                if (val === '0.00' || val === '0' || val === '0.0') {
+                    input.value = '';
+                }
+            }
+        });
+
+        // 3. Focusout (Blur): Convert whole numbers and decimals to standard 2-decimal float (e.g. 500 -> 500.00)
+        document.addEventListener('focusout', function(e) {
+            const input = e.target;
+            if (!isCurrencyOrPriceField(input)) return;
+
+            const val = input.value.trim();
+            if (val === '') {
+                if (input.dataset.autoClearedZero === 'true' || input.required || input.name === 'opening_cash' || 
+                    input.name === 'purchase_price' || input.name === 'retail_price' || input.name === 'wholesale_price') {
+                    input.value = '0.00';
+                }
+                delete input.dataset.autoClearedZero;
+            } else {
+                delete input.dataset.autoClearedZero;
+                const num = parseFloat(val);
+                if (!isNaN(num)) {
+                    input.value = num.toFixed(2);
+                }
+            }
+        });
+
+        // 4. Form Submit: Ensure all currency inputs have proper 2-decimal float before sending
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach(input => {
+                if (isCurrencyOrPriceField(input)) {
+                    const val = input.value.trim();
+                    if (val !== '') {
+                        const num = parseFloat(val);
+                        if (!isNaN(num)) {
+                            input.value = num.toFixed(2);
+                        }
+                    } else if (input.required || input.name === 'opening_cash') {
+                        input.value = '0.00';
+                    }
+                }
+            });
+        });
+
+        // 5. Modal shown hook for auto-clearing opening cash modal
+        if (typeof $ !== 'undefined') {
+            $('#autoOpeningCashModal').on('shown.bs.modal', function() {
+                const input = this.querySelector('input[name="opening_cash"]');
+                if (input) {
+                    input.focus();
+                    const val = input.value.trim();
+                    if (val === '0' || val === '0.00' || parseFloat(val) === 0) {
+                        input.dataset.autoClearedZero = 'true';
+                        input.value = '';
+                    } else {
+                        input.select();
+                    }
+                }
+            });
+        }
+    })();
 </script>
 
 @if(!empty($shouldShowOpeningCashModal))

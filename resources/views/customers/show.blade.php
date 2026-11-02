@@ -148,7 +148,7 @@
                     <div class="form-group mb-3">
                         <label class="font-weight-bold text-sm">Collection Amount (₹) *</label>
                         <input type="number" name="amount" class="form-control form-control-lg font-weight-bold text-success" 
-                               value="{{ $customer->current_balance > 0 ? $customer->current_balance : 0 }}" required min="0.01" step="0.5">
+                               value="{{ $customer->current_balance > 0 ? number_format($customer->current_balance, 2, '.', '') : '0.00' }}" required min="0.01" step="0.01" placeholder="0.00">
                     </div>
 
                     <div class="row">

@@ -266,4 +266,28 @@ class DailyCashRegisterTest extends TestCase
         $response->assertViewHas('shouldShowOpeningCashModal', false);
         $response->assertDontSee('id="autoOpeningCashModal"', false);
     }
+
+    public function test_whole_number_opening_cash_and_other_expenses_are_converted_to_float_amounts(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => now()->toDateString(),
+            'opening_cash' => 500, // Typed as whole number
+            'other_expenses' => 75, // Typed as whole number
+            'other_expenses_note' => 'Staff tea and refreshments',
+            'status' => 'open',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $register = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', now()->toDateString())
+            ->first();
+
+        $this->assertNotNull($register);
+        $this->assertSame(500.0, (float) $register->opening_cash);
+        $this->assertSame(75.0, (float) $register->other_expenses);
+    }
 }
