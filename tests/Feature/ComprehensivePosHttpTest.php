@@ -887,4 +887,84 @@ class ComprehensivePosHttpTest extends TestCase
             ->get('/products');
         $indexResponse->assertSee('25.75');
     }
+
+    public function test_set_price_option_in_products_catalog_and_inside_add_product(): void
+    {
+        // 1. In Products & Pricing index page, verify "Set Price" button and modal exist
+        $indexResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products');
+
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Set Price');
+        $indexResponse->assertSee('btn-open-set-price');
+        $indexResponse->assertSee('id="setPriceModal"', false);
+        $indexResponse->assertSee('id="modalPurchasePrice"', false);
+        $indexResponse->assertSee('id="modalRetailPrice"', false);
+        $indexResponse->assertSee('id="modalWholesalePrice"', false);
+        $indexResponse->assertSee('Quick Markup Calculator');
+
+        // 2. In Add Product page, verify "Set Price Amount" option with base price, retail, wholesale and markup presets
+        $createResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products/create');
+
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('Set Price Amount Option');
+        $createResponse->assertSee('Set Price Amount: Base Price, Wholesale Price', false);
+        $createResponse->assertSee('id="createPurchasePrice"', false);
+        $createResponse->assertSee('id="createRetailPrice"', false);
+        $createResponse->assertSee('id="createWholesalePrice"', false);
+        $createResponse->assertSee('Retail Selling Markup Presets');
+        $createResponse->assertSee('Wholesale Selling Markup Presets');
+        $createResponse->assertSee('Auto-calculate selling prices on cost change');
+
+        // 3. In Edit Product page, verify the same smart pricing setter exists
+        $editResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products/'.$this->product->id.'/edit');
+
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('Set Price Amount Option');
+        $editResponse->assertSee('id="editPurchasePrice"', false);
+        $editResponse->assertSee('id="editRetailPrice"', false);
+        $editResponse->assertSee('id="editWholesalePrice"', false);
+
+        // 4. Test quick price update when base price increases or decreases
+        $quickUpdateResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->patch('/products/'.$this->product->id.'/quick-price-update', [
+                'purchase_price' => 85.50,
+                'retail_price' => 120.00,
+                'wholesale_price' => 105.00,
+            ]);
+
+        $quickUpdateResponse->assertRedirect('/products');
+        $quickUpdateResponse->assertSessionHas('success');
+
+        $fresh = $this->product->fresh();
+        $this->assertEquals('85.5000', $fresh->purchase_price);
+        $this->assertEquals('120.0000', $fresh->retail_price);
+        $this->assertEquals('105.0000', $fresh->wholesale_price);
+
+        // 5. Test JSON request for quick price update
+        $jsonResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->patchJson('/products/'.$this->product->id.'/quick-price-update', [
+                'purchase_price' => 90.00,
+                'retail_price' => 125.00,
+                'wholesale_price' => 110.00,
+            ]);
+
+        $jsonResponse->assertStatus(200);
+        $jsonResponse->assertJson([
+            'success' => true,
+            'product' => [
+                'id' => $this->product->id,
+                'purchase_price' => '90.00',
+                'retail_price' => '125.00',
+                'wholesale_price' => '110.00',
+            ],
+        ]);
+    }
 }

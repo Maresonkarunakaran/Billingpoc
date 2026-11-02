@@ -115,6 +115,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('perm:products_pricing')->group(function () {
         Route::get('products/reports', [ProductReportController::class, 'index'])->name('products.reports');
         Route::patch('products/{id}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
+        Route::patch('products/{id}/quick-price-update', [ProductController::class, 'updatePrices'])->name('products.quick-price-update');
         Route::resource('products', ProductController::class);
         Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
         Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');

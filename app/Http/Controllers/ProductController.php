@@ -190,6 +190,53 @@ class ProductController extends Controller
         return back()->with('success', "Product '{$product->name}' {$statusText} successfully.");
     }
 
+    public function updatePrices(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $product = Product::where('business_id', $user->business_id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'purchase_price' => 'required|numeric|min:0',
+            'retail_price' => 'required|numeric|min:0',
+            'wholesale_price' => 'required|numeric|min:0',
+        ]);
+
+        $oldPrices = [
+            'purchase_price' => (float) $product->purchase_price,
+            'retail_price' => (float) $product->retail_price,
+            'wholesale_price' => (float) $product->wholesale_price,
+        ];
+
+        $product->update([
+            'purchase_price' => $validated['purchase_price'],
+            'retail_price' => $validated['retail_price'],
+            'wholesale_price' => $validated['wholesale_price'],
+        ]);
+
+        AuditLog::log('product_price_updated', $product, $oldPrices, [
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'new_purchase_price' => $validated['purchase_price'],
+            'new_retail_price' => $validated['retail_price'],
+            'new_wholesale_price' => $validated['wholesale_price'],
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Prices for '{$product->name}' updated successfully.",
+                'product' => [
+                    'id' => $product->id,
+                    'purchase_price' => number_format((float) $product->purchase_price, 2, '.', ''),
+                    'retail_price' => number_format((float) $product->retail_price, 2, '.', ''),
+                    'wholesale_price' => number_format((float) $product->wholesale_price, 2, '.', ''),
+                ],
+            ]);
+        }
+
+        return redirect()->route('products.index')->with('success', "Prices for '{$product->name}' updated successfully.");
+    }
+
     public function destroy(int $id)
     {
         $user = Auth::user();
