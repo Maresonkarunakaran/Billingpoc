@@ -299,4 +299,49 @@ class CostingMethodReportTest extends TestCase
         $reportResponse->assertDontSee('id="tab-expenses"', false);
         $reportResponse->assertDontSee('id="pane-expenses"', false);
     }
+
+    public function test_sales_margin_report_displays_comprehensive_formula_guide_with_worked_examples_and_accounting_rules(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('products.reports', ['tab' => 'margin']));
+
+        $response->assertStatus(200);
+
+        // Verify Formula Drawer structure
+        $response->assertSee('id="formulaBox"', false);
+        $response->assertSee('Sales Margin Formula Guide', false);
+
+        // Verify Moving Weighted Average (Method 1)
+        $response->assertSee('Moving Weighted Average', false);
+        $response->assertSee('Formula A – New Average Cost', false);
+        $response->assertSee('Formula B – COGS', false);
+        $response->assertSee('Formula C – Gross Profit', false);
+        $response->assertSee('Formula D – Gross Margin %', false);
+        $response->assertSee('Formula E – Ending Stock Value', false);
+        $response->assertSee('Ending Stock Value = Closing Qty', false);
+
+        // Verify FIFO (Method 2) & Example
+        $response->assertSee('FIFO – First In, First Out', false);
+        $response->assertSee('Formula A – FIFO COGS', false);
+        $response->assertSee('FIFO Example:', false);
+        $response->assertSee('Total FIFO COGS:', false);
+        $response->assertSee('5,500', false);
+
+        // Verify LIFO (Method 3) & Example
+        $response->assertSee('LIFO – Last In, First Out', false);
+        $response->assertSee('Formula A – LIFO COGS', false);
+        $response->assertSee('LIFO Example:', false);
+        $response->assertSee('Total LIFO COGS:', false);
+        $response->assertSee('6,500', false);
+
+        // Verify Accounting Warning for LIFO
+        $response->assertSee('IAS 2 / Ind AS 2', false);
+        $response->assertSee('Accounting Warning:', false);
+
+        // Verify Important Implementation Rules for Laravel
+        $response->assertSee('Important Implementation Rules for Laravel', false);
+        $response->assertSee('New purchase', false);
+        $response->assertSee('Sale', false);
+        $response->assertSee('Closing stock', false);
+        $response->assertSee('Gross profit', false);
+    }
 }

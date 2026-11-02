@@ -468,79 +468,220 @@
         <div class="collapse mb-3" id="formulaBox">
             <div class="card shadow-sm border-0" style="border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0 !important;">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                    <h6 class="font-weight-bold text-dark mb-0">
-                        <i class="fas fa-calculator text-info mr-1"></i> Inventory Valuation & Costing Formulas (Moving Average, FIFO, LIFO)
-                    </h6>
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-0">
+                            <i class="fas fa-calculator text-primary mr-2"></i> Inventory Costing & Sales Margin Formula Guide
+                        </h6>
+                        <small class="text-muted">Exact mathematical formulas, lot consumption logic, worked examples, and statutory valuation rules for Moving Weighted Average, FIFO, and LIFO.</small>
+                    </div>
                     <button type="button" class="close" data-toggle="collapse" data-target="#formulaBox">&times;</button>
                 </div>
                 <div class="card-body p-3">
                     <div class="row">
-                        <!-- Option 1: Moving Average -->
-                        <div class="col-md-4 mb-3">
+                        <!-- Method 1: Moving Weighted Average -->
+                        <div class="col-lg-4 mb-3">
                             <div class="p-3 bg-white rounded border h-100 shadow-xs">
-                                <span class="badge badge-primary mb-2">Option 1</span>
-                                <h6 class="font-weight-bold text-dark mb-1">Moving Average (MAC)</h6>
-                                <p class="text-muted text-xs mb-2">Perpetual moving weighted average recalculated immediately after each purchase/receipt.</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-primary">
-                                    AverageCost/unit = (OpeningStockValue + PurchaseValue) / (OpeningQty + PurchaseQty)
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge badge-primary px-2 py-1">Method 1</span>
+                                    <span class="badge badge-light border text-muted">Perpetual</span>
                                 </div>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
-                                    COGS = Sold Qty × Average Cost per unit
+                                <h6 class="font-weight-bold text-dark mb-1">Moving Weighted Average</h6>
+                                <p class="text-muted text-xs mb-2"><strong>Concept:</strong> Every time you purchase new stock, the application recalculates the average purchase cost of the remaining inventory.</p>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-primary d-block mb-1">Formula A – New Average Cost:</span>
+                                    <div class="text-center font-weight-bold py-1 bg-white rounded border" style="font-family: monospace; font-size: 0.82rem;">
+                                        <div class="border-bottom pb-1">(Q<sub>o</sub> × C<sub>o</sub>) + (Q<sub>p</sub> × C<sub>p</sub>)</div>
+                                        <div class="pt-1">Q<sub>o</sub> + Q<sub>p</sub></div>
+                                    </div>
+                                    <div class="text-muted text-xs mt-2 border-top pt-1">
+                                        <em>Where:</em><br>
+                                        • <strong>Q<sub>o</sub></strong> = Existing stock quantity<br>
+                                        • <strong>C<sub>o</sub></strong> = Existing average cost per unit<br>
+                                        • <strong>Q<sub>p</sub></strong> = Newly purchased quantity<br>
+                                        • <strong>C<sub>p</sub></strong> = New purchase cost per unit
+                                    </div>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-dark d-block">Formula B – COGS:</span>
+                                    <code class="text-dark font-weight-bold">COGS = Sold Qty × Current Average Cost</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-success d-block">Formula C – Gross Profit:</span>
+                                    <code class="text-success font-weight-bold">Gross Profit = Sales Revenue − COGS</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-info d-block">Formula D – Gross Margin %:</span>
+                                    <code class="text-info font-weight-bold">Margin % = (Gross Profit / Sales Revenue) × 100</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border text-xs">
+                                    <span class="font-weight-bold text-secondary d-block">Formula E – Ending Stock Value:</span>
+                                    <code class="text-dark font-weight-bold">Ending Stock Value = Closing Qty × Closing Average Cost</code>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Option 2: FIFO -->
-                        <div class="col-md-4 mb-3">
+                        <!-- Method 2: FIFO (First In, First Out) -->
+                        <div class="col-lg-4 mb-3">
                             <div class="p-3 bg-white rounded border h-100 shadow-xs">
-                                <span class="badge badge-success mb-2">Option 2</span>
-                                <h6 class="font-weight-bold text-dark mb-1">FIFO (First In, First Out)</h6>
-                                <p class="text-muted text-xs mb-2">Inbound inventory batches are consumed chronologically (oldest available stock sold first).</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-success">
-                                    Batch Consumption = Chronological Order (Oldest &rarr; Newest)
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge badge-success px-2 py-1">Method 2</span>
+                                    <span class="badge badge-light border text-muted">IAS 2 / Ind AS 2</span>
                                 </div>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
-                                    COGS = Σ (Sold Qty from Oldest Batch × Batch Unit Cost)
+                                <h6 class="font-weight-bold text-dark mb-1">FIFO – First In, First Out</h6>
+                                <p class="text-muted text-xs mb-2"><strong>Concept:</strong> The oldest purchased stock is considered sold first. The application must consume the oldest available purchase lot first and preserves each purchase lot's original cost.</p>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-success d-block">Formula A – FIFO COGS:</span>
+                                    <code class="text-dark font-weight-bold">FIFO COGS = &Sigma; (Qty Sold from Lot<sub>i</sub> × Lot Purchase Cost<sub>i</sub>)</code>
+                                    <small class="text-muted d-block mt-1">Consumes oldest available purchase lot first.</small>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-success d-block">Formula B – Gross Profit:</span>
+                                    <code class="text-success font-weight-bold">Gross Profit = Sales Revenue − FIFO COGS</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-info d-block">Formula C – Gross Margin %:</span>
+                                    <code class="text-info font-weight-bold">Margin % = (Gross Profit / Sales Revenue) × 100</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-secondary d-block">Formula D – Ending Stock Value:</span>
+                                    <code class="text-dark font-weight-bold">Ending Stock Value = &Sigma; (Remaining Qty<sub>i</sub> × Lot Cost<sub>i</sub>)</code>
+                                </div>
+
+                                <!-- FIFO Worked Example -->
+                                <div class="border rounded p-2 bg-white text-xs mt-2">
+                                    <span class="font-weight-bold text-dark d-block mb-1"><i class="fas fa-table mr-1 text-success"></i> FIFO Example:</span>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-1 text-xs">
+                                            <thead class="bg-light">
+                                                <tr><th>Purchase Lot</th><th>Quantity</th><th>Purchase Cost</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>Lot 1</td><td>100 kg</td><td>₹30/kg</td></tr>
+                                                <tr><td>Lot 2</td><td>100 kg</td><td>₹50/kg</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="p-1 bg-light rounded text-xs">
+                                        <strong>Sale:</strong> 150 kg at ₹35/kg (Sales Revenue: ₹5,250)<br>
+                                        • 100 kg × ₹30 = ₹3,000 (Lot 1)<br>
+                                        • 50 kg × ₹50 = ₹2,500 (Lot 2)<br>
+                                        • <strong>Total FIFO COGS:</strong> ₹5,500<br>
+                                        • <strong>Gross Loss:</strong> −₹250<br>
+                                        • <strong>Remaining Stock:</strong> 50 kg<br>
+                                        • <strong>Ending Stock Value:</strong> ₹2,500
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Option 3: LIFO -->
-                        <div class="col-md-4 mb-3">
+                        <!-- Method 3: LIFO (Last In, First Out) -->
+                        <div class="col-lg-4 mb-3">
                             <div class="p-3 bg-white rounded border h-100 shadow-xs">
-                                <span class="badge badge-warning mb-2">Option 3</span>
-                                <h6 class="font-weight-bold text-dark mb-1">LIFO (Last In, First Out)</h6>
-                                <p class="text-muted text-xs mb-2">Inbound inventory batches are consumed in reverse chronological order (newest stock sold first).</p>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border mb-2 text-warning">
-                                    Batch Consumption = Reverse Order (Newest &rarr; Oldest)
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge badge-warning px-2 py-1">Method 3</span>
+                                    <span class="badge badge-secondary px-2 py-1">Comparative</span>
                                 </div>
-                                <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-dark">
-                                    COGS = Σ (Sold Qty from Newest Batch × Batch Unit Cost)
+                                <h6 class="font-weight-bold text-dark mb-1">LIFO – Last In, First Out</h6>
+                                <p class="text-muted text-xs mb-2"><strong>Concept:</strong> The newest purchased stock is considered sold first. The application consumes the newest available purchase lot first.</p>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-warning d-block">Formula A – LIFO COGS:</span>
+                                    <code class="text-dark font-weight-bold">LIFO COGS = &Sigma; (Qty Sold from Newest Lot<sub>i</sub> × Lot Cost<sub>i</sub>)</code>
+                                    <small class="text-muted d-block mt-1">Consumes newest available purchase lot first.</small>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-success d-block">Formula B – Gross Profit:</span>
+                                    <code class="text-success font-weight-bold">Gross Profit = Sales Revenue − LIFO COGS</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-info d-block">Formula C – Gross Margin %:</span>
+                                    <code class="text-info font-weight-bold">Margin % = (Gross Profit / Sales Revenue) × 100</code>
+                                </div>
+
+                                <div class="bg-light p-2 rounded border mb-2 text-xs">
+                                    <span class="font-weight-bold text-secondary d-block">Formula D – Ending Stock Value:</span>
+                                    <code class="text-dark font-weight-bold">Ending Stock Value = &Sigma; (Remaining Qty<sub>i</sub> × Lot Cost<sub>i</sub>)</code>
+                                </div>
+
+                                <!-- LIFO Worked Example -->
+                                <div class="border rounded p-2 bg-white text-xs mt-2 mb-2">
+                                    <span class="font-weight-bold text-dark d-block mb-1"><i class="fas fa-table mr-1 text-warning"></i> LIFO Example:</span>
+                                    <small class="text-muted d-block">Using same lots (Lot 1: 100kg @ ₹30, Lot 2: 100kg @ ₹50); Sale: 150 kg at ₹35/kg:</small>
+                                    <div class="p-1 bg-light rounded text-xs mt-1">
+                                        • 100 kg × ₹50 = ₹5,000 (Newest Lot 2)<br>
+                                        • 50 kg × ₹30 = ₹1,500 (Lot 1)<br>
+                                        • <strong>Total LIFO COGS:</strong> ₹6,500<br>
+                                        • <strong>Sales Revenue:</strong> ₹5,250<br>
+                                        • <strong>Gross Loss:</strong> −₹1,250<br>
+                                        • <strong>Remaining Stock:</strong> 50 kg<br>
+                                        • <strong>Ending Stock Value:</strong> ₹1,500
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-warning py-2 px-2 mb-0 text-xs border-0" style="background-color: #fffbeb; color: #b45309; border-left: 3px solid #f59e0b !important;">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <strong>Accounting Warning:</strong> LIFO is not permitted under <strong>IAS 2 / Ind AS 2</strong> for standard financial inventory valuation. You can implement it as an experimental or internal comparison method, but do not use it for statutory financial reporting.
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Universal Formulas -->
+                        <!-- Important Implementation Rules for Laravel -->
                         <div class="col-12">
                             <div class="p-3 bg-white rounded border shadow-xs">
-                                <span class="badge badge-secondary mb-2">Standard Calculations</span>
-                                <h6 class="font-weight-bold text-dark mb-2">Gross Profit, Margin Percentage & Closing Stock Value</h6>
-                                <div class="row">
-                                    <div class="col-md-4 mb-2 mb-md-0">
-                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-success">
-                                            Gross Profit = Sales Amount − COGS
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-2 mb-md-0">
-                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-info">
-                                            Gross Margin % = (Gross Profit / Sales Amount) × 100
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="bg-light p-2 rounded text-monospace text-xs font-weight-bold border text-secondary">
-                                            Closing Value = Closing Qty × Unit Cost
-                                        </div>
-                                    </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="font-weight-bold text-dark mb-0">
+                                        <i class="fas fa-cogs text-secondary mr-1"></i> Important Implementation Rules for Laravel
+                                    </h6>
+                                    <span class="badge badge-light border text-muted">Core Engine Logic</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm mb-0 text-xs">
+                                        <thead class="bg-light font-weight-bold text-dark">
+                                            <tr>
+                                                <th style="width: 18%;">Event</th>
+                                                <th style="width: 28%;"><i class="fas fa-chart-line text-primary mr-1"></i> Moving Average</th>
+                                                <th style="width: 27%;"><i class="fas fa-sort-amount-down text-success mr-1"></i> FIFO</th>
+                                                <th style="width: 27%;"><i class="fas fa-sort-amount-up text-warning mr-1"></i> LIFO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="font-weight-bold bg-light">New purchase</td>
+                                                <td>Recalculate average: <code>((Q<sub>o</sub>×C<sub>o</sub>) + (Q<sub>p</sub>×C<sub>p</sub>)) / (Q<sub>o</sub>+Q<sub>p</sub>)</code></td>
+                                                <td>Create new lot: <code>[Quantity, Purchase Cost]</code></td>
+                                                <td>Create new lot: <code>[Quantity, Purchase Cost]</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold bg-light">Sale</td>
+                                                <td>Use current average: <code>Sold Qty × Current Avg Cost</code></td>
+                                                <td>Consume oldest lot first</td>
+                                                <td>Consume newest lot first</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold bg-light">Closing stock</td>
+                                                <td><code>Closing Qty × Closing Average Cost</code></td>
+                                                <td>Remaining lot values: <code>&Sigma; (Remaining Qty<sub>i</sub> × Lot Cost<sub>i</sub>)</code></td>
+                                                <td>Remaining lot values: <code>&Sigma; (Remaining Qty<sub>i</sub> × Lot Cost<sub>i</sub>)</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold bg-light">Gross profit</td>
+                                                <td><code>Sales Revenue − COGS</code></td>
+                                                <td><code>Sales Revenue − COGS</code></td>
+                                                <td><code>Sales Revenue − COGS</code></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
