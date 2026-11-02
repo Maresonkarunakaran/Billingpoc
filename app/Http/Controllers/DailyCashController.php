@@ -20,12 +20,19 @@ class DailyCashController extends Controller
         $user = Auth::user();
         $businessId = $user->business_id;
 
-        $isSuperAdmin = $user->role?->slug === 'super-admin';
-        $branches = $isSuperAdmin ? Branch::where('business_id', $businessId)->get() : $user->branches;
+        $isSuperAdmin = ($user->role?->slug === 'super-admin' || $user->role?->slug === 'business-owner' || $user->is_master_admin);
+        $branches = ($isSuperAdmin || ! $user->branches()->exists())
+            ? Branch::where('business_id', $businessId)->where('is_active', true)->get()
+            : $user->branches()->where('is_active', true)->get();
 
-        // Default to active branch or first available branch
-        $defaultBranchId = session('active_branch_id') ?: ($branches->first()?->id ?? 1);
+        if ($branches->isEmpty()) {
+            $branches = Branch::where('business_id', $businessId)->get();
+        }
+
+        // Default to active branch or user default branch or first available branch
+        $defaultBranchId = session('active_branch_id') ?: ($user->default_branch_id ?: ($branches->first()?->id ?? 1));
         $branchId = (int) $request->get('branch_id', $defaultBranchId);
+        session(['active_branch_id' => $branchId]);
 
         // Date selection & Presets (similar to Sales Margin Report)
         $startDate = $request->get('start_date');
@@ -281,6 +288,13 @@ class DailyCashController extends Controller
         $user = Auth::user();
         $businessId = $user->business_id;
 
+        // Auto-resolve branch_id if missing or empty
+        $resolvedBranchId = (int) ($request->input('branch_id')
+            ?: session('active_branch_id')
+            ?: ($user->default_branch_id ?: Branch::where('business_id', $businessId)->value('id')));
+
+        $request->merge(['branch_id' => $resolvedBranchId]);
+
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'register_date' => 'required|date',
@@ -293,69 +307,109 @@ class DailyCashController extends Controller
         ]);
 
         $branchId = (int) $validated['branch_id'];
+        session(['active_branch_id' => $branchId]);
+
         $date = $validated['register_date'];
         $openingCash = (float) $validated['opening_cash'];
         $otherExpenses = (float) ($validated['other_expenses'] ?? 0.00);
 
-        // Fetch verified server-side totals to guarantee calculations cannot be tampered with
-        $salesAmount = (float) Sale::where('business_id', $businessId)
-            ->where('branch_id', $branchId)
-            ->whereDate('invoice_date', '=', $date)
-            ->where('invoice_status', '!=', 'cancelled')
-            ->sum('final_amount');
+        try {
+            // Fetch verified server-side totals to guarantee calculations cannot be tampered with
+            $salesAmount = (float) Sale::where('business_id', $businessId)
+                ->where('branch_id', $branchId)
+                ->whereDate('invoice_date', '=', $date)
+                ->where('invoice_status', '!=', 'cancelled')
+                ->sum('final_amount');
 
-        $expensesAmount = (float) Expense::where('business_id', $businessId)
-            ->where('branch_id', $branchId)
-            ->whereDate('expense_date', '=', $date)
-            ->sum('amount');
+            $expensesAmount = (float) Expense::where('business_id', $businessId)
+                ->where('branch_id', $branchId)
+                ->whereDate('expense_date', '=', $date)
+                ->sum('amount');
 
-        $purchasesAmount = (float) Purchase::where('business_id', $businessId)
-            ->where('branch_id', $branchId)
-            ->whereDate('purchase_date', '=', $date)
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+            $purchasesAmount = (float) Purchase::where('business_id', $businessId)
+                ->where('branch_id', $branchId)
+                ->whereDate('purchase_date', '=', $date)
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
 
-        // Required Formula:
-        // Closing Cash = Opening Cash + Sales - Expenses - Other Expenses - Purchases
-        $closingCash = round(
-            $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount,
-            2
-        );
+            // Required Formula:
+            // Closing Cash = Opening Cash + Sales - Expenses - Other Expenses - Purchases
+            $closingCash = round(
+                $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount,
+                2
+            );
 
-        $register = DailyCashRegister::updateOrCreate(
-            [
-                'business_id' => $businessId,
+            $register = \Illuminate\Support\Facades\DB::transaction(function () use (
+                $businessId,
+                $branchId,
+                $date,
+                $user,
+                $openingCash,
+                $salesAmount,
+                $expensesAmount,
+                $otherExpenses,
+                $purchasesAmount,
+                $closingCash,
+                $validated
+            ) {
+                $reg = DailyCashRegister::updateOrCreate(
+                    [
+                        'business_id' => $businessId,
+                        'branch_id' => $branchId,
+                        'register_date' => $date,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'opening_cash' => $openingCash,
+                        'sales_amount' => $salesAmount,
+                        'expenses_amount' => $expensesAmount,
+                        'other_expenses' => $otherExpenses,
+                        'other_expenses_note' => $validated['other_expenses_note'] ?? null,
+                        'purchases_amount' => $purchasesAmount,
+                        'closing_cash' => $closingCash,
+                        'closing_cash_physical' => $validated['closing_cash_physical'] ?? null,
+                        'status' => $validated['status'] ?? 'closed',
+                        'notes' => $validated['notes'] ?? null,
+                    ]
+                );
+
+                AuditLog::log('daily_cash_register_saved', $reg, null, [
+                    'date' => $date,
+                    'opening_cash' => $openingCash,
+                    'sales' => $salesAmount,
+                    'expenses' => $expensesAmount,
+                    'other_expenses' => $otherExpenses,
+                    'purchases' => $purchasesAmount,
+                    'closing_cash' => $closingCash,
+                ]);
+
+                return $reg;
+            });
+
+            $successMsg = "Daily cash float for " . Carbon::parse($date)->format('d M Y') . " saved successfully! Opening Cash: ₹" . number_format($openingCash, 2);
+
+            // Redirect back to referring page or POS if requested
+            if ($request->filled('redirect_to')) {
+                return redirect($request->input('redirect_to'))->with('success', $successMsg);
+            }
+
+            if ($request->header('referer') && (str_contains($request->header('referer'), '/pos') || !$user->hasPermission('opening_closing_cash'))) {
+                return redirect()->route('pos.index')->with('success', $successMsg);
+            }
+
+            return redirect()->route('cash-register.index', [
                 'branch_id' => $branchId,
-                'register_date' => $date,
-            ],
-            [
+                'date' => $date,
+            ])->with('success', $successMsg . " | Estimated Closing Cash: ₹" . number_format($closingCash, 2));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to save daily cash register: ' . $e->getMessage(), [
+                'exception' => $e,
                 'user_id' => $user->id,
-                'opening_cash' => $openingCash,
-                'sales_amount' => $salesAmount,
-                'expenses_amount' => $expensesAmount,
-                'other_expenses' => $otherExpenses,
-                'other_expenses_note' => $validated['other_expenses_note'] ?? null,
-                'purchases_amount' => $purchasesAmount,
-                'closing_cash' => $closingCash,
-                'closing_cash_physical' => $validated['closing_cash_physical'] ?? null,
-                'status' => $validated['status'] ?? 'closed',
-                'notes' => $validated['notes'] ?? null,
-            ]
-        );
+                'branch_id' => $branchId,
+                'date' => $date,
+            ]);
 
-        AuditLog::log('daily_cash_register_saved', $register, null, [
-            'date' => $date,
-            'opening_cash' => $openingCash,
-            'sales' => $salesAmount,
-            'expenses' => $expensesAmount,
-            'other_expenses' => $otherExpenses,
-            'purchases' => $purchasesAmount,
-            'closing_cash' => $closingCash,
-        ]);
-
-        return redirect()->route('cash-register.index', [
-            'branch_id' => $branchId,
-            'date' => $date,
-        ])->with('success', "Daily cash register for " . Carbon::parse($date)->format('d M Y') . " saved successfully! Closing Cash: ₹" . number_format($closingCash, 2));
+            return back()->with('error', 'Unable to save opening cash register: ' . $e->getMessage())->withInput();
+        }
     }
 }

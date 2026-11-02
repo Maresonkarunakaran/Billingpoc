@@ -195,10 +195,15 @@
         <ul class="navbar-nav ml-auto align-items-center">
             <!-- Active Branch Switcher -->
             @php
-                $currentBranch = \App\Models\Branch::find(session('active_branch_id'));
-                $userBranches = auth()->user()->role?->slug === 'super-admin'
-                    ? \App\Models\Branch::where('business_id', auth()->user()->business_id)->where('is_active', true)->get()
-                    : auth()->user()->branches;
+                $currentBranch = session('active_branch_id') ? \App\Models\Branch::find(session('active_branch_id')) : null;
+                $userBranches = auth()->check()
+                    ? ((in_array(auth()->user()->role?->slug, ['super-admin', 'business-owner']) || auth()->user()->is_master_admin || !auth()->user()->branches()->exists())
+                        ? \App\Models\Branch::where('business_id', auth()->user()->business_id)->where('is_active', true)->get()
+                        : auth()->user()->branches()->where('is_active', true)->get())
+                    : collect();
+                if (!$currentBranch && $userBranches->isNotEmpty()) {
+                    $currentBranch = $userBranches->first();
+                }
             @endphp
             <li class="nav-item mr-2">
                 <form action="{{ route('branch.switch') }}" method="POST" class="d-inline" id="branchSwitchForm">
@@ -796,9 +801,16 @@
             </div>
             <form action="{{ route('cash-register.store') }}" method="POST">
                 @csrf
-                <input type="hidden" name="branch_id" value="{{ $activeBranchId ?? session('active_branch_id', auth()->user()?->default_branch_id) }}">
+                @php
+                    $modalBranchId = $activeBranchId 
+                        ?? session('active_branch_id') 
+                        ?? auth()->user()?->default_branch_id 
+                        ?? \App\Models\Branch::where('business_id', auth()->user()?->business_id)->value('id');
+                @endphp
+                <input type="hidden" name="branch_id" value="{{ $modalBranchId }}">
                 <input type="hidden" name="register_date" value="{{ now()->toDateString() }}">
                 <input type="hidden" name="status" value="open">
+                <input type="hidden" name="redirect_to" value="{{ url()->current() }}">
 
                 <div class="modal-body p-4">
                     <div class="alert alert-light border mb-3 text-sm">

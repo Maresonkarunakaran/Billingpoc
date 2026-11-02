@@ -28,7 +28,8 @@ class AppServiceProvider extends ServiceProvider
             if (Auth::check()) {
                 $user = Auth::user();
                 $businessId = $user->business_id;
-                $branchId = session('active_branch_id', $user->default_branch_id);
+                $branchId = session('active_branch_id')
+                    ?: ($user->default_branch_id ?: \App\Models\Branch::where('business_id', $businessId)->value('id'));
                 $today = now()->toDateString();
 
                 // Check if any bill has been printed / finalized today in active branch

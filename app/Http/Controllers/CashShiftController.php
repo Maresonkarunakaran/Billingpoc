@@ -31,7 +31,13 @@ class CashShiftController extends Controller
     public function open(Request $request)
     {
         $user = Auth::user();
-        $branchId = session('active_branch_id') ?? $user->default_branch_id;
+        $businessId = $user->business_id;
+
+        $branchId = (int) ($request->input('branch_id')
+            ?: session('active_branch_id')
+            ?: ($user->default_branch_id ?: \App\Models\Branch::where('business_id', $businessId)->value('id')));
+
+        session(['active_branch_id' => $branchId]);
 
         $existing = CashShift::where('branch_id', $branchId)
             ->where('user_id', $user->id)

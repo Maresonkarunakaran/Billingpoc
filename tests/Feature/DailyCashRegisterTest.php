@@ -290,4 +290,63 @@ class DailyCashRegisterTest extends TestCase
         $this->assertSame(500.0, (float) $register->opening_cash);
         $this->assertSame(75.0, (float) $register->other_expenses);
     }
+
+    public function test_auto_modal_opening_cash_submission_redirects_safely_without_500_server_error(): void
+    {
+        $today = now()->toDateString();
+
+        $response = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => $today,
+            'opening_cash' => 2000,
+            'status' => 'open',
+            'redirect_to' => route('pos.index'),
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('pos.index'));
+        $response->assertSessionHas('success');
+
+        // Follow redirect to POS page to ensure entire render pipeline completes with 200 OK
+        $followResponse = $this->actingAs($this->admin)->get(route('pos.index'));
+        $followResponse->assertStatus(200);
+        $followResponse->assertDontSee('500 Server Error');
+    }
+
+    public function test_opening_cash_with_missing_branch_id_resolves_fallback_safely(): void
+    {
+        $today = now()->toDateString();
+
+        // Omit branch_id completely to verify auto-resolution
+        $response = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'register_date' => $today,
+            'opening_cash' => 1250.00,
+            'status' => 'open',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $register = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', $today)
+            ->first();
+
+        $this->assertNotNull($register);
+        $this->assertEquals(1250.00, $register->opening_cash);
+    }
+
+    public function test_cash_shift_open_with_missing_branch_id_resolves_fallback_safely(): void
+    {
+        // Test cash shift drawer opening when session active_branch_id is not set
+        session()->forget('active_branch_id');
+
+        $response = $this->actingAs($this->admin)->post(route('shifts.open'), [
+            'opening_cash' => 1000.00,
+            'notes' => 'Morning shift open test',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('pos.index'));
+    }
 }
