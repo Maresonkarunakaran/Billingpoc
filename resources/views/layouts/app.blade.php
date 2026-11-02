@@ -605,6 +605,11 @@
             const id = (input.id || '').toLowerCase();
             const classes = (input.className || '').toLowerCase();
 
+            // Allow min_wholesale_qty explicitly as a formatted decimal field
+            if (name === 'min_wholesale_qty') {
+                return true;
+            }
+
             // Strict exclusions: quantities, barcodes, phones, HSN, SKUs, dates
             if (name.includes('qty') || name.includes('quantity') || name.includes('stock') ||
                 name.includes('barcode') || name.includes('phone') || name.includes('mobile') ||
@@ -694,6 +699,8 @@
                 if (input.dataset.autoClearedZero === 'true' || input.required || input.name === 'opening_cash' || 
                     input.name === 'purchase_price' || input.name === 'retail_price' || input.name === 'wholesale_price') {
                     input.value = '0.00';
+                } else if (input.name === 'min_wholesale_qty') {
+                    input.value = '10.00';
                 }
                 delete input.dataset.autoClearedZero;
             } else {
@@ -719,9 +726,40 @@
                         }
                     } else if (input.required || input.name === 'opening_cash') {
                         input.value = '0.00';
+                    } else if (input.name === 'min_wholesale_qty') {
+                        input.value = '10.00';
                     }
                 }
             });
+        });
+
+        // 5. Prevent accidental form submission on 'Enter' key in product create/edit forms
+        // Adding product completes only when clicking 'Save Product to Catalog' button
+        // Updating product completes only when clicking 'Update Product Details' button
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const form = e.target.closest('form');
+                if (form && (form.id === 'productForm' || form.hasAttribute('data-prevent-enter-submit'))) {
+                    // Allow normal multi-line typing in description textarea
+                    if (e.target.tagName === 'TEXTAREA') {
+                        return;
+                    }
+                    // Allow activating buttons when user is focused on the button itself
+                    if (e.target.tagName === 'BUTTON' || (e.target.tagName === 'INPUT' && (e.target.type === 'submit' || e.target.type === 'button'))) {
+                        return;
+                    }
+
+                    e.preventDefault();
+
+                    // Advance focus to next input field instead of prematurely submitting incomplete product
+                    const focusables = Array.from(form.querySelectorAll('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'));
+                    const currentIndex = focusables.indexOf(e.target);
+                    if (currentIndex > -1 && currentIndex + 1 < focusables.length) {
+                        focusables[currentIndex + 1].focus();
+                    }
+                    return false;
+                }
+            }
         });
 
         // 5. Modal shown hook for auto-clearing opening cash modal

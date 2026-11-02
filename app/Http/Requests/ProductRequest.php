@@ -27,7 +27,7 @@ class ProductRequest extends FormRequest
             'purchase_price' => 'required|numeric|min:0',
             'retail_price' => 'required|numeric|min:0',
             'wholesale_price' => 'required|numeric|min:0',
-            'min_wholesale_qty' => 'nullable|integer|min:1',
+            'min_wholesale_qty' => 'nullable|numeric|min:0.01',
             'gst_rate' => 'required|numeric|in:0,5,12,18,28',
             'tax_type' => 'required|in:exclusive,inclusive',
             'alert_quantity' => 'nullable|numeric|min:0',
@@ -41,7 +41,6 @@ class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'min_wholesale_qty.integer' => 'Minimum wholesale quantity must be a whole number.',
             'opening_stock.integer' => 'Opening stock must be a whole number.',
         ];
     }

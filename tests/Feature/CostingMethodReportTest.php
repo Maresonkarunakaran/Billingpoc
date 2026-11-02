@@ -344,4 +344,71 @@ class CostingMethodReportTest extends TestCase
         $response->assertSee('Closing stock', false);
         $response->assertSee('Gross profit', false);
     }
+
+    public function test_sales_margin_report_shows_all_records_by_default_without_date_clamping(): void
+    {
+        $product = Product::create([
+            'business_id' => $this->business->id,
+            'category_id' => $this->categoryVeg->id,
+            'base_unit_id' => $this->unitKg->id,
+            'name' => 'Farm Fresh Tomatoes',
+            'sku' => 'TOM-01',
+            'barcode' => '8901234999',
+            'purchase_price' => 30.00,
+            'retail_price' => 50.00,
+            'min_wholesale_qty' => 10.00,
+            'is_active' => true,
+        ]);
+
+        StockMovement::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'product_id' => $product->id,
+            'movement_type' => 'opening_stock',
+            'quantity_change' => 100,
+            'previous_balance' => 0,
+            'current_balance' => 100,
+            'unit_cost' => 30.00,
+            'created_at' => Carbon::now()->subMonths(3),
+        ]);
+
+        $sale = Sale::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->admin->id,
+            'invoice_number' => 'INV-HIST-001',
+            'invoice_date' => Carbon::now()->subMonths(2),
+            'invoice_status' => 'finalized',
+            'subtotal' => 2500,
+            'total_amount' => 2500,
+            'final_total' => 2500,
+            'paid_amount' => 2500,
+            'balance_amount' => 0,
+            'is_interstate' => false,
+            'created_at' => Carbon::now()->subMonths(2),
+        ]);
+
+        SaleItem::create([
+            'sale_id' => $sale->id,
+            'product_id' => $product->id,
+            'unit_id' => $this->unitKg->id,
+            'quantity' => 50,
+            'unit_price' => 50.00,
+            'cost_price' => 30.00,
+            'taxable_amount' => 2500,
+            'total_amount' => 2500,
+            'created_at' => Carbon::now()->subMonths(2),
+        ]);
+
+        // Default query without any date filters
+        $response = $this->actingAs($this->admin)->get(route('products.reports', ['tab' => 'margin']));
+
+        $response->assertStatus(200);
+        // The historical product must be present in the default table view
+        $response->assertSee('Farm Fresh Tomatoes');
+        $response->assertSee('TOM-01');
+        // Preset "All Time" is active by default
+        $response->assertSee('All Time');
+        $response->assertSee('50.00 kg');
+    }
 }

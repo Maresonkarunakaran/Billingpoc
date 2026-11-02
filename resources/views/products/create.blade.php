@@ -9,7 +9,7 @@
     <a href="{{ route('products.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Back to Products</a>
 </div>
 
-<form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
+<form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data" id="productForm" data-prevent-enter-submit="true">
     @csrf
     <div class="card shadow-sm border-0 mb-3">
         <div class="card-header bg-white py-2 font-weight-bold text-sm">Basic Information</div>
@@ -88,7 +88,7 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="font-weight-bold text-sm">Min Wholesale Quantity</label>
-                    <input type="number" name="min_wholesale_qty" class="form-control font-weight-bold" value="{{ old('min_wholesale_qty', 10) }}" min="1" step="1">
+                    <input type="number" name="min_wholesale_qty" id="min_wholesale_qty" class="form-control font-weight-bold" value="{{ old('min_wholesale_qty', '10.00') }}" min="0.01" step="0.01" placeholder="10.00">
                 </div>
             </div>
 
@@ -135,7 +135,7 @@
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm mb-4">
+    <button type="submit" id="btnSaveProduct" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm mb-4">
         <i class="fas fa-save mr-1"></i> Save Product to Catalog
     </button>
 </form>
@@ -152,6 +152,23 @@
         input.classList.add('is-valid');
         setTimeout(() => input.classList.remove('is-valid'), 1200);
     });
+
+    // Guard: Pressing enter in inputs will NOT prematurely submit the form
+    // Adding the product only completes when explicitly clicking 'Save Product to Catalog'
+    const productForm = document.getElementById('productForm');
+    if (productForm) {
+        productForm.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.type !== 'submit') {
+                e.preventDefault();
+                const focusables = Array.from(productForm.querySelectorAll('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'));
+                const idx = focusables.indexOf(e.target);
+                if (idx > -1 && idx + 1 < focusables.length) {
+                    focusables[idx + 1].focus();
+                }
+                return false;
+            }
+        });
+    }
 </script>
 @endpush
 @endsection

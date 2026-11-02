@@ -965,7 +965,7 @@
             existing.quantity += 1;
         } else {
             const initialQty = (selectedPricingType === 'wholesale' && product.min_wholesale_qty > 1) 
-                ? Math.min(Math.floor(Number(product.min_wholesale_qty)), availableStock)
+                ? Math.min(Number(product.min_wholesale_qty), availableStock)
                 : 1;
 
             cart.push({

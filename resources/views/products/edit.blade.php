@@ -9,7 +9,7 @@
     <a href="{{ route('products.index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left mr-1"></i> Back to Products</a>
 </div>
 
-<form action="{{ route('products.update', $product->id) }}" method="POST" enctype="multipart/form-data">
+<form action="{{ route('products.update', $product->id) }}" method="POST" enctype="multipart/form-data" id="productForm" data-prevent-enter-submit="true">
     @csrf
     @method('PUT')
 
@@ -90,7 +90,7 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="font-weight-bold text-sm">Min Wholesale Quantity</label>
-                    <input type="number" name="min_wholesale_qty" class="form-control font-weight-bold" value="{{ old('min_wholesale_qty', $product->min_wholesale_qty) }}" min="1" step="1">
+                    <input type="number" name="min_wholesale_qty" id="min_wholesale_qty" class="form-control font-weight-bold" value="{{ old('min_wholesale_qty', number_format((float)$product->min_wholesale_qty, 2, '.', '')) }}" min="0.01" step="0.01" placeholder="10.00">
                 </div>
             </div>
 
@@ -153,7 +153,7 @@
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button type="submit" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm">
+        <button type="submit" id="btnUpdateProduct" class="btn btn-primary font-weight-bold px-4 py-2 shadow-sm">
             <i class="fas fa-save mr-1"></i> Update Product Details
         </button>
         <button type="button" class="btn btn-outline-danger font-weight-bold px-3 py-2 shadow-sm" onclick="if(confirm('Are you sure you want to delete product \'{{ addslashes($product->name) }}\'? This action cannot be undone.')) { document.getElementById('delete-product-form-{{ $product->id }}').submit(); }">
@@ -178,6 +178,23 @@
         input.classList.add('is-valid');
         setTimeout(() => input.classList.remove('is-valid'), 1200);
     });
+
+    // Guard: Pressing enter in inputs will NOT prematurely submit the form
+    // Updating the product only completes when explicitly clicking 'Update Product Details'
+    const productForm = document.getElementById('productForm');
+    if (productForm) {
+        productForm.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.type !== 'submit') {
+                e.preventDefault();
+                const focusables = Array.from(productForm.querySelectorAll('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'));
+                const idx = focusables.indexOf(e.target);
+                if (idx > -1 && idx + 1 < focusables.length) {
+                    focusables[idx + 1].focus();
+                }
+                return false;
+            }
+        });
+    }
 </script>
 @endpush
 @endsection

@@ -106,11 +106,11 @@
                             <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'yesterday', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
                             <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'this_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
-                               class="btn {{ request('preset') === 'this_month' || (!request('preset') && !request('start_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                               class="btn {{ request('preset') === 'this_month' ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
                             <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'last_month', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
                                class="btn {{ request('preset') === 'last_month' ? 'btn-primary' : 'btn-outline-secondary' }}">Last Month</a>
                             <a href="{{ route('products.reports', ['tab' => 'margin', 'preset' => 'all', 'branch_id' => $branchFilter, 'category_id' => $categoryFilter, 'costing_method' => $selectedCostingMethod]) }}" 
-                               class="btn {{ request('preset') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
+                               class="btn {{ request('preset') === 'all' || (!request('preset') && !request('start_date') && !request('end_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
                         </div>
 
                         <span class="text-xs text-muted">
@@ -907,11 +907,11 @@
                             <a href="{{ route('products.reports', ['tab' => 'sales_rank', 'preset' => 'yesterday', 'branch_id' => $branchFilter]) }}" 
                                class="btn {{ request('preset') === 'yesterday' ? 'btn-primary' : 'btn-outline-secondary' }}">Yesterday</a>
                             <a href="{{ route('products.reports', ['tab' => 'sales_rank', 'preset' => 'this_month', 'branch_id' => $branchFilter]) }}" 
-                               class="btn {{ request('preset') === 'this_month' || (!request('preset') && !request('start_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
+                               class="btn {{ request('preset') === 'this_month' ? 'btn-primary' : 'btn-outline-secondary' }}">📅 This Month</a>
                             <a href="{{ route('products.reports', ['tab' => 'sales_rank', 'preset' => 'last_month', 'branch_id' => $branchFilter]) }}" 
                                class="btn {{ request('preset') === 'last_month' ? 'btn-primary' : 'btn-outline-secondary' }}">Last Month</a>
                             <a href="{{ route('products.reports', ['tab' => 'sales_rank', 'preset' => 'all', 'branch_id' => $branchFilter]) }}" 
-                               class="btn {{ request('preset') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
+                               class="btn {{ request('preset') === 'all' || (!request('preset') && !request('start_date') && !request('end_date')) ? 'btn-primary' : 'btn-outline-secondary' }}">All Time</a>
                         </div>
 
                         <span class="text-xs text-muted">

@@ -75,7 +75,7 @@
                             <td class="text-right font-weight-bold text-primary">₹ {{ number_format($p->retail_price, 2) }}</td>
                             <td class="text-right font-weight-bold text-success">
                                 ₹ {{ number_format($p->wholesale_price, 2) }}
-                                <small class="text-muted d-block">(&ge;{{ number_format($p->min_wholesale_qty) }})</small>
+                                <small class="text-muted d-block">(&ge;{{ number_format((float) $p->min_wholesale_qty, 2) }})</small>
                             </td>
                             <td class="text-center">
                                 <span class="badge badge-gst">{{ $p->gst_rate }}% {{ ucfirst($p->tax_type) }}</span>

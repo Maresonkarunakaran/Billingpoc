@@ -54,11 +54,9 @@ class ProductReportController extends Controller
                 $startDate = $endDate;
             } elseif ($startDate && $endDate && $startDate > $endDate) {
                 [$startDate, $endDate] = [$endDate, $startDate];
-            } elseif (! $startDate && ! $endDate && ! $request->has('preset')) {
-                // Default to this month for sold items if neither start_date nor preset is specified
-                $startDate = now()->startOfMonth()->toDateString();
-                $endDate = now()->toDateString();
             }
+            // By default, if neither start_date nor preset is specified, keep startDate & endDate null
+            // so all available report data is shown in the table by default without restricting to current month.
         }
 
         // Costing method (Moving Average, FIFO, LIFO)

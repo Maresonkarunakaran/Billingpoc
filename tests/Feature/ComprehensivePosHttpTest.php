@@ -809,4 +809,82 @@ class ComprehensivePosHttpTest extends TestCase
         $response2->assertSessionHas('success');
         $this->assertTrue((bool) $this->product->fresh()->is_active);
     }
+
+    public function test_product_creation_and_update_supports_float_min_wholesale_qty_and_enter_protection(): void
+    {
+        // 1. Check create view has Enter protection and proper float step on min_wholesale_qty
+        $createPageResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products/create');
+        
+        $createPageResponse->assertStatus(200);
+        $createPageResponse->assertSee('id="productForm"', false);
+        $createPageResponse->assertSee('data-prevent-enter-submit="true"', false);
+        $createPageResponse->assertSee('id="btnSaveProduct"', false);
+        $createPageResponse->assertSee('Save Product to Catalog', false);
+        $createPageResponse->assertSee('name="min_wholesale_qty"', false);
+        $createPageResponse->assertSee('step="0.01"', false);
+
+        // 2. Submit product with decimal / float min_wholesale_qty (e.g. 15.50)
+        $storeResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->post('/products', [
+                'name' => 'Premium Olive Oil 1L',
+                'sku' => 'OIL-OLV-1L',
+                'barcode' => '890987654321',
+                'base_unit_id' => $this->product->base_unit_id,
+                'purchase_price' => 450.00,
+                'retail_price' => 600.00,
+                'wholesale_price' => 520.00,
+                'min_wholesale_qty' => 15.50,
+                'gst_rate' => 12,
+                'tax_type' => 'exclusive',
+                'alert_quantity' => 5.00,
+            ]);
+
+        $storeResponse->assertRedirect('/products')
+            ->assertSessionHas('success');
+
+        $createdProduct = Product::where('sku', 'OIL-OLV-1L')->first();
+        $this->assertNotNull($createdProduct);
+        $this->assertEquals('15.5000', $createdProduct->min_wholesale_qty);
+
+        // 3. Check edit view has Enter protection and proper float step
+        $editPageResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products/'.$createdProduct->id.'/edit');
+
+        $editPageResponse->assertStatus(200);
+        $editPageResponse->assertSee('id="productForm"', false);
+        $editPageResponse->assertSee('data-prevent-enter-submit="true"', false);
+        $editPageResponse->assertSee('id="btnUpdateProduct"', false);
+        $editPageResponse->assertSee('Update Product Details', false);
+        $editPageResponse->assertSee('value="15.50"', false);
+
+        // 4. Update product with new float min_wholesale_qty (e.g. 25.75)
+        $updateResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->put('/products/'.$createdProduct->id, [
+                'name' => 'Premium Olive Oil 1L Extra Virgin',
+                'sku' => 'OIL-OLV-1L',
+                'barcode' => '890987654321',
+                'base_unit_id' => $this->product->base_unit_id,
+                'purchase_price' => 460.00,
+                'retail_price' => 620.00,
+                'wholesale_price' => 530.00,
+                'min_wholesale_qty' => 25.75,
+                'gst_rate' => 12,
+                'tax_type' => 'exclusive',
+                'alert_quantity' => 10.00,
+            ]);
+
+        $updateResponse->assertRedirect('/products');
+        $this->assertEquals('25.7500', $createdProduct->fresh()->min_wholesale_qty);
+
+        // 5. Index view formats min wholesale quantity with decimal formatting
+        $indexResponse = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->shop->id])
+            ->get('/products');
+        $indexResponse->assertSee('25.75');
+    }
 }
