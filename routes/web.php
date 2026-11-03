@@ -145,6 +145,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/{id}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{id}', [ExpenseController::class, 'destroy'])->name('destroy');
         Route::post('/categories', [ExpenseController::class, 'storeCategory'])->name('categories.store');
+        Route::post('/categories/batch-apply', [ExpenseController::class, 'batchApplyCategories'])->name('categories.batch-apply');
         Route::put('/categories/{id}', [ExpenseController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{id}', [ExpenseController::class, 'destroyCategory'])->name('categories.destroy');
     });

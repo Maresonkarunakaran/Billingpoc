@@ -357,68 +357,124 @@
 
 <!-- ADD & MANAGE CATEGORY MODAL -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
-            <div class="modal-header bg-light py-2">
-                <h5 class="modal-title font-weight-bold text-dark">
-                    <i class="fas fa-folder-open text-primary mr-1"></i> Manage Expense Categories
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body p-3">
-                <form action="{{ route('expenses.categories.store') }}" method="POST" class="mb-3 p-3 bg-light rounded border">
-                    @csrf
-                    <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">Create New Category</label>
-                    <div class="row">
-                        <div class="col-7">
-                            <input type="text" name="name" class="form-control form-control-sm" required placeholder="Category Name *">
+            <form action="{{ route('expenses.categories.batch-apply') }}" method="POST" id="batchCategoryForm">
+                @csrf
+                <div class="modal-header bg-light py-2">
+                    <h5 class="modal-title font-weight-bold text-dark">
+                        <i class="fas fa-folder-open text-primary mr-2"></i> Manage Expense Categories
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="alert alert-info py-2 px-3 text-xs mb-3 d-flex align-items-center">
+                        <i class="fas fa-info-circle mr-2 fa-lg text-info"></i>
+                        <span>
+                            Stage new categories or mark categories for deletion, then click <strong>Apply Changes</strong> to save everything together.
+                        </span>
+                    </div>
+
+                    <!-- Add New Category -->
+                    <div class="p-3 bg-light rounded border mb-3">
+                        <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">
+                            <i class="fas fa-plus-circle text-primary mr-1"></i> Add New Category
+                        </label>
+                        <div class="row align-items-center">
+                            <div class="col-md-7 mb-2 mb-md-0">
+                                <input type="text" id="newCategoryName" name="inline_name" class="form-control form-control-sm" placeholder="Category Name (e.g. Office Supplies) *">
+                            </div>
+                            <div class="col-md-3 mb-2 mb-md-0">
+                                <input type="text" id="newCategoryCode" name="inline_code" class="form-control form-control-sm" placeholder="Code (e.g. OFF)">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" id="btnAddCategoryToList" class="btn btn-primary btn-sm btn-block font-weight-bold" title="Stage Category">
+                                    <i class="fas fa-plus mr-1"></i> Add
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-3">
-                            <input type="text" name="code" class="form-control form-control-sm" placeholder="Code">
-                        </div>
-                        <div class="col-2">
-                            <button type="submit" class="btn btn-primary btn-sm btn-block font-weight-bold" title="Save Category">
-                                <i class="fas fa-plus"></i>
-                            </button>
+
+                        <!-- Staged New Categories Container -->
+                        <div id="stagedCategoriesContainer" class="mt-2 d-none">
+                            <span class="font-weight-bold text-xs text-muted mb-1 d-block">Pending New Categories:</span>
+                            <div id="stagedCategoriesList" class="d-flex flex-wrap" style="gap: 6px;"></div>
                         </div>
                     </div>
-                </form>
 
-                <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">Existing Categories ({{ count($categories) }})</label>
-                <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
-                    <table class="table table-sm table-hover mb-0">
-                        <tbody>
-                            @forelse($categories as $cat)
+                    <!-- Existing Categories List -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="font-weight-bold text-xs text-uppercase text-muted mb-0">
+                            Existing Categories (<span id="existingCategoryCount">{{ count($categories) }}</span>)
+                        </label>
+                        <span id="pendingChangesBadge" class="badge badge-secondary text-xs">0 changes pending</span>
+                    </div>
+
+                    <div class="table-responsive border rounded bg-white" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0" id="existingCategoriesTable">
+                            <thead class="bg-light text-muted text-xs">
                                 <tr>
-                                    <td class="font-weight-medium text-dark">{{ $cat->name }}</td>
-                                    <td><small class="text-muted">{{ $cat->code ?: '---' }}</small></td>
-                                    <td class="text-right">
-                                        <form action="{{ route('expenses.categories.destroy', $cat->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete category {{ addslashes($cat->name) }}?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete Category">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th style="width: 50%;">Name</th>
+                                    <th style="width: 25%;">Code</th>
+                                    <th style="width: 25%;" class="text-right">Action</th>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-2">No categories found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @forelse($categories as $cat)
+                                    @php $hasExpenses = ($cat->expenses_count ?? 0) > 0; @endphp
+                                    <tr id="catRow_{{ $cat->id }}" class="category-item-row" data-id="{{ $cat->id }}">
+                                        <td class="font-weight-medium text-dark align-middle category-name-cell">
+                                            <span class="cat-name-text">{{ $cat->name }}</span>
+                                            @if($hasExpenses)
+                                                <span class="badge badge-light border text-muted ml-2 text-xs" title="Linked to {{ $cat->expenses_count }} expense records">
+                                                    <i class="fas fa-receipt mr-1 text-secondary"></i>{{ $cat->expenses_count }} {{ Str::plural('expense', $cat->expenses_count) }}
+                                                </span>
+                                            @endif
+                                            <span class="badge badge-danger ml-2 d-none marked-delete-badge font-weight-bold text-xs">Marked for deletion</span>
+                                        </td>
+                                        <td class="align-middle text-muted">
+                                            <code>{{ $cat->code ?: '---' }}</code>
+                                        </td>
+                                        <td class="text-right align-middle">
+                                            @if($hasExpenses)
+                                                <button type="button" class="btn btn-xs btn-outline-secondary" disabled title="Cannot delete: recorded expenses exist under this category">
+                                                    <i class="fas fa-lock mr-1"></i> In Use
+                                                </button>
+                                            @else
+                                                <input type="checkbox" name="delete_ids[]" value="{{ $cat->id }}" id="delCheck_{{ $cat->id }}" class="d-none cat-del-checkbox">
+                                                <button type="button" class="btn btn-xs btn-outline-danger btn-toggle-cat-delete" data-id="{{ $cat->id }}" title="Mark for deletion">
+                                                    <i class="fas fa-trash mr-1"></i> Delete
+                                                </button>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr id="emptyCategoriesRow">
+                                        <td colspan="3" class="text-center text-muted py-3">No categories found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer py-2 bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
-            </div>
+                <div class="modal-footer py-2 bg-light d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="submit" id="applyCategoryBtn" class="btn btn-success btn-sm font-weight-bold px-3 shadow-xs">
+                        <i class="fas fa-check-circle mr-1"></i> Apply Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <style>
+.strikethrough-text {
+    text-decoration: line-through !important;
+    opacity: 0.6;
+}
+.cursor-pointer {
+    cursor: pointer;
+}
 @media print {
     .main-sidebar, .main-header, .btn, .modal, .card-footer, form, .badge-light {
         display: none !important;
@@ -434,4 +490,151 @@
     }
 }
 </style>
+
+@push('scripts')
+<script>
+$(function() {
+    let stagedAdditions = [];
+    let stagedDeletions = new Set();
+
+    function updateSummary() {
+        const addCount = stagedAdditions.length;
+        const uncommittedName = $('#newCategoryName').val().trim();
+        const effectiveAddCount = addCount + (uncommittedName ? 1 : 0);
+        const delCount = stagedDeletions.size;
+        const totalChanges = effectiveAddCount + delCount;
+
+        const badge = $('#pendingChangesBadge');
+        if (totalChanges === 0) {
+            badge.removeClass('badge-primary badge-warning').addClass('badge-secondary').text('0 changes pending');
+        } else {
+            let desc = [];
+            if (effectiveAddCount > 0) desc.push(effectiveAddCount + ' to add');
+            if (delCount > 0) desc.push(delCount + ' to delete');
+            badge.removeClass('badge-secondary').addClass('badge-primary font-weight-bold').text(desc.join(', '));
+        }
+    }
+
+    function renderStagedAdditions() {
+        const container = $('#stagedCategoriesContainer');
+        const list = $('#stagedCategoriesList');
+        list.empty();
+
+        if (stagedAdditions.length === 0) {
+            container.addClass('d-none');
+            updateSummary();
+            return;
+        }
+
+        container.removeClass('d-none');
+        stagedAdditions.forEach((item, index) => {
+            const escapedName = $('<div>').text(item.name).html();
+            const escapedCode = item.code ? $('<div>').text(item.code).html() : '';
+            const pill = $(`
+                <div class="badge badge-primary font-weight-normal px-2 py-1 d-inline-flex align-items-center" style="font-size: 0.85rem; border-radius: 6px;">
+                    <span><strong>${escapedName}</strong>${escapedCode ? ' <code class="text-white">(' + escapedCode + ')</code>' : ''}</span>
+                    <button type="button" class="close text-white ml-2 remove-staged-cat" data-index="${index}" style="font-size: 1rem; line-height: 1; outline: none; opacity: 0.85;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <input type="hidden" name="new_categories[${index}][name]" value="${escapedName}">
+                    <input type="hidden" name="new_categories[${index}][code]" value="${escapedCode}">
+                </div>
+            `);
+            list.append(pill);
+        });
+
+        updateSummary();
+    }
+
+    // Add category button click
+    $('#btnAddCategoryToList').on('click', function(e) {
+        e.preventDefault();
+        const nameInput = $('#newCategoryName');
+        const codeInput = $('#newCategoryCode');
+        const name = nameInput.val().trim();
+        const code = codeInput.val().trim();
+
+        if (!name) {
+            nameInput.focus();
+            return;
+        }
+
+        stagedAdditions.push({ name: name, code: code });
+        nameInput.val('');
+        codeInput.val('');
+        nameInput.focus();
+        renderStagedAdditions();
+    });
+
+    // Enter key support in input fields
+    $('#newCategoryName, #newCategoryCode').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $('#btnAddCategoryToList').click();
+        }
+    });
+
+    // Remove staged category
+    $(document).on('click', '.remove-staged-cat', function(e) {
+        e.preventDefault();
+        const idx = $(this).data('index');
+        stagedAdditions.splice(idx, 1);
+        renderStagedAdditions();
+    });
+
+    // Toggle delete state on existing categories
+    $(document).on('click', '.btn-toggle-cat-delete', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const id = parseInt(btn.data('id'), 10);
+        const row = $(`#catRow_${id}`);
+        const checkbox = $(`#delCheck_${id}`);
+        const badge = row.find('.marked-delete-badge');
+        const nameText = row.find('.cat-name-text');
+
+        if (stagedDeletions.has(id)) {
+            // Revert / Undo
+            stagedDeletions.delete(id);
+            checkbox.prop('checked', false);
+            row.removeClass('table-danger');
+            nameText.removeClass('strikethrough-text text-muted');
+            badge.addClass('d-none');
+            btn.removeClass('btn-warning').addClass('btn-outline-danger').html('<i class="fas fa-trash mr-1"></i> Delete');
+        } else {
+            // Stage for deletion
+            stagedDeletions.add(id);
+            checkbox.prop('checked', true);
+            row.addClass('table-danger');
+            nameText.addClass('strikethrough-text text-muted');
+            badge.removeClass('d-none');
+            btn.removeClass('btn-outline-danger').addClass('btn-warning').html('<i class="fas fa-undo mr-1"></i> Undo');
+        }
+
+        updateSummary();
+    });
+
+    $('#newCategoryName').on('input', updateSummary);
+
+    // Form submission validation
+    $('#batchCategoryForm').on('submit', function(e) {
+        const pendingName = $('#newCategoryName').val().trim();
+        const pendingCode = $('#newCategoryCode').val().trim();
+        if (pendingName) {
+            stagedAdditions.push({ name: pendingName, code: pendingCode });
+            $('#newCategoryName').val('');
+            $('#newCategoryCode').val('');
+            renderStagedAdditions();
+        }
+
+        if (stagedAdditions.length === 0 && stagedDeletions.size === 0) {
+            e.preventDefault();
+            alert('No changes to apply. Please enter a new category or mark an existing category for deletion.');
+            return false;
+        }
+
+        $('#applyCategoryBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Applying Changes...');
+    });
+});
+</script>
+@endpush
 @endsection

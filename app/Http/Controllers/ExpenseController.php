@@ -112,7 +112,10 @@ class ExpenseController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $categories = ExpenseCategory::where('business_id', $user->business_id)->get();
+        $categories = ExpenseCategory::where('business_id', $user->business_id)
+            ->withCount('expenses')
+            ->orderBy('name')
+            ->get();
 
         return view('expenses.index', compact(
             'expenses',
@@ -300,5 +303,104 @@ class ExpenseController extends Controller
         $category->delete();
 
         return back()->with('success', "Expense category '{$category->name}' deleted successfully!");
+    }
+
+    public function batchApplyCategories(Request $request)
+    {
+        $user = Auth::user();
+        $businessId = $user->business_id;
+
+        $request->validate([
+            'delete_ids' => 'nullable|array',
+            'delete_ids.*' => 'integer',
+            'new_categories' => 'nullable|array',
+            'new_categories.*.name' => 'nullable|string|max:100',
+            'new_categories.*.code' => 'nullable|string|max:30',
+            'inline_name' => 'nullable|string|max:100',
+            'inline_code' => 'nullable|string|max:30',
+        ]);
+
+        $deleteIds = $request->input('delete_ids', []);
+        $newCategories = $request->input('new_categories', []);
+
+        if ($request->filled('inline_name')) {
+            $inlineName = trim($request->input('inline_name'));
+            if ($inlineName !== '') {
+                $newCategories[] = [
+                    'name' => $inlineName,
+                    'code' => trim($request->input('inline_code', '')),
+                ];
+            }
+        }
+
+        $deletedNames = [];
+        $skippedNames = [];
+        $addedNames = [];
+        $duplicateNames = [];
+
+        DB::transaction(function () use ($businessId, $deleteIds, $newCategories, &$deletedNames, &$skippedNames, &$addedNames, &$duplicateNames) {
+            // Process deletions first
+            if (!empty($deleteIds)) {
+                $categoriesToDelete = ExpenseCategory::where('business_id', $businessId)
+                    ->whereIn('id', $deleteIds)
+                    ->withCount('expenses')
+                    ->get();
+
+                foreach ($categoriesToDelete as $category) {
+                    if ($category->expenses_count > 0) {
+                        $skippedNames[] = $category->name;
+                    } else {
+                        $deletedNames[] = $category->name;
+                        $category->delete();
+                    }
+                }
+            }
+
+            // Process additions
+            foreach ($newCategories as $catData) {
+                $name = trim($catData['name'] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+
+                $exists = ExpenseCategory::where('business_id', $businessId)
+                    ->where('name', $name)
+                    ->exists();
+
+                if ($exists) {
+                    $duplicateNames[] = $name;
+                    continue;
+                }
+
+                ExpenseCategory::create([
+                    'business_id' => $businessId,
+                    'name' => $name,
+                    'code' => !empty($catData['code']) ? trim($catData['code']) : null,
+                    'is_active' => true,
+                ]);
+                $addedNames[] = $name;
+            }
+        });
+
+        if (empty($deletedNames) && empty($addedNames) && empty($skippedNames) && empty($duplicateNames)) {
+            return redirect()->route('expenses.index')->with('info', 'No category changes were made.');
+        }
+
+        $parts = [];
+        if (!empty($addedNames)) {
+            $parts[] = count($addedNames) . ' category(s) added (' . implode(', ', array_slice($addedNames, 0, 3)) . (count($addedNames) > 3 ? '...' : '') . ')';
+        }
+        if (!empty($deletedNames)) {
+            $parts[] = count($deletedNames) . ' category(s) deleted (' . implode(', ', array_slice($deletedNames, 0, 3)) . (count($deletedNames) > 3 ? '...' : '') . ')';
+        }
+        if (!empty($skippedNames)) {
+            $parts[] = count($skippedNames) . ' category(s) skipped because expenses are filed under them';
+        }
+        if (!empty($duplicateNames)) {
+            $parts[] = count($duplicateNames) . ' category(s) already existed (' . implode(', ', $duplicateNames) . ')';
+        }
+
+        $message = 'Category changes applied successfully: ' . implode('; ', $parts) . '.';
+        return redirect()->route('expenses.index')->with('success', $message);
     }
 }
