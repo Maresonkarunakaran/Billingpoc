@@ -28,7 +28,6 @@ class DailyCashRegister extends Model
     ];
 
     protected $casts = [
-        'register_date' => 'date',
         'opening_cash' => 'decimal:2',
         'sales_amount' => 'decimal:2',
         'expenses_amount' => 'decimal:2',
@@ -37,6 +36,16 @@ class DailyCashRegister extends Model
         'closing_cash' => 'decimal:2',
         'closing_cash_physical' => 'decimal:2',
     ];
+
+    public function setRegisterDateAttribute($value): void
+    {
+        $this->attributes['register_date'] = \Carbon\Carbon::parse($value)->format('Y-m-d');
+    }
+
+    public function getRegisterDateAttribute($value): ?\Carbon\Carbon
+    {
+        return $value ? \Carbon\Carbon::parse($value) : null;
+    }
 
     public function business(): BelongsTo
     {

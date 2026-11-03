@@ -352,26 +352,43 @@ class DailyCashController extends Controller
                 $closingCash,
                 $validated
             ) {
-                $reg = DailyCashRegister::updateOrCreate(
-                    [
+                $formattedDate = Carbon::parse($date)->format('Y-m-d');
+
+                // Robust lookup matching DATE(register_date), exact string, or timestamp across SQLite and MySQL
+                $reg = DailyCashRegister::where('business_id', $businessId)
+                    ->where('branch_id', $branchId)
+                    ->where(function ($q) use ($date, $formattedDate) {
+                        $q->whereDate('register_date', '=', $formattedDate)
+                          ->orWhere('register_date', '=', $date)
+                          ->orWhere('register_date', '=', $formattedDate . ' 00:00:00');
+                    })
+                    ->first();
+
+                $attributesToSave = [
+                    'user_id' => $user->id,
+                    'opening_cash' => $openingCash,
+                    'sales_amount' => $salesAmount,
+                    'expenses_amount' => $expensesAmount,
+                    'other_expenses' => $otherExpenses,
+                    'other_expenses_note' => $validated['other_expenses_note'] ?? null,
+                    'purchases_amount' => $purchasesAmount,
+                    'closing_cash' => $closingCash,
+                    'closing_cash_physical' => $validated['closing_cash_physical'] ?? null,
+                    'status' => $validated['status'] ?? 'closed',
+                    'notes' => $validated['notes'] ?? null,
+                ];
+
+                if ($reg) {
+                    $reg->fill($attributesToSave);
+                    $reg->register_date = $formattedDate;
+                    $reg->save();
+                } else {
+                    $reg = DailyCashRegister::create(array_merge([
                         'business_id' => $businessId,
                         'branch_id' => $branchId,
-                        'register_date' => $date,
-                    ],
-                    [
-                        'user_id' => $user->id,
-                        'opening_cash' => $openingCash,
-                        'sales_amount' => $salesAmount,
-                        'expenses_amount' => $expensesAmount,
-                        'other_expenses' => $otherExpenses,
-                        'other_expenses_note' => $validated['other_expenses_note'] ?? null,
-                        'purchases_amount' => $purchasesAmount,
-                        'closing_cash' => $closingCash,
-                        'closing_cash_physical' => $validated['closing_cash_physical'] ?? null,
-                        'status' => $validated['status'] ?? 'closed',
-                        'notes' => $validated['notes'] ?? null,
-                    ]
-                );
+                        'register_date' => $formattedDate,
+                    ], $attributesToSave));
+                }
 
                 AuditLog::log('daily_cash_register_saved', $reg, null, [
                     'date' => $date,

@@ -349,4 +349,104 @@ class DailyCashRegisterTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertRedirect(route('pos.index'));
     }
+
+    public function test_user_can_update_other_expenses_without_unique_constraint_violation(): void
+    {
+        $today = now()->toDateString();
+
+        // 1. First save opening cash (e.g. from popup or initial start of day)
+        $initialResponse = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => $today,
+            'opening_cash' => 1000.00,
+            'status' => 'open',
+        ]);
+        $initialResponse->assertSessionHasNoErrors();
+
+        // Verify initial register was created
+        $register = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', $today)
+            ->first();
+        $this->assertNotNull($register);
+        $this->assertEquals(1000.00, $register->opening_cash);
+        $this->assertEquals(0.00, $register->other_expenses);
+        $this->assertEquals(1, DailyCashRegister::where('business_id', $this->business->id)->where('branch_id', $this->branch->id)->count());
+
+        // 2. Later during the day, user goes to Opening & Closing Cash page and adds Other Expenses = 90.00
+        $updateResponse = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => $today,
+            'opening_cash' => 1000.00,
+            'other_expenses' => 90.00,
+            'other_expenses_note' => 'Evening courier and stationery',
+            'status' => 'closed',
+            'notes' => 'Updated end of day',
+        ]);
+
+        $updateResponse->assertSessionHasNoErrors();
+        $updateResponse->assertSessionHas('success');
+
+        // Verify it UPDATED the same register row rather than attempting duplicate insert
+        $this->assertEquals(1, DailyCashRegister::where('business_id', $this->business->id)->where('branch_id', $this->branch->id)->count());
+
+        $updatedRegister = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', $today)
+            ->first();
+
+        $this->assertNotNull($updatedRegister);
+        $this->assertEquals(1000.00, $updatedRegister->opening_cash);
+        $this->assertEquals(90.00, $updatedRegister->other_expenses);
+        $this->assertEquals('Evening courier and stationery', $updatedRegister->other_expenses_note);
+        $this->assertEquals('closed', $updatedRegister->status);
+        // Closing cash = 1000 (opening) - 90 (other expenses) = 910
+        $this->assertEquals(910.00, $updatedRegister->closing_cash);
+    }
+
+    public function test_updating_existing_register_stored_with_timestamp_format_does_not_fail(): void
+    {
+        $today = now()->toDateString();
+
+        // Directly insert raw row with timestamp in register_date (as previously produced by SQLite date casting)
+        \Illuminate\Support\Facades\DB::table('daily_cash_registers')->insert([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->admin->id,
+            'register_date' => $today . ' 00:00:00',
+            'opening_cash' => 1000.00,
+            'sales_amount' => 8531.00,
+            'expenses_amount' => 1000.00,
+            'other_expenses' => 0.00,
+            'purchases_amount' => 1792.00,
+            'closing_cash' => 6739.00,
+            'status' => 'open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Submit update via controller (exactly as user did: adding other_expenses = 90)
+        $response = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => $today,
+            'opening_cash' => 1000.00,
+            'other_expenses' => 90.00,
+            'status' => 'closed',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success');
+
+        // Verify only 1 register exists and other_expenses is 90
+        $this->assertEquals(1, DailyCashRegister::where('business_id', $this->business->id)->where('branch_id', $this->branch->id)->count());
+
+        $reg = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', $today)
+            ->first();
+
+        $this->assertNotNull($reg);
+        $this->assertEquals(90.00, $reg->other_expenses);
+        $this->assertEquals('2026-11-03', $reg->register_date->toDateString());
+    }
 }
