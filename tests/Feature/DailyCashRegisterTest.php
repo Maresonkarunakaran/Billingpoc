@@ -169,6 +169,7 @@ class DailyCashRegisterTest extends TestCase
         $response->assertSee('Staff evening tea and biscuits');
         $response->assertSee('Purchases');
         $response->assertSee('1 orders from Purchases');
+        $response->assertSee('Wasteages');
         $response->assertSee('Closing Cash');
         $response->assertSee('Calculated Day Cash');
         $response->assertSee('2,625.00');
@@ -176,7 +177,7 @@ class DailyCashRegisterTest extends TestCase
         $response->assertSee('1,200.00');
         $response->assertSee('2,000.00');
         $response->assertSee('Total Gross Sales:');
-        $response->assertSee('Total Outflow (Exp + Purch):');
+        $response->assertSee('Total Outflow (Exp + Other + Waste + Purch):');
         $response->assertSee('Overall Closing Cash:');
     }
 
@@ -448,5 +449,50 @@ class DailyCashRegisterTest extends TestCase
         $this->assertNotNull($reg);
         $this->assertEquals(90.00, $reg->other_expenses);
         $this->assertEquals('2026-11-03', $reg->register_date->toDateString());
+    }
+
+    public function test_user_can_enter_wasteages_and_it_is_deducted_from_closing_cash(): void
+    {
+        $today = now()->toDateString();
+
+        // Save cash register with wasteages manually entered
+        $response = $this->actingAs($this->admin)->post(route('cash-register.store'), [
+            'branch_id' => $this->branch->id,
+            'register_date' => $today,
+            'opening_cash' => 2000.00,
+            'other_expenses' => 100.00,
+            'wasteages' => 150.00,
+            'wasteages_note' => 'Broken glass bottle and damaged packaging',
+            'status' => 'closed',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success');
+
+        $register = DailyCashRegister::where('business_id', $this->business->id)
+            ->where('branch_id', $this->branch->id)
+            ->whereDate('register_date', $today)
+            ->first();
+
+        $this->assertNotNull($register);
+        $this->assertEquals(2000.00, $register->opening_cash);
+        $this->assertEquals(100.00, $register->other_expenses);
+        $this->assertEquals(150.00, $register->wasteages);
+        $this->assertEquals('Broken glass bottle and damaged packaging', $register->wasteages_note);
+
+        // Expected Closing Cash = 2000 (opening) + 0 (sales) - 0 (expenses) - 100 (other exp) - 0 (purchases) - 150 (wasteages) = 1750.00
+        $this->assertEquals(1750.00, $register->closing_cash);
+
+        // Check index view displays Wasteages column and amount properly
+        $indexResponse = $this->actingAs($this->admin)->get(route('cash-register.index', [
+            'branch_id' => $this->branch->id,
+            'date' => $today,
+        ]));
+
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Wasteages');
+        $indexResponse->assertSee('150.00');
+        $indexResponse->assertSee('Broken glass bottle and damaged packaging');
+        $indexResponse->assertSee('1,750.00');
     }
 }

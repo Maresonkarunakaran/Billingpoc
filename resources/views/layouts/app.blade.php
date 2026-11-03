@@ -629,6 +629,8 @@
                 name === 'closing_cash' ||
                 name === 'closing_cash_physical' ||
                 name === 'other_expenses' ||
+                name === 'wasteages' ||
+                name === 'wastages' ||
                 name === 'amount' ||
                 name === 'purchase_price' ||
                 name === 'retail_price' ||

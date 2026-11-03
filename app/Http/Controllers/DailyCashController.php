@@ -152,6 +152,8 @@ class DailyCashController extends Controller
                 $openingCash = (float) $reg->opening_cash;
                 $otherExpenses = (float) $reg->other_expenses;
                 $otherExpensesNote = $reg->other_expenses_note;
+                $wasteages = (float) ($reg->wasteages ?? 0.00);
+                $wasteagesNote = $reg->wasteages_note;
                 $notes = $reg->notes;
                 $status = $reg->status;
             } else {
@@ -173,6 +175,14 @@ class DailyCashController extends Controller
                     ? $request->get('other_expenses_note')
                     : null;
 
+                $wasteages = ($isTargetDate && $request->filled('wasteages'))
+                    ? (float) $request->get('wasteages')
+                    : 0.00;
+
+                $wasteagesNote = ($isTargetDate && $request->filled('wasteages_note'))
+                    ? $request->get('wasteages_note')
+                    : null;
+
                 $notes = null;
                 $status = 'open';
             }
@@ -187,6 +197,12 @@ class DailyCashController extends Controller
             if ($isTargetDate && $request->filled('other_expenses_note')) {
                 $otherExpensesNote = $request->get('other_expenses_note');
             }
+            if ($isTargetDate && $request->filled('wasteages')) {
+                $wasteages = (float) $request->get('wasteages');
+            }
+            if ($isTargetDate && $request->filled('wasteages_note')) {
+                $wasteagesNote = $request->get('wasteages_note');
+            }
 
             $salesAmount = (float) ($sale?->total_sales ?? 0.00);
             $salesCount = (int) ($sale?->count ?? 0);
@@ -197,9 +213,9 @@ class DailyCashController extends Controller
             $purchasesAmount = (float) ($purch?->total_purchases ?? 0.00);
             $purchasesCount = (int) ($purch?->count ?? 0);
 
-            // Formula: Closing Cash = (Opening Cash + Total Sales) - (Expenses + Other Expenses + Purchases)
+            // Formula: Closing Cash = (Opening Cash + Total Sales) - (Expenses + Other Expenses + Purchases + Wasteages)
             $closingCash = round(
-                $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount,
+                $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount - $wasteages,
                 2
             );
 
@@ -214,6 +230,8 @@ class DailyCashController extends Controller
                 'expenses_count' => $expensesCount,
                 'other_expenses' => $otherExpenses,
                 'other_expenses_note' => $otherExpensesNote,
+                'wasteages' => $wasteages,
+                'wasteages_note' => $wasteagesNote,
                 'purchases' => $purchasesAmount,
                 'purchases_count' => $purchasesCount,
                 'closing_cash' => $closingCash,
@@ -227,10 +245,11 @@ class DailyCashController extends Controller
         $totalDailySales = (float) $dailyCashMargins->sum('sales');
         $totalDailyExpenses = (float) $dailyCashMargins->sum('expenses');
         $totalDailyOtherExpenses = (float) $dailyCashMargins->sum('other_expenses');
+        $totalDailyWasteages = (float) $dailyCashMargins->sum('wasteages');
         $totalDailyPurchases = (float) $dailyCashMargins->sum('purchases');
-        $totalCashOutflow = round($totalDailyExpenses + $totalDailyOtherExpenses + $totalDailyPurchases, 2);
+        $totalCashOutflow = round($totalDailyExpenses + $totalDailyOtherExpenses + $totalDailyPurchases + $totalDailyWasteages, 2);
         $overallClosingCash = round(
-            $totalDailyOpeningCash + $totalDailySales - $totalDailyExpenses - $totalDailyOtherExpenses - $totalDailyPurchases,
+            $totalDailyOpeningCash + $totalDailySales - $totalCashOutflow,
             2
         );
 
@@ -246,6 +265,8 @@ class DailyCashController extends Controller
         $totalExpensesCount = $targetRow ? $targetRow->expenses_count : 0;
         $otherExpenses = $targetRow ? $targetRow->other_expenses : 0.00;
         $otherExpensesNote = $targetRow ? $targetRow->other_expenses_note : null;
+        $wasteages = $targetRow ? $targetRow->wasteages : 0.00;
+        $wasteagesNote = $targetRow ? $targetRow->wasteages_note : null;
         $totalPurchases = $targetRow ? $targetRow->purchases : 0.00;
         $totalPurchasesCount = $targetRow ? $targetRow->purchases_count : 0;
         $closingCash = $targetRow ? $targetRow->closing_cash : 0.00;
@@ -265,6 +286,7 @@ class DailyCashController extends Controller
             'totalDailySales',
             'totalDailyExpenses',
             'totalDailyOtherExpenses',
+            'totalDailyWasteages',
             'totalDailyPurchases',
             'totalCashOutflow',
             'overallClosingCash',
@@ -276,6 +298,8 @@ class DailyCashController extends Controller
             'totalExpensesCount',
             'otherExpenses',
             'otherExpensesNote',
+            'wasteages',
+            'wasteagesNote',
             'totalPurchases',
             'totalPurchasesCount',
             'closingCash',
@@ -301,6 +325,8 @@ class DailyCashController extends Controller
             'opening_cash' => 'required|numeric|min:0',
             'other_expenses' => 'nullable|numeric|min:0',
             'other_expenses_note' => 'nullable|string|max:255',
+            'wasteages' => 'nullable|numeric|min:0',
+            'wasteages_note' => 'nullable|string|max:255',
             'closing_cash_physical' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:open,closed',
             'notes' => 'nullable|string|max:1000',
@@ -312,6 +338,7 @@ class DailyCashController extends Controller
         $date = $validated['register_date'];
         $openingCash = (float) $validated['opening_cash'];
         $otherExpenses = (float) ($validated['other_expenses'] ?? 0.00);
+        $wasteages = (float) ($validated['wasteages'] ?? 0.00);
 
         try {
             // Fetch verified server-side totals to guarantee calculations cannot be tampered with
@@ -333,9 +360,9 @@ class DailyCashController extends Controller
                 ->sum('total_amount');
 
             // Required Formula:
-            // Closing Cash = Opening Cash + Sales - Expenses - Other Expenses - Purchases
+            // Closing Cash = Opening Cash + Sales - Expenses - Other Expenses - Purchases - Wasteages
             $closingCash = round(
-                $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount,
+                $openingCash + $salesAmount - $expensesAmount - $otherExpenses - $purchasesAmount - $wasteages,
                 2
             );
 
@@ -348,6 +375,7 @@ class DailyCashController extends Controller
                 $salesAmount,
                 $expensesAmount,
                 $otherExpenses,
+                $wasteages,
                 $purchasesAmount,
                 $closingCash,
                 $validated
@@ -371,6 +399,8 @@ class DailyCashController extends Controller
                     'expenses_amount' => $expensesAmount,
                     'other_expenses' => $otherExpenses,
                     'other_expenses_note' => $validated['other_expenses_note'] ?? null,
+                    'wasteages' => $wasteages,
+                    'wasteages_note' => $validated['wasteages_note'] ?? null,
                     'purchases_amount' => $purchasesAmount,
                     'closing_cash' => $closingCash,
                     'closing_cash_physical' => $validated['closing_cash_physical'] ?? null,
@@ -396,6 +426,7 @@ class DailyCashController extends Controller
                     'sales' => $salesAmount,
                     'expenses' => $expensesAmount,
                     'other_expenses' => $otherExpenses,
+                    'wasteages' => $wasteages,
                     'purchases' => $purchasesAmount,
                     'closing_cash' => $closingCash,
                 ]);

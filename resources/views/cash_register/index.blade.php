@@ -10,7 +10,7 @@
                 <i class="fas fa-coins text-success mr-2"></i>Opening &amp; Closing Cash
             </h4>
             <span class="text-muted text-sm">
-                Daily cash reconciliation audit: <strong>Opening Cash + Sales &minus; Expenses &minus; Other Expenses &minus; Purchases = Closing Cash</strong>
+                Daily cash reconciliation audit: <strong>Opening Cash + Sales &minus; Expenses &minus; Other Expenses &minus; Wasteages &minus; Purchases = Closing Cash</strong>
             </span>
         </div>
         <div class="mt-2 mt-md-0 d-flex flex-wrap align-items-center" style="gap: 8px;">
@@ -131,6 +131,7 @@
                             <th class="text-right text-success">Total Sales</th>
                             <th class="text-right text-danger">Expenses</th>
                             <th class="text-right text-warning">Other Exp.</th>
+                            <th class="text-right" style="color: #ea580c;">Wasteages</th>
                             <th class="text-right" style="color: #8b5cf6;">Purchases</th>
                             <th class="text-right">Closing Cash</th>
                             <th class="text-center" style="width: 100px;">Action</th>
@@ -183,7 +184,17 @@
                                     </small>
                                 </td>
 
-                                <!-- 5. Purchases -->
+                                <!-- 5. Wasteages (Manual Enter Amount) -->
+                                <td class="text-right align-middle">
+                                    <span class="font-weight-bold" style="color: #ea580c; font-size: 0.98rem;">
+                                        &minus; ₹ {{ number_format($row->wasteages, 2) }}
+                                    </span>
+                                    <small class="text-muted d-block text-xs font-weight-normal">
+                                        {{ $row->wasteages_note ?: 'Manual waste / loss' }}
+                                    </small>
+                                </td>
+
+                                <!-- 6. Purchases -->
                                 <td class="text-right align-middle">
                                     <span class="font-weight-bold" style="color: #8b5cf6; font-size: 0.98rem;">
                                         &minus; ₹ {{ number_format($row->purchases, 2) }}
@@ -193,7 +204,7 @@
                                     </small>
                                 </td>
 
-                                <!-- 6. Closing Cash -->
+                                <!-- 7. Closing Cash -->
                                 <td class="text-right align-middle font-weight-bold">
                                     <span class="{{ $row->closing_cash >= 0 ? 'text-success' : 'text-danger' }}" style="font-size: 1.05rem;">
                                         ₹ {{ number_format($row->closing_cash, 2) }}
@@ -207,7 +218,7 @@
                                             class="btn btn-xs btn-outline-primary font-weight-bold shadow-xs py-1 px-2"
                                             data-toggle="modal" 
                                             data-target="#editCashModal-{{ $row->date }}"
-                                            title="Edit Opening Cash or Other Expenses for {{ $row->date_formatted }}">
+                                            title="Edit Opening Cash, Other Expenses, or Wasteages for {{ $row->date_formatted }}">
                                         <i class="fas fa-edit mr-1"></i> Edit
                                     </button>
                                 </td>
@@ -289,6 +300,30 @@
                                                            value="{{ $row->other_expenses_note }}">
                                                 </div>
 
+                                                <!-- Wasteages -->
+                                                <div class="form-group mb-3">
+                                                    <label class="font-weight-bold text-sm text-dark d-flex justify-content-between">
+                                                        <span>5. Wasteages</span>
+                                                        <small class="text-muted font-weight-normal">(Manual entry &minus; deducted from closing cash)</small>
+                                                    </label>
+                                                    <div class="input-group mb-2">
+                                                        <div class="input-group-prepend"><span class="input-group-text bg-light font-weight-bold">₹</span></div>
+                                                        <input type="number" 
+                                                               step="0.01" 
+                                                               min="0" 
+                                                               name="wasteages" 
+                                                               class="form-control font-weight-bold" 
+                                                               style="color: #ea580c;"
+                                                               value="{{ number_format($row->wasteages, 2, '.', '') }}" 
+                                                               placeholder="0.00">
+                                                    </div>
+                                                    <input type="text" 
+                                                           name="wasteages_note" 
+                                                           class="form-control form-control-sm" 
+                                                           placeholder="Optional reason for wasteage (e.g. Spoilage, damaged goods, transit leak)..." 
+                                                           value="{{ $row->wasteages_note }}">
+                                                </div>
+
                                                 <div class="form-group mb-0">
                                                     <label class="font-weight-bold text-xs text-uppercase text-muted">Notes / Closing Remarks</label>
                                                     <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional notes" value="{{ $row->notes }}">
@@ -306,7 +341,7 @@
                             </div>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted font-weight-bold">
+                                <td colspan="9" class="text-center py-5 text-muted font-weight-bold">
                                     <i class="fas fa-search fa-2x mb-2 d-block text-muted"></i>
                                     THERE IS NO RECORD IN THIS DATE
                                 </td>
@@ -330,6 +365,9 @@
                                 </td>
                                 <td class="text-right font-weight-bold text-warning">
                                     &minus; ₹ {{ number_format($totalDailyOtherExpenses, 2) }}
+                                </td>
+                                <td class="text-right font-weight-bold" style="color: #ea580c;">
+                                    &minus; ₹ {{ number_format($totalDailyWasteages, 2) }}
                                 </td>
                                 <td class="text-right font-weight-bold" style="color: #8b5cf6;">
                                     &minus; ₹ {{ number_format($totalDailyPurchases, 2) }}
@@ -356,8 +394,11 @@
                         </span>
                     </div>
                     <div class="col-md-4 mb-1 mb-md-0 text-center">
-                        <span class="text-xs text-muted text-uppercase font-weight-bold">Total Outflow (Exp + Purch):</span>
+                        <span class="text-xs text-muted text-uppercase font-weight-bold">Total Outflow (Exp + Other + Waste + Purch):</span>
                         <span class="font-weight-bold ml-2 text-danger" style="font-size: 1.1rem;">
+                            &minus; ₹ {{ number_format($totalCashOutflow, 2) }}
+                        </span>
+                    </div>
                             &minus; ₹ {{ number_format($totalCashOutflow, 2) }}
                         </span>
                     </div>
