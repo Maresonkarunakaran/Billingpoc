@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\Branch;
 use App\Models\Product;
+use App\Models\Purchase;
 use App\Models\Role;
 use App\Models\Supplier;
 use App\Models\Unit;
@@ -63,18 +64,32 @@ class PurchaseQuickSupplierTest extends TestCase
         ]);
     }
 
-    public function test_purchase_create_page_renders_quick_add_supplier_button_and_modal(): void
+    public function test_purchase_create_page_renders_quick_add_supplier_without_due_option_and_with_delete_option(): void
     {
+        $supplier = Supplier::create([
+            'business_id' => $this->business->id,
+            'name' => 'Test Vendor',
+            'company_name' => 'Test Corp',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_active' => true,
+        ]);
+
         $response = $this->actingAs($this->admin)
             ->withSession(['active_branch_id' => $this->branch->id])
             ->get(route('purchases.create'));
 
         $response->assertStatus(200);
         $response->assertSee('Record New Purchase Order / Goods Receipt');
-        $response->assertSee('+ Add New Supplier');
+        $response->assertSee('+ Add / Manage Suppliers');
         $response->assertSee('id="quickSupplierModal"', false);
         $response->assertSee('id="quickSupplierForm"', false);
         $response->assertSee('id="supplierSelect"', false);
+        $response->assertSee('id="btnDeleteSelectedSupplier"', false);
+        $response->assertSee('id="modalSuppliersTable"', false);
+        // Due option removed from adding supplier
+        $response->assertDontSee('Opening Balance / Due Owed', false);
+        $response->assertDontSee('qsOpeningBalance', false);
     }
 
     public function test_user_can_quick_add_supplier_via_ajax_endpoint(): void
@@ -88,7 +103,6 @@ class PurchaseQuickSupplierTest extends TestCase
                 'gstin' => '33AAAAA0000A1Z5',
                 'state_code' => '33',
                 'state_name' => 'Tamil Nadu',
-                'opening_balance' => 1500.00,
                 'address' => '123 Market Street, Madurai',
             ]);
 
@@ -110,7 +124,73 @@ class PurchaseQuickSupplierTest extends TestCase
             'company_name' => 'Vasantham Wholesale Ltd',
             'phone' => '9876543210',
             'gstin' => '33AAAAA0000A1Z5',
-            'current_balance' => 1500.00,
+        ]);
+    }
+
+    public function test_user_can_delete_supplier_from_purchase_page(): void
+    {
+        $supplier = Supplier::create([
+            'business_id' => $this->business->id,
+            'name' => 'Removable Supplier',
+            'company_name' => 'To Be Removed Ltd',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->branch->id])
+            ->deleteJson(route('purchases.delete-supplier', $supplier->id));
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'supplier_id' => $supplier->id,
+            'action' => 'deleted',
+        ]);
+
+        $this->assertDatabaseMissing('suppliers', ['id' => $supplier->id]);
+    }
+
+    public function test_deleting_supplier_with_past_purchases_deactivates_cleanly(): void
+    {
+        $supplier = Supplier::create([
+            'business_id' => $this->business->id,
+            'name' => 'Historic Supplier',
+            'company_name' => 'Historic Ltd',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_active' => true,
+        ]);
+
+        Purchase::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id,
+            'supplier_id' => $supplier->id,
+            'user_id' => $this->admin->id,
+            'po_number' => 'PO-TEST-001',
+            'purchase_date' => now()->toDateString(),
+            'total_amount' => 1000.00,
+            'tax_amount' => 50.00,
+            'status' => 'received',
+            'payment_status' => 'paid',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_branch_id' => $this->branch->id])
+            ->deleteJson(route('purchases.delete-supplier', $supplier->id));
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'supplier_id' => $supplier->id,
+            'action' => 'deactivated',
+        ]);
+
+        // Retains row in DB for foreign key / audit history, but marked inactive so it disappears from purchase list
+        $this->assertDatabaseHas('suppliers', [
+            'id' => $supplier->id,
+            'is_active' => false,
         ]);
     }
 
@@ -124,7 +204,6 @@ class PurchaseQuickSupplierTest extends TestCase
                 'company_name' => 'Murugan & Sons',
                 'state_code' => '33',
                 'state_name' => 'Tamil Nadu',
-                'opening_balance' => 0.00,
             ]);
 
         $quickResponse->assertStatus(201);

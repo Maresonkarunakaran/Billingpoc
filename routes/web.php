@@ -92,6 +92,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', [PurchaseController::class, 'index'])->name('index');
         Route::get('/create', [PurchaseController::class, 'create'])->name('create');
         Route::post('/quick-supplier', [PurchaseController::class, 'quickSupplier'])->name('quick-supplier');
+        Route::delete('/delete-supplier/{id}', [PurchaseController::class, 'deleteSupplier'])->name('delete-supplier');
         Route::post('/', [PurchaseController::class, 'store'])->name('store');
         Route::get('/{id}', [PurchaseController::class, 'show'])->name('show');
     });

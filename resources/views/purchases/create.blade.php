@@ -27,20 +27,23 @@
                 <div class="col-md-4 mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="text-xs font-weight-bold text-uppercase text-muted mb-0">Supplier *</label>
-                        <button type="button" class="btn btn-link btn-xs text-primary font-weight-bold p-0" data-toggle="modal" data-target="#quickSupplierModal" title="Register New Supplier">
-                            <i class="fas fa-plus-circle mr-1"></i>+ Add New Supplier
+                        <button type="button" class="btn btn-link btn-xs text-primary font-weight-bold p-0" data-toggle="modal" data-target="#quickSupplierModal" title="Add / Manage Suppliers">
+                            <i class="fas fa-plus-circle mr-1"></i>+ Add / Manage Suppliers
                         </button>
                     </div>
                     <div class="input-group input-group-sm">
                         <select name="supplier_id" id="supplierSelect" class="form-control form-control-sm font-weight-bold" required>
                             <option value="">-- Select Supplier --</option>
                             @foreach($suppliers as $s)
-                                <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->company_name ?? 'Individual' }}) [Due: ₹{{ number_format($s->current_balance, 2) }}]</option>
+                                <option value="{{ $s->id }}">{{ $s->name }}{{ $s->company_name ? ' (' . $s->company_name . ')' : '' }}</option>
                             @endforeach
                         </select>
                         <div class="input-group-append">
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#quickSupplierModal" title="Add New Supplier">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#quickSupplierModal" title="Add / Manage Suppliers">
                                 <i class="fas fa-user-plus"></i>
+                            </button>
+                            <button type="button" id="btnDeleteSelectedSupplier" class="btn btn-outline-danger" title="Delete Selected Supplier" style="display: none;">
+                                <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </div>
@@ -173,31 +176,37 @@
     </div>
 </form>
 
-<!-- QUICK ADD SUPPLIER MODAL -->
+<!-- QUICK ADD & MANAGE SUPPLIER MODAL -->
 <div class="modal fade" id="quickSupplierModal" tabindex="-1" role="dialog" aria-labelledby="quickSupplierModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
             <div class="modal-header bg-primary text-white py-2">
                 <h5 class="modal-title font-weight-bold text-sm" id="quickSupplierModalLabel">
-                    <i class="fas fa-truck mr-1"></i> Register New Supplier
+                    <i class="fas fa-truck mr-1"></i> Add & Manage Suppliers
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="quickSupplierForm">
-                @csrf
-                <div class="modal-body p-3">
+            
+            <div class="modal-body p-3">
+                <!-- Add New Supplier Form (Due option removed) -->
+                <form id="quickSupplierForm" class="p-3 bg-light rounded border mb-3">
+                    @csrf
                     <div id="quickSupplierAlert" class="alert alert-danger d-none py-1 px-2 text-xs mb-2"></div>
+                    <label class="font-weight-bold text-xs text-uppercase text-muted d-block mb-2">
+                        <i class="fas fa-user-plus text-primary mr-1"></i> Register New Supplier
+                    </label>
 
-                    <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold text-dark mb-1">Supplier / Contact Person Name <span class="text-danger">*</span></label>
-                        <input type="text" id="qsName" name="name" class="form-control form-control-sm" required placeholder="e.g. Ramesh Kumar">
-                    </div>
-
-                    <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold text-dark mb-1">Business / Company Name</label>
-                        <input type="text" id="qsCompany" name="company_name" class="form-control form-control-sm" placeholder="e.g. Sri Murugan Traders">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">Supplier / Contact Person Name <span class="text-danger">*</span></label>
+                            <input type="text" id="qsName" name="name" class="form-control form-control-sm" required placeholder="e.g. Ramesh Kumar">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">Business / Company Name</label>
+                            <input type="text" id="qsCompany" name="company_name" class="form-control form-control-sm" placeholder="e.g. Sri Murugan Traders">
+                        </div>
                     </div>
 
                     <div class="row">
@@ -223,22 +232,58 @@
                     </div>
 
                     <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold text-dark mb-1">Opening Balance / Due Owed (₹)</label>
-                        <input type="number" id="qsOpeningBalance" name="opening_balance" class="form-control form-control-sm" value="0.00" step="0.01" min="0" placeholder="0.00">
+                        <label class="text-xs font-weight-bold text-dark mb-1">Address <small class="text-muted">(Optional)</small></label>
+                        <textarea id="qsAddress" name="address" class="form-control form-control-sm" rows="1" placeholder="Warehouse / Shop Address"></textarea>
                     </div>
 
-                    <div class="form-group mb-0">
-                        <label class="text-xs font-weight-bold text-dark mb-1">Address <small class="text-muted">(Optional)</small></label>
-                        <textarea id="qsAddress" name="address" class="form-control form-control-sm" rows="2" placeholder="Warehouse / Shop Address"></textarea>
+                    <div class="text-right">
+                        <button type="submit" id="saveQuickSupplierBtn" class="btn btn-primary btn-sm font-weight-bold px-3 shadow-xs">
+                            <i class="fas fa-save mr-1"></i> Save & Select Supplier
+                        </button>
                     </div>
+                </form>
+
+                <!-- Existing Suppliers List with Delete Option -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="font-weight-bold text-xs text-uppercase text-muted mb-0">
+                        Existing Suppliers (<span id="modalSupplierCount">{{ count($suppliers) }}</span>)
+                    </label>
+                    <small class="text-muted text-xs">Delete any supplier name directly from here</small>
                 </div>
-                <div class="modal-footer py-2 bg-light d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    <button type="submit" id="saveQuickSupplierBtn" class="btn btn-primary btn-sm font-weight-bold px-3">
-                        <i class="fas fa-save mr-1"></i> Save & Select Supplier
-                    </button>
+
+                <div class="table-responsive border rounded bg-white" style="max-height: 200px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0" id="modalSuppliersTable">
+                        <thead class="bg-light text-muted text-xs">
+                            <tr>
+                                <th style="width: 50%;">Supplier Name</th>
+                                <th style="width: 30%;">Company</th>
+                                <th style="width: 20%;" class="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalSuppliersList">
+                            @forelse($suppliers as $s)
+                                <tr id="supplierRow_{{ $s->id }}">
+                                    <td class="font-weight-medium text-dark align-middle">{{ $s->name }}</td>
+                                    <td class="align-middle text-muted">{{ $s->company_name ?: '---' }}</td>
+                                    <td class="text-right align-middle">
+                                        <button type="button" class="btn btn-xs btn-outline-danger btn-modal-delete-supplier" data-id="{{ $s->id }}" data-name="{{ $s->name }}" title="Delete Supplier">
+                                            <i class="fas fa-trash mr-1"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr id="noSuppliersRow">
+                                    <td colspan="3" class="text-center text-muted py-3">No suppliers found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            </form>
+            </div>
+            
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -332,7 +377,111 @@
         calcRowTotal(0);
     }
 
-    // Quick Add Supplier AJAX Submission
+    // Toggle Delete Selected Supplier button on dropdown change
+    const supplierSelect = document.getElementById('supplierSelect');
+    const btnDeleteSelectedSupplier = document.getElementById('btnDeleteSelectedSupplier');
+
+    function syncDeleteButtonVisibility() {
+        if (supplierSelect && btnDeleteSelectedSupplier) {
+            if (supplierSelect.value) {
+                btnDeleteSelectedSupplier.style.display = 'inline-block';
+            } else {
+                btnDeleteSelectedSupplier.style.display = 'none';
+            }
+        }
+    }
+
+    if (supplierSelect) {
+        supplierSelect.addEventListener('change', syncDeleteButtonVisibility);
+        syncDeleteButtonVisibility();
+    }
+
+    // Supplier Delete Handler (works for both dropdown delete button and modal table delete buttons)
+    function executeDeleteSupplier(supplierId, supplierName) {
+        if (!confirm(`Are you sure you want to delete supplier "${supplierName}"?`)) {
+            return;
+        }
+
+        fetch("{{ url('/purchases/delete-supplier') }}/" + supplierId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json().then(data => ({ status: res.status, body: data })))
+        .then(result => {
+            if (result.status >= 200 && result.status < 300) {
+                // 1. Remove option from supplierSelect
+                const opt = supplierSelect.querySelector(`option[value="${supplierId}"]`);
+                if (opt) {
+                    if (supplierSelect.value == supplierId) {
+                        supplierSelect.value = '';
+                        syncDeleteButtonVisibility();
+                    }
+                    opt.remove();
+                }
+
+                // 2. Remove row from modal table
+                const row = document.getElementById(`supplierRow_${supplierId}`);
+                if (row) {
+                    row.remove();
+                }
+
+                // 3. Update count
+                const countBadge = document.getElementById('modalSupplierCount');
+                if (countBadge) {
+                    const currentCount = parseInt(countBadge.innerText, 10) || 1;
+                    countBadge.innerText = Math.max(0, currentCount - 1);
+                }
+
+                // If no suppliers remain in table, show empty row
+                const tbody = document.getElementById('modalSuppliersList');
+                if (tbody && tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr id="noSuppliersRow"><td colspan="3" class="text-center text-muted py-3">No suppliers found.</td></tr>';
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Supplier Removed',
+                        text: result.body.message || `Supplier "${supplierName}" has been deleted.`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(result.body.message || `Supplier "${supplierName}" deleted successfully.`);
+                }
+            } else {
+                alert(result.body.message || 'Failed to delete supplier.');
+            }
+        })
+        .catch(err => {
+            alert('Network or server error while deleting supplier.');
+        });
+    }
+
+    // Delete selected supplier from input group button
+    if (btnDeleteSelectedSupplier) {
+        btnDeleteSelectedSupplier.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedId = supplierSelect.value;
+            if (!selectedId) return;
+            const selectedText = supplierSelect.options[supplierSelect.selectedIndex].text;
+            executeDeleteSupplier(selectedId, selectedText);
+        });
+    }
+
+    // Delete supplier from modal table
+    $(document).on('click', '.btn-modal-delete-supplier', function(e) {
+        e.preventDefault();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        executeDeleteSupplier(id, name);
+    });
+
+    // Quick Add Supplier AJAX Submission (Due Option Removed)
     const quickSupplierForm = document.getElementById('quickSupplierForm');
     if (quickSupplierForm) {
         quickSupplierForm.addEventListener('submit', function(e) {
@@ -349,7 +498,6 @@
                 gstin: document.getElementById('qsGstin').value.trim() || null,
                 state_code: document.getElementById('qsStateCode').value.trim() || '33',
                 state_name: document.getElementById('qsStateName').value.trim() || 'Tamil Nadu',
-                opening_balance: parseFloat(document.getElementById('qsOpeningBalance').value) || 0.00,
                 address: document.getElementById('qsAddress').value.trim() || null
             };
 
@@ -378,19 +526,46 @@
 
                 if (result.status >= 200 && result.status < 300 && result.body.supplier) {
                     const sup = result.body.supplier;
-                    const select = document.getElementById('supplierSelect');
-                    const label = `${sup.name} (${sup.company_name || 'Individual'}) [Due: ₹${parseFloat(sup.current_balance || 0).toFixed(2)}]`;
+                    const label = `${sup.name}${sup.company_name ? ' (' + sup.company_name + ')' : ''}`;
+                    
+                    // Add to dropdown and select
                     const opt = new Option(label, sup.id, true, true);
-                    select.appendChild(opt);
-                    select.value = sup.id;
+                    supplierSelect.appendChild(opt);
+                    supplierSelect.value = sup.id;
+                    syncDeleteButtonVisibility();
                     if (typeof $ !== 'undefined') {
-                        $(select).trigger('change');
+                        $(supplierSelect).trigger('change');
                         $('#quickSupplierModal').modal('hide');
                     }
+
+                    // Add to modal table
+                    const tbody = document.getElementById('modalSuppliersList');
+                    const noRow = document.getElementById('noSuppliersRow');
+                    if (noRow) noRow.remove();
+
+                    const newRow = document.createElement('tr');
+                    newRow.id = `supplierRow_${sup.id}`;
+                    newRow.innerHTML = `
+                        <td class="font-weight-medium text-dark align-middle">${$('<div>').text(sup.name).html()}</td>
+                        <td class="align-middle text-muted">${sup.company_name ? $('<div>').text(sup.company_name).html() : '---'}</td>
+                        <td class="text-right align-middle">
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-modal-delete-supplier" data-id="${sup.id}" data-name="${$('<div>').text(sup.name).html()}" title="Delete Supplier">
+                                <i class="fas fa-trash mr-1"></i> Delete
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(newRow);
+
+                    // Update count
+                    const countBadge = document.getElementById('modalSupplierCount');
+                    if (countBadge) {
+                        const currentCount = parseInt(countBadge.innerText, 10) || 0;
+                        countBadge.innerText = currentCount + 1;
+                    }
+
                     quickSupplierForm.reset();
                     document.getElementById('qsStateCode').value = '33';
                     document.getElementById('qsStateName').value = 'Tamil Nadu';
-                    document.getElementById('qsOpeningBalance').value = '0.00';
 
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({

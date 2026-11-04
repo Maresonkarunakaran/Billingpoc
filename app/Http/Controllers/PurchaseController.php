@@ -122,6 +122,44 @@ class PurchaseController extends Controller
         ], 201);
     }
 
+    public function deleteSupplier(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $supplier = Supplier::where('business_id', $user->business_id)
+            ->withCount('purchases')
+            ->findOrFail($id);
+
+        if ($supplier->purchases_count > 0) {
+            $supplier->update(['is_active' => false]);
+            AuditLog::log('supplier_deactivated', $supplier, null, [
+                'name' => $supplier->name,
+                'reason' => 'Removed from purchase order list (has purchase history)',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Supplier '{$supplier->name}' has {$supplier->purchases_count} past purchase records and has been removed from the active list.",
+                'supplier_id' => $id,
+                'action' => 'deactivated',
+            ]);
+        }
+
+        $name = $supplier->name;
+        $supplier->delete();
+
+        AuditLog::log('supplier_deleted', null, null, [
+            'name' => $name,
+            'source' => 'purchase_order',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Supplier '{$name}' has been deleted successfully.",
+            'supplier_id' => $id,
+            'action' => 'deleted',
+        ]);
+    }
+
     public function store(PurchaseRequest $request)
     {
         $user = Auth::user();

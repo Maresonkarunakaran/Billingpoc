@@ -111,4 +111,46 @@ class SupplierController extends Controller
             return back()->with('success', 'Payment of ₹'.number_format($amount, 2)." settled to {$supplier->name}. Voucher #{$payNumber}");
         });
     }
+
+    public function destroy(Request $request, int $id)
+    {
+        $user = Auth::user();
+        $supplier = Supplier::where('business_id', $user->business_id)
+            ->withCount('purchases')
+            ->findOrFail($id);
+
+        if ($supplier->purchases_count > 0) {
+            $supplier->update(['is_active' => false]);
+            AuditLog::log('supplier_deactivated', $supplier, null, [
+                'name' => $supplier->name,
+                'reason' => 'Deactivated because purchases are recorded',
+            ]);
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Supplier '{$supplier->name}' has past purchases and has been deactivated.",
+                    'supplier_id' => $id,
+                    'action' => 'deactivated',
+                ]);
+            }
+
+            return redirect()->route('suppliers.index')->with('success', "Supplier '{$supplier->name}' has past purchases and has been marked inactive.");
+        }
+
+        $name = $supplier->name;
+        $supplier->delete();
+        AuditLog::log('supplier_deleted', null, null, ['name' => $name]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Supplier '{$name}' deleted successfully.",
+                'supplier_id' => $id,
+                'action' => 'deleted',
+            ]);
+        }
+
+        return redirect()->route('suppliers.index')->with('success', "Supplier '{$name}' deleted successfully!");
+    }
 }
