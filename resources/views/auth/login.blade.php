@@ -1,34 +1,9 @@
-@php
-    $cookieHeader = request()->header('cookie', '');
-    $serverLang = request()->cookie('app_language') 
-        ?? request()->cookie('billingpoc_lang')
-        ?? ($_COOKIE['app_language'] ?? ($_COOKIE['billingpoc_lang'] ?? (preg_match('/(?:^|;\s*)(?:app_language|billingpoc_lang)=([^;]+)/', $cookieHeader, $m) ? $m[1] : 'en')));
-    $isTamil = ($serverLang === 'ta');
-@endphp
 <!DOCTYPE html>
-<html lang="{{ $isTamil ? 'ta' : 'en' }}" class="{{ $isTamil ? 'lang-tamil translating-tamil' : '' }}">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign In | BILLINGPOC GST Retail & Wholesale Hub</title>
-
-    <!-- Synchronous Anti-Flash Language State Detection (0ms before body render) -->
-    <script>
-        (function() {
-            var l = localStorage.getItem('app_language') || localStorage.getItem('billingpoc_lang');
-            if (!l) {
-                var m = document.cookie.match(/(?:^|;)\s*app_language=([^;]+)/) || document.cookie.match(/(?:^|;)\s*billingpoc_lang=([^;]+)/);
-                if (m) l = m[1];
-            }
-            if (l === 'ta') {
-                document.documentElement.classList.add('lang-tamil', 'translating-tamil');
-                document.documentElement.setAttribute('lang', 'ta');
-            } else if (l === 'en') {
-                document.documentElement.classList.remove('lang-tamil', 'translating-tamil');
-                document.documentElement.setAttribute('lang', 'en');
-            }
-        })();
-    </script>
 
     <!-- PWA Desktop & Mobile App Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -41,16 +16,6 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-    <!-- Instant Bilingual Translation Engine (0ms UI dictionary & Google Translate integration) -->
-    <script src="/js/translator.js"></script>
-
-    <!-- Preconnect & Early Load for Google Translate -->
-    <link rel="preconnect" href="https://translate.googleapis.com">
-    <link rel="preconnect" href="https://translate.google.com">
-    <link rel="dns-prefetch" href="https://translate.googleapis.com">
-    <link rel="dns-prefetch" href="https://translate.google.com">
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
-
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
@@ -60,94 +25,11 @@
         .card-custom { border-radius: 14px; border: 1px solid #1e293b; background: #ffffff; box-shadow: 0 20px 30px -10px rgba(0,0,0,0.5); }
         .btn-brand { background: #2563eb; color: #fff; font-weight: 600; }
         .btn-brand:hover { background: #1d4ed8; color: #fff; }
-
-        /* Completely Hide Google Translate Top Banner Bar & Injected Frames */
-        .goog-te-banner-frame,
-        .goog-te-banner-frame.skiptranslate,
-        iframe.goog-te-banner-frame,
-        iframe.skiptranslate,
-        .VIpgJd-ZVi9od-ORHb-OEVmcd,
-        .VIpgJd-ZVi9od-ORHb-OEVmcd-ti6hGc,
-        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
-        .VIpgJd-ZVi9od-aZ2wEe-OiiCO,
-        .VIpgJd-yAWdhb-hvhGLS-mrxup,
-        #goog-gt-tt,
-        .goog-te-balloon-frame,
-        .goog-tooltip,
-        div[id*=":1.container"],
-        div[id*=":2.container"] {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            height: 0px !important;
-            width: 0px !important;
-            max-height: 0px !important;
-            pointer-events: none !important;
-            position: absolute !important;
-            left: -9999px !important;
-            top: -9999px !important;
-            z-index: -9999 !important;
-        }
-
-        body {
-            top: 0px !important;
-            position: static !important;
-        }
-
-        .goog-text-highlight {
-            background: none !important;
-            box-shadow: none !important;
-        }
-
-        .lang-btn { font-size: 0.8rem; border-radius: 6px; padding: 3px 10px; font-weight: 600; }
-        .lang-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
-
-        /* Smooth anti-flash: when user has chosen Tamil, hide untranslated English text until translated */
-        html.lang-tamil:not(.lang-ready) body,
-        html.translating-tamil:not(.translation-ready) body {
-            visibility: hidden !important;
-            opacity: 0 !important;
-        }
-        html.lang-tamil.lang-ready body,
-        html.translating-tamil.translation-ready body {
-            visibility: visible !important;
-            opacity: 1 !important;
-            transition: opacity 0.1s ease-in;
-        }
-
-        #tamil-translate-loader {
-            display: none !important;
-        }
-
     </style>
 </head>
 <body>
-    <!-- Tamil Translation Loading Screen -->
-    <div id="tamil-translate-loader" aria-live="polite">
-        <div class="spinner-border text-primary mb-3" style="width: 2.2rem; height: 2.2rem;" role="status"></div>
-        <div class="font-weight-bold text-white text-base mb-1">தமிழ் மொழிபெயர்ப்பு ஏற்றப்படுகிறது...</div>
-        <small class="text-muted">Loading Tamil Translation...</small>
-    </div>
-
-    <!-- Hidden Google Translate Element -->
-    <div id="google_translate_element" style="display:none;"></div>
 
 <div class="login-box">
-    <!-- Language Switcher Bar -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <span class="text-xs text-white opacity-75">
-            <i class="fas fa-globe mr-1"></i> Language / மொழி:
-        </span>
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-light lang-btn lang-btn-en active" onclick="switchLanguage('en')">
-                English
-            </button>
-            <button type="button" class="btn btn-outline-light lang-btn lang-btn-ta" onclick="switchLanguage('ta')">
-                தமிழ்
-            </button>
-        </div>
-    </div>
-
     <div class="text-center mb-4">
         <div class="d-inline-flex p-3 rounded-circle bg-primary text-white mb-2 shadow">
             <i class="fas fa-cubes fa-2x"></i>

@@ -49,6 +49,14 @@ class SupplierController extends Controller
 
         AuditLog::log('supplier_created', $supplier, null, ['name' => $supplier->name, 'company' => $supplier->company_name]);
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Supplier created successfully!',
+                'supplier' => $supplier,
+            ], 201);
+        }
+
         return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully!');
     }
 

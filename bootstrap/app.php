@@ -17,11 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
-        $middleware->encryptCookies(except: [
-            'app_language',
-            'billingpoc_lang',
-            'googtrans',
-        ]);
         $middleware->alias([
             'active' => EnsureUserActive::class,
             'perm' => CheckPermission::class,

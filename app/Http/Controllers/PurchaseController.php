@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PurchaseRequest;
+use App\Http\Requests\SupplierRequest;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Payment;
@@ -97,6 +98,28 @@ class PurchaseController extends Controller
         $products = Product::where('business_id', $user->business_id)->where('is_active', true)->with('baseUnit')->get();
 
         return view('purchases.create', compact('branches', 'suppliers', 'products'));
+    }
+
+    public function quickSupplier(SupplierRequest $request)
+    {
+        $user = Auth::user();
+        $data = $request->validated();
+        $data['business_id'] = $user->business_id;
+        $data['current_balance'] = $data['opening_balance'] ?? 0.00;
+
+        $supplier = Supplier::create($data);
+
+        AuditLog::log('supplier_created_quick', $supplier, null, [
+            'name' => $supplier->name,
+            'company' => $supplier->company_name,
+            'source' => 'purchase_order',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Supplier created successfully!',
+            'supplier' => $supplier,
+        ], 201);
     }
 
     public function store(PurchaseRequest $request)

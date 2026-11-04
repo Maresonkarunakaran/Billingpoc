@@ -448,7 +448,7 @@ class DailyCashRegisterTest extends TestCase
 
         $this->assertNotNull($reg);
         $this->assertEquals(90.00, $reg->other_expenses);
-        $this->assertEquals('2026-11-03', $reg->register_date->toDateString());
+        $this->assertEquals($today, $reg->register_date->toDateString());
     }
 
     public function test_user_can_enter_wasteages_and_it_is_deducted_from_closing_cash(): void

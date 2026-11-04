@@ -25,13 +25,25 @@
                     </select>
                 </div>
                 <div class="col-md-4 mb-2">
-                    <label class="text-xs font-weight-bold text-uppercase text-muted">Supplier *</label>
-                    <select name="supplier_id" class="form-control form-control-sm" required>
-                        <option value="">-- Select Supplier --</option>
-                        @foreach($suppliers as $s)
-                            <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->company_name ?? 'Individual' }}) [Due: ₹{{ number_format($s->current_balance, 2) }}]</option>
-                        @endforeach
-                    </select>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="text-xs font-weight-bold text-uppercase text-muted mb-0">Supplier *</label>
+                        <button type="button" class="btn btn-link btn-xs text-primary font-weight-bold p-0" data-toggle="modal" data-target="#quickSupplierModal" title="Register New Supplier">
+                            <i class="fas fa-plus-circle mr-1"></i>+ Add New Supplier
+                        </button>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <select name="supplier_id" id="supplierSelect" class="form-control form-control-sm font-weight-bold" required>
+                            <option value="">-- Select Supplier --</option>
+                            @foreach($suppliers as $s)
+                                <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->company_name ?? 'Individual' }}) [Due: ₹{{ number_format($s->current_balance, 2) }}]</option>
+                            @endforeach
+                        </select>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#quickSupplierModal" title="Add New Supplier">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-3 mb-2">
                     <label class="text-xs font-weight-bold text-uppercase text-muted">Supplier Invoice No</label>
@@ -160,6 +172,76 @@
         </div>
     </div>
 </form>
+
+<!-- QUICK ADD SUPPLIER MODAL -->
+<div class="modal fade" id="quickSupplierModal" tabindex="-1" role="dialog" aria-labelledby="quickSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title font-weight-bold text-sm" id="quickSupplierModalLabel">
+                    <i class="fas fa-truck mr-1"></i> Register New Supplier
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="quickSupplierForm">
+                @csrf
+                <div class="modal-body p-3">
+                    <div id="quickSupplierAlert" class="alert alert-danger d-none py-1 px-2 text-xs mb-2"></div>
+
+                    <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold text-dark mb-1">Supplier / Contact Person Name <span class="text-danger">*</span></label>
+                        <input type="text" id="qsName" name="name" class="form-control form-control-sm" required placeholder="e.g. Ramesh Kumar">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold text-dark mb-1">Business / Company Name</label>
+                        <input type="text" id="qsCompany" name="company_name" class="form-control form-control-sm" placeholder="e.g. Sri Murugan Traders">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">Phone Number</label>
+                            <input type="text" id="qsPhone" name="phone" class="form-control form-control-sm" placeholder="10-digit mobile number">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">GSTIN <small class="text-muted">(Optional)</small></label>
+                            <input type="text" id="qsGstin" name="gstin" class="form-control form-control-sm" maxlength="15" placeholder="15-character GSTIN">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-4 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">State Code <span class="text-danger">*</span></label>
+                            <input type="text" id="qsStateCode" name="state_code" class="form-control form-control-sm" value="33" required placeholder="33">
+                        </div>
+                        <div class="col-8 mb-2">
+                            <label class="text-xs font-weight-bold text-dark mb-1">State Name <span class="text-danger">*</span></label>
+                            <input type="text" id="qsStateName" name="state_name" class="form-control form-control-sm" value="Tamil Nadu" required placeholder="Tamil Nadu">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold text-dark mb-1">Opening Balance / Due Owed (₹)</label>
+                        <input type="number" id="qsOpeningBalance" name="opening_balance" class="form-control form-control-sm" value="0.00" step="0.01" min="0" placeholder="0.00">
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="text-xs font-weight-bold text-dark mb-1">Address <small class="text-muted">(Optional)</small></label>
+                        <textarea id="qsAddress" name="address" class="form-control form-control-sm" rows="2" placeholder="Warehouse / Shop Address"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" id="saveQuickSupplierBtn" class="btn btn-primary btn-sm font-weight-bold px-3">
+                        <i class="fas fa-save mr-1"></i> Save & Select Supplier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -248,6 +330,93 @@
         }
         btn.closest('tr').remove();
         calcRowTotal(0);
+    }
+
+    // Quick Add Supplier AJAX Submission
+    const quickSupplierForm = document.getElementById('quickSupplierForm');
+    if (quickSupplierForm) {
+        quickSupplierForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveQuickSupplierBtn');
+            const alertBox = document.getElementById('quickSupplierAlert');
+            alertBox.classList.add('d-none');
+            alertBox.innerText = '';
+            
+            const payload = {
+                name: document.getElementById('qsName').value.trim(),
+                company_name: document.getElementById('qsCompany').value.trim() || null,
+                phone: document.getElementById('qsPhone').value.trim() || null,
+                gstin: document.getElementById('qsGstin').value.trim() || null,
+                state_code: document.getElementById('qsStateCode').value.trim() || '33',
+                state_name: document.getElementById('qsStateName').value.trim() || 'Tamil Nadu',
+                opening_balance: parseFloat(document.getElementById('qsOpeningBalance').value) || 0.00,
+                address: document.getElementById('qsAddress').value.trim() || null
+            };
+
+            if (!payload.name) {
+                alertBox.innerText = 'Supplier name is required.';
+                alertBox.classList.remove('d-none');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
+
+            fetch("{{ route('purchases.quick-supplier') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(result => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save & Select Supplier';
+
+                if (result.status >= 200 && result.status < 300 && result.body.supplier) {
+                    const sup = result.body.supplier;
+                    const select = document.getElementById('supplierSelect');
+                    const label = `${sup.name} (${sup.company_name || 'Individual'}) [Due: ₹${parseFloat(sup.current_balance || 0).toFixed(2)}]`;
+                    const opt = new Option(label, sup.id, true, true);
+                    select.appendChild(opt);
+                    select.value = sup.id;
+                    if (typeof $ !== 'undefined') {
+                        $(select).trigger('change');
+                        $('#quickSupplierModal').modal('hide');
+                    }
+                    quickSupplierForm.reset();
+                    document.getElementById('qsStateCode').value = '33';
+                    document.getElementById('qsStateName').value = 'Tamil Nadu';
+                    document.getElementById('qsOpeningBalance').value = '0.00';
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Supplier Added!',
+                            text: `"${sup.name}" has been registered and selected for this purchase order.`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+                } else {
+                    let errMsg = result.body.message || 'Failed to save supplier.';
+                    if (result.body.errors) {
+                        errMsg = Object.values(result.body.errors).flat().join('<br>');
+                    }
+                    alertBox.innerHTML = errMsg;
+                    alertBox.classList.remove('d-none');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save & Select Supplier';
+                alertBox.innerText = 'Network or server error. Please try again.';
+                alertBox.classList.remove('d-none');
+            });
+        });
     }
 </script>
 @endpush
