@@ -40,11 +40,13 @@ class MasterAdminSeeder extends Seeder
             ['email' => 'master@admin.com'],
             [
                 'name' => 'Software Master Admin',
+                'client_id' => 'MASTER01',
+                'username' => 'masteradmin',
                 'business_id' => $business->id,
                 'role_id' => $role->id,
                 'phone' => '9999999999',
                 'password' => Hash::make('MasterAdmin#2026'),
-                'secondary_password' => Hash::make('SoftwareDev@2026'),
+                'secondary_password' => Hash::make('password'),
                 'is_active' => true,
                 'is_master_admin' => true,
             ]

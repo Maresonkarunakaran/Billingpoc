@@ -182,6 +182,8 @@ class DatabaseSeeder extends Seeder
 
         // 5. Users
         $userAdmin = User::create([
+            'client_id' => 'CLT0001',
+            'username' => 'admin',
             'business_id' => $business->id,
             'role_id' => $roleSuperAdmin->id,
             'default_branch_id' => $shopTnagar->id,
@@ -194,6 +196,9 @@ class DatabaseSeeder extends Seeder
         $userAdmin->branches()->sync([$whChennai->id, $shopTnagar->id, $whCoimbatore->id, $shopBangalore->id]);
 
         $userManager = User::create([
+            'client_id' => 'CLT0002',
+            'staff_id' => 'STF0001',
+            'username' => 'manager',
             'business_id' => $business->id,
             'role_id' => $roleManager->id,
             'default_branch_id' => $shopTnagar->id,
@@ -206,6 +211,9 @@ class DatabaseSeeder extends Seeder
         $userManager->branches()->sync([$shopTnagar->id, $whChennai->id]);
 
         $userCashier = User::create([
+            'client_id' => 'CLT0003',
+            'staff_id' => 'STF0002',
+            'username' => 'cashier',
             'business_id' => $business->id,
             'role_id' => $roleCashier->id,
             'default_branch_id' => $shopTnagar->id,
@@ -218,6 +226,9 @@ class DatabaseSeeder extends Seeder
         $userCashier->branches()->sync([$shopTnagar->id]);
 
         $userInventory = User::create([
+            'client_id' => 'CLT0004',
+            'staff_id' => 'STF0003',
+            'username' => 'inventory',
             'business_id' => $business->id,
             'role_id' => $roleInventory->id,
             'default_branch_id' => $whChennai->id,
