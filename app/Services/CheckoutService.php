@@ -108,11 +108,21 @@ class CheckoutService
                 $unitPrice = $product->getEffectivePrice($branch->id, $pricingType);
                 $itemDiscount = max(0.0, (float) ($item['discount_amount'] ?? 0.0));
 
+                $itemGstRate = (float) $product->gst_rate;
+                if ($pricingType === 'wholesale' || ($customer && $customer->is_distributor)) {
+                    if (isset($payload['distributor_gst_rate']) && $payload['distributor_gst_rate'] !== '' && $payload['distributor_gst_rate'] !== null) {
+                        $rawDistRate = strtolower(trim((string) $payload['distributor_gst_rate']));
+                        $itemGstRate = ($rawDistRate === 'exempted' || $rawDistRate === '0') ? 0.0 : (float) $rawDistRate;
+                    } elseif ($customer && $customer->gst_rate !== null) {
+                        $itemGstRate = (float) $customer->gst_rate;
+                    }
+                }
+
                 $taxBreakdown = $this->gstTaxService->calculateItemTaxes(
                     $unitPrice,
                     $quantity,
                     $itemDiscount,
-                    (float) $product->gst_rate,
+                    $itemGstRate,
                     $product->tax_type,
                     $isInterstate
                 );
@@ -131,6 +141,7 @@ class CheckoutService
                     'base_unit_qty' => $baseUnitQty,
                     'unit_price' => $unitPrice,
                     'item_discount' => $itemDiscount,
+                    'gst_rate' => $itemGstRate,
                     'tax' => $taxBreakdown,
                 ];
             }
@@ -223,7 +234,7 @@ class CheckoutService
                     'discount_amount' => $pItem['item_discount'],
                     'taxable_amount' => $tax['taxable_amount'],
                     'hsn_code' => $product->hsn_code,
-                    'gst_rate' => $product->gst_rate,
+                    'gst_rate' => $pItem['gst_rate'],
                     'cgst_rate' => $tax['cgst_rate'],
                     'cgst_amount' => $tax['cgst_amount'],
                     'sgst_rate' => $tax['sgst_rate'],

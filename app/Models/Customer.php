@@ -27,6 +27,7 @@ class Customer extends Model
         'current_balance',
         'is_active',
         'is_distributor',
+        'gst_rate',
     ];
 
     protected $appends = ['display_name'];
@@ -46,6 +47,7 @@ class Customer extends Model
         'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
         'is_distributor' => 'boolean',
+        'gst_rate' => 'decimal:2',
     ];
 
     public function business(): BelongsTo

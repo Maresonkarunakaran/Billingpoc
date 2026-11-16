@@ -337,4 +337,143 @@ class DistributorPricingAndInvoiceTest extends TestCase
             'is_distributor' => true,
         ]);
     }
+
+    public function test_distributor_gst_rates_exempted_and_tiered_percentage(): void
+    {
+        $this->actingAs($this->cashier);
+
+        // 1. Distributor with 'exempted' GST rate converts to 0.00
+        $exemptResponse = $this->postJson(route('customers.store'), [
+            'shop_name' => 'Exempted Agro Traders',
+            'name' => 'Agro Owner',
+            'phone' => '9444111222',
+            'gstin' => '33EXEMP1234A1Z1',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+            'gst_rate' => 'exempted',
+        ]);
+        $exemptResponse->assertOk()
+            ->assertJson([
+                'success' => true,
+                'customer' => [
+                    'shop_name' => 'Exempted Agro Traders',
+                    'gst_rate' => '0.00',
+                ],
+            ]);
+        $this->assertDatabaseHas('customers', [
+            'shop_name' => 'Exempted Agro Traders',
+            'gst_rate' => 0.00,
+        ]);
+
+        // 2. Distributor with valid tiered GST rates (5%, 12%, 18%, 28%)
+        foreach ([5, 12, 18, 28] as $rate) {
+            $gstin = sprintf('33TIER%02d1234A1Z', $rate); // exactly 15 chars
+            $resp = $this->postJson(route('customers.store'), [
+                'shop_name' => "Distributor Tier {$rate}",
+                'name' => "Manager {$rate}",
+                'phone' => "94442220{$rate}",
+                'gstin' => $gstin,
+                'state_code' => '33',
+                'state_name' => 'Tamil Nadu',
+                'is_distributor' => 1,
+                'gst_rate' => $rate,
+            ]);
+            $resp->assertOk()
+                ->assertJson([
+                    'success' => true,
+                    'customer' => [
+                        'gst_rate' => number_format($rate, 2, '.', ''),
+                    ],
+                ]);
+            $this->assertDatabaseHas('customers', [
+                'shop_name' => "Distributor Tier {$rate}",
+                'gst_rate' => $rate,
+            ]);
+        }
+
+        // 3. Invalid GST rate (e.g. 99%) fails validation
+        $invalidResp = $this->postJson(route('customers.store'), [
+            'shop_name' => 'Invalid Tax Distributor',
+            'name' => 'Bad Rate',
+            'phone' => '9444333444',
+            'gstin' => '33BADTX1234A1Z1',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+            'gst_rate' => 99,
+        ]);
+        $invalidResp->assertStatus(422)
+            ->assertJsonValidationErrors(['gst_rate']);
+
+        // 4. POS checkout applies distributor's specific 5% GST rate instead of product's default 18%
+        $distributor5 = Customer::where('shop_name', 'Distributor Tier 5')->first();
+        $product = $this->product; // wholesale price = 2000.00, default product gst_rate = 18%
+
+        $checkoutResponse = $this->withSession(['active_branch_id' => $this->branch->id])
+            ->postJson(route('pos.checkout'), [
+                'branch_id' => $this->branch->id,
+                'customer_id' => $distributor5->id,
+                'pricing_type' => 'wholesale',
+                'items' => [
+                    [
+                        'product_id' => $product->id,
+                        'quantity' => 1,
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'payment_method' => 'cash',
+                        'amount' => 5000,
+                    ],
+                ],
+            ]);
+
+        $checkoutResponse->assertOk()
+            ->assertJson([
+                'success' => true,
+                'is_wholesale' => true,
+            ]);
+
+        $saleId = $checkoutResponse->json('sale_id');
+        $sale = Sale::with('items')->findOrFail($saleId);
+        $item = $sale->items->first();
+
+        // Wholesale price 1650 + 5% GST = 82.50 tax (CGST 2.5% = 41.25, SGST 2.5% = 41.25) -> total 1732.50
+        $this->assertEquals(5.00, (float) $item->gst_rate);
+        $this->assertEquals(2.50, (float) $item->cgst_rate);
+        $this->assertEquals(41.25, (float) $item->cgst_amount);
+        $this->assertEquals(2.50, (float) $item->sgst_rate);
+        $this->assertEquals(41.25, (float) $item->sgst_amount);
+        $this->assertEquals(1732.50, (float) $item->total_amount);
+
+        // 5. POS checkout with exempted distributor (0% GST)
+        $distributorExempt = Customer::where('shop_name', 'Exempted Agro Traders')->first();
+        $exemptCheckout = $this->withSession(['active_branch_id' => $this->branch->id])
+            ->postJson(route('pos.checkout'), [
+                'branch_id' => $this->branch->id,
+                'customer_id' => $distributorExempt->id,
+                'pricing_type' => 'wholesale',
+                'items' => [
+                    [
+                        'product_id' => $product->id,
+                        'quantity' => 1,
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'payment_method' => 'cash',
+                        'amount' => 5000,
+                    ],
+                ],
+            ]);
+
+        $exemptCheckout->assertOk();
+        $exemptSale = Sale::with('items')->findOrFail($exemptCheckout->json('sale_id'));
+        $exemptItem = $exemptSale->items->first();
+        $this->assertEquals(0.00, (float) $exemptItem->gst_rate);
+        $this->assertEquals(0.00, (float) $exemptItem->cgst_amount);
+        $this->assertEquals(0.00, (float) $exemptItem->sgst_amount);
+        $this->assertEquals(1650.00, (float) $exemptItem->total_amount);
+    }
 }

@@ -27,6 +27,15 @@ class CustomerRequest extends FormRequest
             $cleaned = strtoupper(trim($this->gstin));
             $this->merge(['gstin' => $cleaned !== '' ? $cleaned : null]);
         }
+
+        if ($this->has('gst_rate')) {
+            $rawRate = strtolower(trim((string) $this->gst_rate));
+            if ($rawRate === 'exempted' || $rawRate === 'exempt' || $rawRate === 'none') {
+                $this->merge(['gst_rate' => 0]);
+            } elseif ($rawRate === '') {
+                $this->merge(['gst_rate' => null]);
+            }
+        }
     }
 
     public function rules(): array
@@ -46,6 +55,7 @@ class CustomerRequest extends FormRequest
             'credit_limit' => 'nullable|numeric|min:0',
             'opening_balance' => 'nullable|numeric',
             'is_distributor' => 'nullable|boolean',
+            'gst_rate' => 'nullable|numeric|in:0,5,12,18,28',
         ];
     }
 
@@ -54,6 +64,7 @@ class CustomerRequest extends FormRequest
         return [
             'gstin.required' => 'GST number (GSTIN) is mandatory for distributor / wholesale customers.',
             'gstin.size' => 'The GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5).',
+            'gst_rate.in' => 'GST rate must be Exempted, 0%, 5%, 12%, 18%, or 28%.',
         ];
     }
 }

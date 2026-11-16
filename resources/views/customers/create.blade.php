@@ -49,12 +49,30 @@
                         </div>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <div class="custom-control custom-checkbox p-2 bg-light border rounded">
+                    <div class="form-group mb-3 p-3 bg-light border rounded">
+                        <div class="custom-control custom-checkbox mb-2">
                             <input type="checkbox" class="custom-control-input" id="is_distributor" name="is_distributor" value="1" {{ old('is_distributor') ? 'checked' : '' }}>
                             <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="is_distributor">
                                 <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer - Wholesale pricing applied by default in POS; GSTIN required)
                             </label>
+                        </div>
+                        <div class="row mt-2" id="distributor_gst_rate_row">
+                            <div class="col-md-6">
+                                <label class="font-weight-bold text-sm">Distributor GST % (Tax Slab)</label>
+                                <select name="gst_rate" id="gst_rate" class="form-control font-weight-bold @error('gst_rate') is-invalid @enderror">
+                                    <option value="">-- As per Product Default --</option>
+                                    <option value="exempted" {{ old('gst_rate') === 'exempted' ? 'selected' : '' }}>Exempted</option>
+                                    <option value="0" {{ old('gst_rate') === '0' || (old('gst_rate') !== null && old('gst_rate') == 0 && old('gst_rate') !== 'exempted' && old('gst_rate') !== '') ? 'selected' : '' }}>0%</option>
+                                    <option value="5" {{ old('gst_rate') == 5 ? 'selected' : '' }}>5%</option>
+                                    <option value="12" {{ old('gst_rate') == 12 ? 'selected' : '' }}>12%</option>
+                                    <option value="18" {{ old('gst_rate', 18) == 18 ? 'selected' : '' }}>18%</option>
+                                    <option value="28" {{ old('gst_rate') == 28 ? 'selected' : '' }}>28%</option>
+                                </select>
+                                <small class="text-muted text-xs">GST %: Exempted, 0%, 5%, 12%, 18%, 28%.</small>
+                                @error('gst_rate')
+                                    <div class="invalid-feedback font-weight-bold">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
                     </div>
 
