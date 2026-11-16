@@ -449,7 +449,7 @@
                                        placeholder="Type Shop Name or Customer Name to auto-fetch past data..." 
                                        autocomplete="off" 
                                        oninput="handleQuickCustomerSearch(this.value)"
-                                       onfocus="handleQuickCustomerSearch(this.value)">
+                                       onclick="handleQuickCustomerClick()">
                                 <div class="input-group-append">
                                     <button type="button" class="btn btn-outline-secondary" onclick="clearQuickCustomerSearch()" title="Clear search">
                                         <i class="fas fa-times"></i>
@@ -733,9 +733,6 @@
             const targetFocus = isDistributor ? document.getElementById('qcExistingSearch') : document.getElementById('qcName');
             if (targetFocus) {
                 targetFocus.focus();
-                if (isDistributor) {
-                    handleQuickCustomerSearch('');
-                }
             }
         }, 400);
     }
@@ -1734,6 +1731,11 @@
                 is_distributor: opt.dataset.distributor === '1',
                 gst_rate: (opt.dataset.gstrate !== undefined && opt.dataset.gstrate !== null) ? opt.dataset.gstrate : ''
             }));
+    }
+
+    function handleQuickCustomerClick() {
+        const input = document.getElementById('qcExistingSearch');
+        handleQuickCustomerSearch(input ? input.value : '');
     }
 
     function handleQuickCustomerSearch(query) {
