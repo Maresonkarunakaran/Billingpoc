@@ -488,4 +488,79 @@ class DistributorPricingAndInvoiceTest extends TestCase
         $this->assertEquals(0.00, (float) $exemptItem->sgst_amount);
         $this->assertEquals(1650.00, (float) $exemptItem->total_amount);
     }
+
+    public function test_distributor_search_and_update_capabilities_for_pos(): void
+    {
+        $this->actingAs($this->cashier);
+
+        // 1. Create a distributor customer
+        $dist = Customer::create([
+            'business_id' => $this->branch->business_id,
+            'shop_name' => 'Murugan Super Traders',
+            'name' => 'S. Murugan',
+            'phone' => '9840112233',
+            'gstin' => '33ABCDE1234F1Z5',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => true,
+            'gst_rate' => 12,
+        ]);
+
+        // 2. Search by shop name via JSON
+        $searchShop = $this->getJson(route('customers.index', ['search' => 'Murugan Super']));
+        $searchShop->assertOk()
+            ->assertJson([
+                'success' => true,
+            ])
+            ->assertJsonFragment([
+                'shop_name' => 'Murugan Super Traders',
+                'name' => 'S. Murugan',
+            ]);
+
+        // 3. Search by customer name via JSON
+        $searchName = $this->getJson(route('customers.index', ['search' => 'S. Murugan']));
+        $searchName->assertOk()
+            ->assertJson([
+                'success' => true,
+            ])
+            ->assertJsonFragment([
+                'shop_name' => 'Murugan Super Traders',
+            ]);
+
+        // 4. Update customer via PUT (e.g. from POS modal)
+        $updateResp = $this->putJson(route('customers.update', $dist->id), [
+            'shop_name' => 'Murugan Mega Mart',
+            'name' => 'S. Murugan',
+            'phone' => '9840998877',
+            'gstin' => '33ABCDE1234F1Z5',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+            'gst_rate' => 18,
+        ]);
+
+        $updateResp->assertOk()
+            ->assertJson([
+                'success' => true,
+                'customer' => [
+                    'shop_name' => 'Murugan Mega Mart',
+                    'phone' => '9840998877',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('customers', [
+            'id' => $dist->id,
+            'shop_name' => 'Murugan Mega Mart',
+            'phone' => '9840998877',
+            'gst_rate' => 18.00,
+        ]);
+
+        // 5. Verify POS view contains the search and auto-fetch elements
+        $posView = $this->withSession(['active_branch_id' => $this->branch->id])
+            ->get(route('pos.index'));
+        $posView->assertOk()
+            ->assertSee('id="qcExistingSearch"', false)
+            ->assertSee('id="qcSearchResults"', false)
+            ->assertSee('id="qcFetchedAlert"', false);
+    }
 }

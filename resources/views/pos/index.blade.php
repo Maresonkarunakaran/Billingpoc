@@ -224,6 +224,7 @@
                                     data-display="{{ $c->display_name }}"
                                     data-phone="{{ $c->phone }}"
                                     data-state="{{ $c->state_code }}"
+                                    data-statename="{{ $c->state_name }}"
                                     data-gstin="{{ $c->gstin }}"
                                     data-balance="{{ $c->current_balance }}"
                                     data-distributor="{{ $c->is_distributor ? '1' : '0' }}"
@@ -425,14 +426,65 @@
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-3">
                     <div id="distributorNoticeAlert" class="alert alert-warning py-2 px-3 text-xs mb-3 d-none">
-                        <i class="fas fa-truck mr-1"></i> <strong>Distributor Billing:</strong> Add shop & customer details below. Wholesale pricing will apply immediately, and this customer will be saved for all future visits.
+                        <i class="fas fa-truck mr-1"></i> <strong>Distributor Billing:</strong> Search past distributor/customer below to auto-fetch details, or register a new one. Wholesale pricing will apply immediately.
+                    </div>
+
+                    <!-- Hidden Customer ID for existing record update/selection -->
+                    <input type="hidden" id="qcCustomerId" value="">
+
+                    <!-- Quick Search Past Customers / Distributors Card -->
+                    <div class="card border-warning bg-light mb-3 shadow-xs" id="qcSearchCard">
+                        <div class="card-body p-2 position-relative">
+                            <label class="text-xs font-weight-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                                <span><i class="fas fa-search text-warning mr-1"></i> Search Existing Customer / Distributor:</span>
+                                <span class="badge badge-warning text-dark font-weight-normal text-xs">Search by Shop or Name</span>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+                                </div>
+                                <input type="text" id="qcExistingSearch" class="form-control border-left-0 font-weight-bold" 
+                                       placeholder="Type Shop Name or Customer Name to auto-fetch past data..." 
+                                       autocomplete="off" 
+                                       oninput="handleQuickCustomerSearch(this.value)"
+                                       onfocus="handleQuickCustomerSearch(this.value)">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearQuickCustomerSearch()" title="Clear search">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Live Search Results Dropdown -->
+                            <div id="qcSearchResults" class="list-group shadow position-absolute w-100 mt-1 d-none" 
+                                 style="z-index: 1060; max-height: 220px; overflow-y: auto; left: 0; right: 0;"></div>
+                            <small class="text-muted text-xs mt-1 d-block">
+                                <i class="fas fa-magic text-warning mr-1"></i>Select any past customer to instantly auto-fetch their shop, name, phone, GSTIN, and tax slab below.
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Fetch Notification Banner -->
+                    <div id="qcFetchedAlert" class="alert alert-success py-2 px-3 text-xs mb-3 d-none align-items-center justify-content-between">
+                        <div>
+                            <i class="fas fa-check-circle text-success mr-1"></i>
+                            <strong>Data Fetched:</strong> <span id="qcFetchedName" class="font-weight-bold"></span>
+                            <span class="badge badge-success ml-1">Past Record Loaded</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-xs btn-success font-weight-bold shadow-xs mr-1" onclick="applyFetchedCustomerNow()">
+                                <i class="fas fa-check mr-1"></i> Apply to Bill Now
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="clearFetchedCustomer()" title="Clear and enter fresh details">
+                                <i class="fas fa-undo mr-1"></i> New
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-group mb-2">
                         <label class="text-xs font-weight-bold">Shop / Business Name</label>
-                        <input type="text" id="qcShopName" class="form-control font-weight-bold" placeholder="E.g. Sri Krishna Department Store">
+                        <input type="text" id="qcShopName" class="form-control font-weight-bold" placeholder="E.g. Sri Krishna Department Store" oninput="handleShopNameInput(this.value)">
                         <small class="text-muted text-xs">Used on invoices and for quick search next time.</small>
                     </div>
                     <div class="form-group mb-2">
@@ -618,7 +670,7 @@
 
         if (isDistributor) {
             if (header) header.className = 'modal-header bg-warning text-dark py-2';
-            if (title) title.innerHTML = '<i class="fas fa-truck mr-1"></i> Add Distributor Customer Details';
+            if (title) title.innerHTML = '<i class="fas fa-truck mr-1"></i> Add / Select Distributor Customer Details';
             if (alertBox) alertBox.classList.remove('d-none');
             if (qcGstRateBadge) qcGstRateBadge.classList.remove('d-none');
             if (qcGstRate && !qcGstRate.value) qcGstRate.value = '18';
@@ -653,6 +705,16 @@
         const qcGstRate = document.getElementById('qcGstRate');
 
         document.getElementById('quickCustomerForm').reset();
+        document.getElementById('qcCustomerId').value = '';
+        document.getElementById('qcExistingSearch').value = '';
+        closeQuickCustomerSearchResults();
+
+        const fetchedAlert = document.getElementById('qcFetchedAlert');
+        if (fetchedAlert) {
+            fetchedAlert.classList.add('d-none');
+            fetchedAlert.classList.remove('d-flex');
+        }
+
         document.getElementById('qcStateCode').value = '33';
         document.getElementById('qcStateName').value = 'Tamil Nadu';
 
@@ -668,8 +730,13 @@
 
         modal.modal('show');
         setTimeout(() => {
-            const targetFocus = isDistributor ? document.getElementById('qcShopName') : document.getElementById('qcName');
-            if (targetFocus) targetFocus.focus();
+            const targetFocus = isDistributor ? document.getElementById('qcExistingSearch') : document.getElementById('qcName');
+            if (targetFocus) {
+                targetFocus.focus();
+                if (isDistributor) {
+                    handleQuickCustomerSearch('');
+                }
+            }
         }, 400);
     }
 
@@ -1648,7 +1715,226 @@
         loadProducts(); // refresh branch stock balances
     }
 
-    // 9. Quick Add Customer
+    // Quick Customer Search & Auto-Fill Helpers
+    function getLoadedCustomersList() {
+        const select = document.getElementById('customerSelect');
+        if (!select) return [];
+        return Array.from(select.options)
+            .filter(opt => opt.value)
+            .map(opt => ({
+                id: opt.value,
+                name: opt.dataset.name || '',
+                shop_name: opt.dataset.shop || '',
+                display_name: opt.dataset.display || opt.dataset.name || '',
+                phone: opt.dataset.phone || '',
+                state_code: opt.dataset.state || '33',
+                state_name: opt.dataset.statename || 'Tamil Nadu',
+                gstin: opt.dataset.gstin || '',
+                current_balance: opt.dataset.balance || '0.00',
+                is_distributor: opt.dataset.distributor === '1',
+                gst_rate: (opt.dataset.gstrate !== undefined && opt.dataset.gstrate !== null) ? opt.dataset.gstrate : ''
+            }));
+    }
+
+    function handleQuickCustomerSearch(query) {
+        const resultsEl = document.getElementById('qcSearchResults');
+        if (!resultsEl) return;
+
+        const normalizedQuery = (query || '').trim().toLowerCase();
+        const allCustomers = getLoadedCustomersList();
+        const isDistributorMode = document.getElementById('qcIsDistributor')?.checked;
+
+        let filtered = [];
+        if (normalizedQuery) {
+            filtered = allCustomers.filter(c => {
+                const name = (c.name || '').toLowerCase();
+                const shop = (c.shop_name || '').toLowerCase();
+                const phone = (c.phone || '').toLowerCase();
+                const gstin = (c.gstin || '').toLowerCase();
+                return name.includes(normalizedQuery) ||
+                       shop.includes(normalizedQuery) ||
+                       phone.includes(normalizedQuery) ||
+                       gstin.includes(normalizedQuery);
+            });
+        } else {
+            // When empty/focused, prioritize distributors
+            filtered = allCustomers.filter(c => isDistributorMode ? c.is_distributor : true);
+            if (filtered.length === 0) {
+                filtered = allCustomers;
+            }
+        }
+
+        if (filtered.length === 0) {
+            if (normalizedQuery) {
+                resultsEl.innerHTML = `
+                    <div class="list-group-item py-2 px-3 text-muted text-xs bg-light">
+                        <i class="fas fa-info-circle mr-1 text-secondary"></i> No past record found matching "<strong>${escapeHtml(query)}</strong>".
+                        <div class="mt-1 text-dark">You can fill in the form below to register them as a new customer.</div>
+                    </div>
+                `;
+                resultsEl.classList.remove('d-none');
+            } else {
+                resultsEl.classList.add('d-none');
+            }
+            return;
+        }
+
+        let html = '';
+        if (!normalizedQuery) {
+            html += `<div class="list-group-item py-1 px-3 bg-light text-xs font-weight-bold text-muted text-uppercase">
+                <i class="fas fa-history mr-1"></i> Recent Customers (Click to auto-fetch details)
+            </div>`;
+        }
+
+        html += filtered.slice(0, 8).map(c => {
+            const displayName = (c.shop_name && c.name && c.shop_name !== c.name) ? `${c.shop_name} (${c.name})` : (c.shop_name || c.name);
+            const safeData = JSON.stringify(c).replace(/"/g, '&quot;');
+            const gstRateText = c.gst_rate !== '' ? (c.gst_rate == 0 ? 'Exempted' : `${parseFloat(c.gst_rate)}% GST`) : '';
+            return `
+                <div class="list-group-item list-group-item-action py-2 px-3 d-flex justify-content-between align-items-center cursor-pointer" 
+                     onclick="autofillCustomerFromRecord(${safeData})">
+                    <div class="mr-2" style="max-width: 68%;">
+                        <div class="font-weight-bold text-dark text-sm text-truncate">
+                            ${c.shop_name ? `<i class="fas fa-store mr-1 text-primary"></i>${escapeHtml(c.shop_name)}` : `<i class="fas fa-user mr-1 text-secondary"></i>${escapeHtml(c.name)}`}
+                            ${c.is_distributor ? `<span class="badge badge-warning text-dark ml-1 text-xs"><i class="fas fa-truck mr-1"></i>Distributor ${gstRateText ? '(' + gstRateText + ')' : ''}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-muted text-truncate">
+                            ${c.shop_name && c.name && c.shop_name !== c.name ? `Contact: <strong>${escapeHtml(c.name)}</strong> &bull; ` : ''}
+                            <i class="fas fa-phone-alt mr-1"></i>${escapeHtml(c.phone || 'No phone')}
+                            ${c.gstin ? ` &bull; GSTIN: <code>${escapeHtml(c.gstin)}</code>` : ''}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-xs btn-warning text-dark font-weight-bold mr-1 text-nowrap" 
+                                onclick="event.stopPropagation(); selectCustomerAndApplyDistributor('${escapeHtml(c.id)}')" 
+                                title="Instantly select and bill at distributor price">
+                            <i class="fas fa-check mr-1"></i> Select & Bill
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-primary text-nowrap" 
+                                onclick="event.stopPropagation(); autofillCustomerFromRecord(${safeData})" 
+                                title="Auto-fill form details below">
+                            <i class="fas fa-arrow-down mr-1"></i> Auto-Fill
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        resultsEl.innerHTML = html;
+        resultsEl.classList.remove('d-none');
+    }
+
+    function handleShopNameInput(val) {
+        const searchInput = document.getElementById('qcExistingSearch');
+        if (searchInput && !searchInput.value && val.length >= 2) {
+            handleQuickCustomerSearch(val);
+        }
+    }
+
+    function clearQuickCustomerSearch() {
+        const input = document.getElementById('qcExistingSearch');
+        if (input) input.value = '';
+        closeQuickCustomerSearchResults();
+    }
+
+    function closeQuickCustomerSearchResults() {
+        const resultsEl = document.getElementById('qcSearchResults');
+        if (resultsEl) {
+            resultsEl.classList.add('d-none');
+            resultsEl.innerHTML = '';
+        }
+    }
+
+    function autofillCustomerFromRecord(c) {
+        document.getElementById('qcCustomerId').value = c.id || '';
+        document.getElementById('qcShopName').value = c.shop_name || '';
+        document.getElementById('qcName').value = c.name || '';
+        document.getElementById('qcPhone').value = c.phone || '';
+        document.getElementById('qcGstin').value = c.gstin || '';
+        document.getElementById('qcStateCode').value = c.state_code || '33';
+        document.getElementById('qcStateName').value = c.state_name || 'Tamil Nadu';
+
+        const isDistributorCheckbox = document.getElementById('qcIsDistributor');
+        if (isDistributorCheckbox) {
+            isDistributorCheckbox.checked = true; // since they are in distributor flow
+            toggleDistributorFields(true);
+        }
+
+        const gstRateEl = document.getElementById('qcGstRate');
+        if (gstRateEl) {
+            if (c.gst_rate !== undefined && c.gst_rate !== null && c.gst_rate !== '') {
+                gstRateEl.value = c.gst_rate;
+            } else {
+                gstRateEl.value = '18';
+            }
+        }
+
+        closeQuickCustomerSearchResults();
+
+        const fetchedAlert = document.getElementById('qcFetchedAlert');
+        const fetchedName = document.getElementById('qcFetchedName');
+        if (fetchedAlert && fetchedName) {
+            const displayName = (c.shop_name && c.name && c.shop_name !== c.name) ? `${c.shop_name} (${c.name})` : (c.shop_name || c.name);
+            fetchedName.textContent = displayName;
+            fetchedAlert.classList.remove('d-none');
+            fetchedAlert.classList.add('d-flex');
+        }
+
+        const btnSave = document.getElementById('btnSaveCustomer');
+        if (btnSave) {
+            btnSave.className = 'btn btn-warning font-weight-bold text-dark';
+            btnSave.innerHTML = '<i class="fas fa-check mr-1"></i> Save & Apply Distributor Pricing';
+        }
+    }
+
+    function clearFetchedCustomer() {
+        document.getElementById('qcCustomerId').value = '';
+        document.getElementById('qcExistingSearch').value = '';
+        const fetchedAlert = document.getElementById('qcFetchedAlert');
+        if (fetchedAlert) {
+            fetchedAlert.classList.add('d-none');
+            fetchedAlert.classList.remove('d-flex');
+        }
+        document.getElementById('qcShopName').value = '';
+        document.getElementById('qcName').value = '';
+        document.getElementById('qcPhone').value = '';
+        document.getElementById('qcGstin').value = '';
+        document.getElementById('qcShopName').focus();
+    }
+
+    function applyFetchedCustomerNow() {
+        const customerId = document.getElementById('qcCustomerId')?.value;
+        if (customerId) {
+            selectCustomerAndApplyDistributor(customerId);
+        }
+    }
+
+    function selectCustomerAndApplyDistributor(customerId) {
+        selectCustomer(customerId);
+        setPricingType('wholesale');
+        $('#addCustomerModal').modal('hide');
+
+        const customerSelect = document.getElementById('customerSelect');
+        const selectedOpt = customerSelect.options[customerSelect.selectedIndex];
+        const displayName = selectedOpt ? (selectedOpt.dataset.display || selectedOpt.dataset.name) : 'Customer';
+
+        Swal.fire({
+            title: 'Distributor Selected!',
+            html: `<strong>${escapeHtml(displayName)}</strong> loaded with wholesale distributor pricing activated.`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        const searchCard = document.getElementById('qcSearchCard');
+        if (searchCard && !searchCard.contains(e.target)) {
+            closeQuickCustomerSearchResults();
+        }
+    });
+
+    // 9. Quick Add / Update Customer
     function handleQuickCustomer(e) {
         e.preventDefault();
         const isDistributor = document.getElementById('qcIsDistributor')?.checked ? 1 : 0;
@@ -1684,8 +1970,12 @@
             btnSave.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
         }
 
-        fetch("{{ route('customers.store') }}", {
-            method: 'POST',
+        const existingCustomerId = document.getElementById('qcCustomerId')?.value;
+        const url = existingCustomerId ? `/customers/${existingCustomerId}` : "{{ route('customers.store') }}";
+        const method = existingCustomerId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1716,7 +2006,11 @@
             if (data.success && data.customer) {
                 const c = data.customer;
                 const customerSelect = document.getElementById('customerSelect');
-                const opt = document.createElement('option');
+                let opt = Array.from(customerSelect.options).find(o => o.value == c.id);
+                if (!opt) {
+                    opt = document.createElement('option');
+                    customerSelect.appendChild(opt);
+                }
                 opt.value = c.id;
                 opt.dataset.name = c.name;
                 opt.dataset.shop = c.shop_name || '';
@@ -1724,18 +2018,19 @@
                 opt.dataset.display = displayName;
                 opt.dataset.phone = c.phone || '';
                 opt.dataset.state = c.state_code;
+                opt.dataset.statename = c.state_name;
                 opt.dataset.gstin = c.gstin || '';
                 opt.dataset.balance = c.current_balance || '0.00';
                 opt.dataset.distributor = c.is_distributor ? '1' : '0';
                 opt.dataset.gstrate = (c.gst_rate !== null && c.gst_rate !== undefined) ? c.gst_rate : '';
                 const gstRateTag = c.gst_rate !== null ? (c.gst_rate == 0 ? ' (Exempted)' : ` (${parseFloat(c.gst_rate)}% GST)`) : '';
                 opt.textContent = `${displayName} (${c.phone || 'No phone'}) ${c.is_distributor ? '★ Distributor' + gstRateTag : (c.gstin ? '★ GST' : '')} [Due: ₹0.00]`;
-                customerSelect.appendChild(opt);
 
                 selectCustomer(c.id);
+                setPricingType(c.is_distributor ? 'wholesale' : 'retail');
 
                 Swal.fire({
-                    title: c.is_distributor ? 'Distributor Customer Saved!' : 'Customer Saved!',
+                    title: c.is_distributor ? 'Distributor Customer Ready!' : 'Customer Ready!',
                     html: `
                         <div class="mb-2"><strong>${escapeHtml(displayName)}</strong></div>
                         ${c.is_distributor ? '<div class="text-success font-weight-bold"><i class="fas fa-truck mr-1"></i> Wholesale Distributor Pricing Activated!</div>' : ''}

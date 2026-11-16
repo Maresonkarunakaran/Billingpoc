@@ -18,6 +18,30 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
+        if ($request->wantsJson()) {
+            $customers = Customer::where('business_id', Auth::user()->business_id)
+                ->when($request->filled('search'), function ($q) use ($request) {
+                    $s = trim($request->search);
+                    $q->where(function ($sub) use ($s) {
+                        $sub->where('name', 'like', "%{$s}%")
+                            ->orWhere('shop_name', 'like', "%{$s}%")
+                            ->orWhere('phone', 'like', "%{$s}%")
+                            ->orWhere('gstin', 'like', "%{$s}%");
+                    });
+                })
+                ->when($request->boolean('distributor_only'), function ($q) {
+                    $q->where('is_distributor', true);
+                })
+                ->latest()
+                ->limit(20)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'customers' => $customers,
+            ]);
+        }
+
         $customers = Customer::where('business_id', Auth::user()->business_id)
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
@@ -61,6 +85,25 @@ class CustomerController extends Controller
         }
 
         return redirect()->route('customers.index')->with('success', 'Customer registered successfully!');
+    }
+
+    public function update(CustomerRequest $request, int $id)
+    {
+        $customer = Customer::where('business_id', Auth::user()->business_id)->findOrFail($id);
+        $data = $request->validated();
+        $customer->update($data);
+
+        AuditLog::log('customer_updated', $customer, null, ['name' => $customer->name, 'gstin' => $customer->gstin]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer details updated successfully!',
+                'customer' => $customer,
+            ]);
+        }
+
+        return redirect()->route('customers.index')->with('success', 'Customer updated successfully!');
     }
 
     public function show(int $id)
