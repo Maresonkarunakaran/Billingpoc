@@ -11,6 +11,15 @@ class CustomerRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('is_distributor')) {
+            $this->merge([
+                'is_distributor' => $this->boolean('is_distributor'),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -24,6 +33,7 @@ class CustomerRequest extends FormRequest
             'address' => 'nullable|string|max:500',
             'credit_limit' => 'nullable|numeric|min:0',
             'opening_balance' => 'nullable|numeric',
+            'is_distributor' => 'nullable|boolean',
         ];
     }
 }

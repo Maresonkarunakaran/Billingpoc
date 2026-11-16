@@ -40,6 +40,15 @@
                         </div>
                     </div>
 
+                    <div class="form-group mb-3">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="is_distributor" name="is_distributor" value="1" {{ old('is_distributor') ? 'checked' : '' }}>
+                            <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="is_distributor">
+                                <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer - Wholesale pricing applied by default in POS)
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="font-weight-bold text-sm">State Code *</label>

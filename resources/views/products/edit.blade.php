@@ -154,9 +154,11 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="font-weight-bold text-sm">GST Tax Rate *</label>
-                    <select name="gst_rate" class="form-control font-weight-bold" required>
-                        <option value="0" {{ old('gst_rate', $product->gst_rate) == 0 ? 'selected' : '' }}>0% (Exempt)</option>
+                    <label class="font-weight-bold text-sm">GST Tax Rate <span class="text-muted font-weight-normal">(Optional)</span></label>
+                    <select name="gst_rate" class="form-control font-weight-bold">
+                        <option value="">-- Select GST Rate (Optional) --</option>
+                        <option value="exempted" {{ old('gst_rate') === 'exempted' ? 'selected' : '' }}>Exempted</option>
+                        <option value="0" {{ old('gst_rate', $product->gst_rate) == 0 && old('gst_rate') !== 'exempted' ? 'selected' : '' }}>0%</option>
                         <option value="5" {{ old('gst_rate', $product->gst_rate) == 5 ? 'selected' : '' }}>5% (CGST 2.5% + SGST 2.5% / IGST 5%)</option>
                         <option value="12" {{ old('gst_rate', $product->gst_rate) == 12 ? 'selected' : '' }}>12% (CGST 6% + SGST 6% / IGST 12%)</option>
                         <option value="18" {{ old('gst_rate', $product->gst_rate) == 18 ? 'selected' : '' }}>18% (CGST 9% + SGST 9% / IGST 18%)</option>

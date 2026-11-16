@@ -49,6 +49,14 @@ class CustomerController extends Controller
 
         AuditLog::log('customer_created', $customer, null, ['name' => $customer->name, 'gstin' => $customer->gstin]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer registered successfully!',
+                'customer' => $customer,
+            ]);
+        }
+
         return redirect()->route('customers.index')->with('success', 'Customer registered successfully!');
     }
 

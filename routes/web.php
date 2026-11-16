@@ -77,6 +77,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/search', [PosController::class, 'searchProducts'])->name('search');
         Route::post('/checkout', [PosController::class, 'checkout'])->name('checkout');
         Route::get('/receipt/{id}', [PosController::class, 'printReceipt'])->name('receipt');
+        Route::get('/invoice/{id}', [PosController::class, 'printInvoice'])->name('invoice');
     });
 
     // Sales & GST Invoices

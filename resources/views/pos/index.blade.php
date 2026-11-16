@@ -199,8 +199,8 @@
                 </div>
 
                 <!-- Customer Search and Selection -->
-                <div class="d-flex align-items-center" style="gap: 6px;">
-                    <div class="pos-customer-search flex-grow-1" id="posCustomerSearch">
+                <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                    <div class="pos-customer-search flex-grow-1" id="posCustomerSearch" style="min-width: 170px;">
                         <label class="sr-only" for="customerSearch">Search customers by name, phone, or GSTIN</label>
                         <input
                             type="search"
@@ -216,16 +216,22 @@
                         <div id="customerSearchResults" class="pos-order-search-results pos-customer-search-results d-none" role="listbox" aria-label="Customer search results"></div>
                     </div>
                     <select id="customerSelect" class="d-none" aria-hidden="true" tabindex="-1">
-                        <option value="">Walk-in Customer (Cash / Non-GST)</option>
+                        <option value="" data-distributor="0">Walk-in Customer (Cash / Non-GST)</option>
                         @foreach($customers as $c)
-                            <option value="{{ $c->id }}" data-name="{{ $c->name }}" data-phone="{{ $c->phone }}" data-state="{{ $c->state_code }}" data-gstin="{{ $c->gstin }}" data-balance="{{ $c->current_balance }}">
-                                {{ $c->name }} ({{ $c->phone ?: 'No phone' }}) {{ $c->gstin ? '★ GST' : '' }} [Due: ₹{{ number_format($c->current_balance, 2) }}]
+                            <option value="{{ $c->id }}" data-name="{{ $c->name }}" data-phone="{{ $c->phone }}" data-state="{{ $c->state_code }}" data-gstin="{{ $c->gstin }}" data-balance="{{ $c->current_balance }}" data-distributor="{{ $c->is_distributor ? '1' : '0' }}">
+                                {{ $c->name }} ({{ $c->phone ?: 'No phone' }}) {{ $c->is_distributor ? '★ Distributor' : ($c->gstin ? '★ GST' : '') }} [Due: ₹{{ number_format($c->current_balance, 2) }}]
                             </option>
                         @endforeach
                     </select>
-                    <button class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#addCustomerModal" title="Add Customer">
-                        <i class="fas fa-user-plus"></i>
+                    <button class="btn btn-outline-primary btn-sm text-nowrap" data-toggle="modal" data-target="#addCustomerModal" title="Add Customer">
+                        <i class="fas fa-user-plus mr-1"></i> Add
                     </button>
+                    <div class="custom-control custom-checkbox ml-1 d-flex align-items-center bg-white px-2 py-1 border rounded shadow-xs" style="user-select: none;">
+                        <input type="checkbox" class="custom-control-input" id="distributorPriceToggle">
+                        <label class="custom-control-label font-weight-bold text-xs text-primary cursor-pointer mb-0 text-nowrap" for="distributorPriceToggle" title="Enable wholesale price for distributor">
+                            Distributor Price
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -419,8 +425,17 @@
                         <input type="text" id="qcPhone" class="form-control" placeholder="10-digit mobile number">
                     </div>
                     <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold">GSTIN (Optional, for B2B tax invoice)</label>
-                        <input type="text" id="qcGstin" class="form-control" maxlength="15" placeholder="15-character GSTIN">
+                        <div class="custom-control custom-checkbox p-2 bg-light border rounded">
+                            <input type="checkbox" class="custom-control-input" id="qcIsDistributor" name="is_distributor" value="1">
+                            <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="qcIsDistributor">
+                                <i class="fas fa-truck mr-1"></i> Distributor
+                            </label>
+                            <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer.</small>
+                        </div>
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold">GSTIN Number (Optional, for B2B tax invoice)</label>
+                        <input type="text" id="qcGstin" class="form-control" maxlength="15" placeholder="15-character GSTIN Number">
                     </div>
                     <div class="row">
                         <div class="col-4">
@@ -457,6 +472,38 @@
     let orderProductSearchController = null;
     let currentIdempotencyKey = 'pos-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     const branchStateCode = "{{ $branch->state_code }}";
+
+    function setPricingType(type) {
+        selectedPricingType = (type === 'wholesale') ? 'wholesale' : 'retail';
+        const isWholesale = (selectedPricingType === 'wholesale');
+
+        const toggle = document.getElementById('distributorPriceToggle');
+        if (toggle && toggle.checked !== isWholesale) {
+            toggle.checked = isWholesale;
+        }
+
+        const retailRadio = document.getElementById('pricingRetail');
+        const wholesaleRadio = document.getElementById('pricingWholesale');
+        const retailLabel = document.getElementById('pricingRetailLabel');
+        const wholesaleLabel = document.getElementById('pricingWholesaleLabel');
+
+        if (retailRadio && wholesaleRadio) {
+            retailRadio.checked = !isWholesale;
+            wholesaleRadio.checked = isWholesale;
+            if (retailLabel && wholesaleLabel) {
+                if (isWholesale) {
+                    wholesaleLabel.classList.add('active');
+                    retailLabel.classList.remove('active');
+                } else {
+                    retailLabel.classList.add('active');
+                    wholesaleLabel.classList.remove('active');
+                }
+            }
+        }
+
+        renderProducts(getFilteredProducts());
+        recalculateCart();
+    }
 
     function getFilteredProducts() {
         const searchTerm = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
@@ -531,23 +578,31 @@
             });
         });
 
+        // Distributor Price Checkbox
+        const distributorPriceToggle = document.getElementById('distributorPriceToggle');
+        if (distributorPriceToggle) {
+            distributorPriceToggle.addEventListener('change', function() {
+                setPricingType(this.checked ? 'wholesale' : 'retail');
+            });
+        }
+
         // Retail vs Wholesale switch
         document.querySelectorAll('input[name="pricing_type_radio"]').forEach(radio => {
             radio.addEventListener('change', function() {
-                selectedPricingType = this.value;
-                recalculateCart();
-                renderProducts(getFilteredProducts());
+                setPricingType(this.value);
             });
         });
 
         // Customer change
         document.getElementById('customerSelect').addEventListener('change', function() {
+            const selectedOpt = this.options[this.selectedIndex];
+            const isDistributor = selectedOpt && selectedOpt.dataset.distributor === '1';
+            setPricingType(isDistributor ? 'wholesale' : 'retail');
             updateCustomerSearchValue();
-            recalculateCart();
         });
         document.getElementById('customerSearch').addEventListener('input', function() {
             document.getElementById('customerSelect').value = '';
-            recalculateCart();
+            setPricingType('retail');
             renderCustomerSearchResults(this.value);
         });
         document.getElementById('customerSearch').addEventListener('keydown', handleCustomerSearchKeydown);
@@ -862,7 +917,10 @@
             <button type="button" class="pos-order-search-result" role="option" data-customer-id="${escapeHtml(option.value)}" aria-selected="false">
                 <span class="d-flex justify-content-between align-items-center">
                     <span class="font-weight-bold text-dark">${escapeHtml(option.dataset.name)}</span>
-                    <span class="text-primary">${option.dataset.gstin ? 'GST Registered' : ''}</span>
+                    <span>
+                        ${option.dataset.distributor === '1' ? '<span class="badge badge-warning text-xs mr-1"><i class="fas fa-truck mr-1"></i>Distributor</span>' : ''}
+                        ${option.dataset.gstin ? '<span class="text-primary text-xs font-weight-bold">GST</span>' : ''}
+                    </span>
                 </span>
                 <small class="d-flex justify-content-between text-muted">
                     <span>${escapeHtml(option.dataset.phone || 'No phone number')}${option.dataset.gstin ? ` · ${escapeHtml(option.dataset.gstin)}` : ''}</span>
@@ -895,9 +953,12 @@
     function selectCustomer(customerId) {
         const customerSelect = document.getElementById('customerSelect');
         customerSelect.value = customerId;
+        const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+        const isDistributor = selectedOption && selectedOption.dataset.distributor === '1';
+
+        setPricingType(isDistributor ? 'wholesale' : 'retail');
         updateCustomerSearchValue();
         closeCustomerSearchResults();
-        recalculateCart();
         document.getElementById('customerSearch').focus();
     }
 
@@ -911,8 +972,10 @@
             return;
         }
 
+        const distributorTag = selectedOption.dataset.distributor === '1' ? ' [Distributor]' : '';
         customerSearch.value = selectedOption.dataset.name
-            + (selectedOption.dataset.phone ? ` (${selectedOption.dataset.phone})` : '');
+            + (selectedOption.dataset.phone ? ` (${selectedOption.dataset.phone})` : '')
+            + distributorTag;
     }
 
     function handleCustomerSearchKeydown(event) {
@@ -1291,24 +1354,91 @@
             if (data.success) {
                 $('#paymentModal').modal('hide');
 
-                Swal.fire({
-                    title: 'Sale Finalized!',
-                    html: `Invoice Number: <strong>${data.invoice_number}</strong><br>Total Amount: <strong>₹ ${data.final_amount}</strong>`,
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonText: '<i class="fas fa-print mr-1"></i> Print Receipt',
-                    cancelButtonText: '<i class="fas fa-plus mr-1"></i> Next Sale',
-                    confirmButtonColor: '#10b981',
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.open(data.receipt_url, '_blank', 'width=450,height=650');
-                    }
-                    // Reset cart and generate new idempotency key
-                    cart = [];
-                    currentIdempotencyKey = 'pos-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-                    recalculateCart();
-                    loadProducts(); // refresh branch stock balances
-                });
+                if (data.is_wholesale) {
+                    Swal.fire({
+                        title: 'Wholesale Sale Finalized!',
+                        html: `
+                            <div class="mb-3 text-center">
+                                <div>Invoice: <strong class="text-primary">${escapeHtml(data.invoice_number)}</strong></div>
+                                <div>Total Amount: <strong class="text-success">₹ ${data.final_amount}</strong></div>
+                                <span class="badge badge-warning text-xs mt-1 px-2 py-1"><i class="fas fa-truck mr-1"></i> Wholesale / Distributor Order</span>
+                            </div>
+                            <p class="text-sm text-muted mb-2 font-weight-bold">Select preferred bill format to print:</p>
+                            <div class="d-flex flex-column" style="gap: 8px;">
+                                <button type="button" class="btn btn-primary btn-block font-weight-bold py-2 shadow-xs" id="swalBtnInvoice">
+                                    <i class="fas fa-file-invoice mr-2"></i> Print Tax Invoice (Full A4 Bill)
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-block font-weight-bold py-2 shadow-xs" id="swalBtnReceipt">
+                                    <i class="fas fa-receipt mr-2"></i> Print Receipt Bill (Thermal 80mm)
+                                </button>
+                            </div>
+                        `,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: '<i class="fas fa-plus mr-1"></i> Next Sale',
+                        cancelButtonColor: '#6c757d',
+                        didOpen: () => {
+                            const btnInv = document.getElementById('swalBtnInvoice');
+                            const btnRec = document.getElementById('swalBtnReceipt');
+                            if (btnInv) {
+                                btnInv.addEventListener('click', () => {
+                                    window.open(data.invoice_url, '_blank', 'width=900,height=750');
+                                    Swal.close();
+                                });
+                            }
+                            if (btnRec) {
+                                btnRec.addEventListener('click', () => {
+                                    window.open(data.receipt_url, '_blank', 'width=450,height=650');
+                                    Swal.close();
+                                });
+                            }
+                        }
+                    }).then(() => {
+                        resetPosAfterSale();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Sale Finalized!',
+                        html: `
+                            <div class="mb-3 text-center">
+                                <div>Invoice: <strong class="text-primary">${escapeHtml(data.invoice_number)}</strong></div>
+                                <div>Total Amount: <strong class="text-success">₹ ${data.final_amount}</strong></div>
+                            </div>
+                            <div class="d-flex flex-column" style="gap: 8px;">
+                                <button type="button" class="btn btn-success btn-block font-weight-bold py-2 shadow-xs" id="swalBtnReceipt">
+                                    <i class="fas fa-receipt mr-2"></i> Print Receipt Bill
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-block btn-sm" id="swalBtnInvoice">
+                                    <i class="fas fa-file-invoice mr-1"></i> Print Tax Invoice (A4)
+                                </button>
+                            </div>
+                        `,
+                        icon: 'success',
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: '<i class="fas fa-plus mr-1"></i> Next Sale',
+                        cancelButtonColor: '#6c757d',
+                        didOpen: () => {
+                            const btnRec = document.getElementById('swalBtnReceipt');
+                            const btnInv = document.getElementById('swalBtnInvoice');
+                            if (btnRec) {
+                                btnRec.addEventListener('click', () => {
+                                    window.open(data.receipt_url, '_blank', 'width=450,height=650');
+                                    Swal.close();
+                                });
+                            }
+                            if (btnInv) {
+                                btnInv.addEventListener('click', () => {
+                                    window.open(data.invoice_url, '_blank', 'width=900,height=750');
+                                    Swal.close();
+                                });
+                            }
+                        }
+                    }).then(() => {
+                        resetPosAfterSale();
+                    });
+                }
             } else {
                 Swal.fire('Checkout Error', data.error || 'Failed to finalize transaction.', 'error');
             }
@@ -1320,15 +1450,27 @@
         });
     }
 
+    function resetPosAfterSale() {
+        cart = [];
+        currentIdempotencyKey = 'pos-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const customerSelect = document.getElementById('customerSelect');
+        if (customerSelect) customerSelect.value = '';
+        updateCustomerSearchValue();
+        setPricingType('retail');
+        loadProducts(); // refresh branch stock balances
+    }
+
     // 9. Quick Add Customer
     function handleQuickCustomer(e) {
         e.preventDefault();
+        const isDistributor = document.getElementById('qcIsDistributor')?.checked ? 1 : 0;
         const payload = {
             name: document.getElementById('qcName').value,
             phone: document.getElementById('qcPhone').value,
             gstin: document.getElementById('qcGstin').value,
             state_code: document.getElementById('qcStateCode').value,
-            state_name: document.getElementById('qcStateName').value
+            state_name: document.getElementById('qcStateName').value,
+            is_distributor: isDistributor
         };
 
         fetch("{{ route('customers.store') }}", {
@@ -1340,9 +1482,42 @@
             },
             body: JSON.stringify(payload)
         })
-        .then(() => {
+        .then(res => res.json())
+        .then(data => {
             $('#addCustomerModal').modal('hide');
-            Swal.fire('Customer Added', 'Customer saved. Please select them from the list.', 'success')
+            if (data.success && data.customer) {
+                const c = data.customer;
+                const customerSelect = document.getElementById('customerSelect');
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.dataset.name = c.name;
+                opt.dataset.phone = c.phone || '';
+                opt.dataset.state = c.state_code;
+                opt.dataset.gstin = c.gstin || '';
+                opt.dataset.balance = c.current_balance || '0.00';
+                opt.dataset.distributor = c.is_distributor ? '1' : '0';
+                opt.textContent = `${c.name} (${c.phone || 'No phone'}) ${c.is_distributor ? '★ Distributor' : (c.gstin ? '★ GST' : '')} [Due: ₹0.00]`;
+                customerSelect.appendChild(opt);
+
+                selectCustomer(c.id);
+
+                Swal.fire({
+                    title: 'Customer Added!',
+                    text: c.is_distributor ? `${c.name} registered as Distributor. Wholesale pricing activated!` : `${c.name} registered successfully.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                document.getElementById('quickCustomerForm').reset();
+            } else {
+                Swal.fire('Customer Added', 'Customer saved. Please select them from the list.', 'success')
+                    .then(() => window.location.reload());
+            }
+        })
+        .catch(err => {
+            $('#addCustomerModal').modal('hide');
+            Swal.fire('Customer Saved', 'Customer details saved.', 'info')
                 .then(() => window.location.reload());
         });
     }

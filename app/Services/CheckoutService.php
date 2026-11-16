@@ -51,6 +51,10 @@ class CheckoutService
             ? $payload['pricing_type']
             : 'retail';
 
+        if ($customer && $customer->is_distributor) {
+            $pricingType = 'wholesale';
+        }
+
         $itemsData = $payload['items'] ?? [];
         if (empty($itemsData)) {
             throw new Exception('Sale checkout requires at least one product item.');

@@ -11,6 +11,22 @@ class ProductRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('gst_rate')) {
+            $rawRate = strtolower(trim((string) $this->gst_rate));
+            if ($rawRate === '' || $rawRate === 'exempted' || $rawRate === 'exempt' || $rawRate === 'none') {
+                $this->merge(['gst_rate' => 0]);
+            }
+        } else {
+            $this->merge(['gst_rate' => 0]);
+        }
+
+        if (! $this->has('tax_type') || empty($this->tax_type)) {
+            $this->merge(['tax_type' => 'exclusive']);
+        }
+    }
+
     public function rules(): array
     {
         $product = $this->route('product');
@@ -28,8 +44,8 @@ class ProductRequest extends FormRequest
             'retail_price' => 'required|numeric|min:0',
             'wholesale_price' => 'required|numeric|min:0',
             'min_wholesale_qty' => 'nullable|numeric|min:0.01',
-            'gst_rate' => 'required|numeric|in:0,5,12,18,28',
-            'tax_type' => 'required|in:exclusive,inclusive',
+            'gst_rate' => 'nullable|numeric|in:0,5,12,18,28',
+            'tax_type' => 'nullable|in:exclusive,inclusive',
             'alert_quantity' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:1000',
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=4000,max_height=4000', 'max:2048'],

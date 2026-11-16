@@ -57,6 +57,9 @@
                                 <a href="{{ route('customers.show', $c->id) }}" class="font-weight-bold text-dark">
                                     {{ $c->name }}
                                 </a>
+                                @if($c->is_distributor)
+                                    <span class="badge badge-info ml-1"><i class="fas fa-truck mr-1"></i>Distributor</span>
+                                @endif
                                 @if($c->isB2B())
                                     <span class="badge badge-gst ml-1">B2B GST</span>
                                 @endif

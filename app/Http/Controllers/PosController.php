@@ -108,14 +108,18 @@ class PosController extends Controller
         try {
             $sale = $this->checkoutService->processSale($request->validated(), Auth::user());
 
+            $isWholesale = $sale->pricing_type === 'wholesale' || ($sale->customer && $sale->customer->is_distributor);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Sale finalized successfully!',
                 'sale_id' => $sale->id,
                 'invoice_number' => $sale->invoice_number,
                 'final_amount' => $sale->final_amount,
+                'pricing_type' => $sale->pricing_type,
+                'is_wholesale' => (bool) $isWholesale,
                 'receipt_url' => route('pos.receipt', $sale->id),
-                'invoice_url' => route('sales.show', $sale->id),
+                'invoice_url' => route('pos.invoice', $sale->id),
             ]);
         } catch (InsufficientStockException $e) {
             return response()->json([
@@ -136,5 +140,13 @@ class PosController extends Controller
             ->findOrFail($id);
 
         return view('pos.receipt', compact('sale'));
+    }
+
+    public function printInvoice(int $id)
+    {
+        $sale = Sale::with(['items.product', 'items.unit', 'items.taxes', 'customer', 'branch.business', 'user', 'shift'])
+            ->findOrFail($id);
+
+        return view('pos.invoice', compact('sale'));
     }
 }

@@ -25,6 +25,7 @@ class Customer extends Model
         'opening_balance',
         'current_balance',
         'is_active',
+        'is_distributor',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Customer extends Model
         'opening_balance' => 'decimal:2',
         'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_distributor' => 'boolean',
     ];
 
     public function business(): BelongsTo
