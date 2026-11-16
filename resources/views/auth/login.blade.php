@@ -102,7 +102,28 @@
                 </button>
             </form>
 
-            <div class="text-center mt-3 pt-2 border-top">
+            <!-- Quick Demo Credentials Box -->
+            <div class="p-3 mb-2 rounded bg-light border">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-xs font-weight-bold text-dark">
+                        <i class="fas fa-key mr-1 text-primary"></i> Default Login Credentials:
+                    </span>
+                    <span class="badge badge-secondary" style="font-size: 0.7rem;">Password: password</span>
+                </div>
+                <div class="d-flex flex-wrap" style="gap: 5px;">
+                    <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2 font-weight-bold" onclick="fillLogin('admin@pos.com', 'password')" title="Click to fill Admin credentials">
+                        <i class="fas fa-user-shield mr-1"></i> Admin (CLT0001)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 font-weight-bold" onclick="fillLogin('cashier@pos.com', 'password')" title="Click to fill Cashier credentials">
+                        <i class="fas fa-cash-register mr-1"></i> Cashier (CLT0003)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-info py-1 px-2 font-weight-bold" onclick="fillLogin('manager@pos.com', 'password')" title="Click to fill Manager credentials">
+                        <i class="fas fa-user-tie mr-1"></i> Manager (CLT0002)
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-center mt-2 pt-2 border-top">
                 <span class="text-xs text-muted">
                     <i class="fas fa-lock text-secondary mr-1"></i> Authorized Client Access Only &bull; User IDs & passwords are created & assigned by the Software Administrator.
                 </span>
@@ -237,6 +258,11 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    function fillLogin(user, pass) {
+        document.getElementById('emailInput').value = user;
+        document.getElementById('passwordInput').value = pass;
+    }
+
     function togglePasswordVisibility() {
         const pwd = document.getElementById('passwordInput');
         const icon = document.getElementById('toggleIcon');

@@ -37,6 +37,9 @@ return [
             'url' => env('DB_URL'),
             'database' => (function () {
                 $db = env('DB_DATABASE');
+                if ($db === ':memory:') {
+                    return ':memory:';
+                }
                 if (empty($db) || (!str_contains($db, '.') && !str_contains($db, '/') && !str_contains($db, '\\'))) {
                     $path = database_path('database.sqlite');
                 } else {
