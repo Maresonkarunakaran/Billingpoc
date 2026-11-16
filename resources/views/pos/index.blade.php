@@ -218,20 +218,27 @@
                     <select id="customerSelect" class="d-none" aria-hidden="true" tabindex="-1">
                         <option value="" data-distributor="0">Walk-in Customer (Cash / Non-GST)</option>
                         @foreach($customers as $c)
-                            <option value="{{ $c->id }}" data-name="{{ $c->name }}" data-phone="{{ $c->phone }}" data-state="{{ $c->state_code }}" data-gstin="{{ $c->gstin }}" data-balance="{{ $c->current_balance }}" data-distributor="{{ $c->is_distributor ? '1' : '0' }}">
-                                {{ $c->name }} ({{ $c->phone ?: 'No phone' }}) {{ $c->is_distributor ? '★ Distributor' : ($c->gstin ? '★ GST' : '') }} [Due: ₹{{ number_format($c->current_balance, 2) }}]
+                            <option value="{{ $c->id }}"
+                                    data-name="{{ $c->name }}"
+                                    data-shop="{{ $c->shop_name }}"
+                                    data-display="{{ $c->display_name }}"
+                                    data-phone="{{ $c->phone }}"
+                                    data-state="{{ $c->state_code }}"
+                                    data-gstin="{{ $c->gstin }}"
+                                    data-balance="{{ $c->current_balance }}"
+                                    data-distributor="{{ $c->is_distributor ? '1' : '0' }}">
+                                {{ $c->display_name }} ({{ $c->phone ?: 'No phone' }}) {{ $c->is_distributor ? '★ Distributor' : ($c->gstin ? '★ GST' : '') }} [Due: ₹{{ number_format($c->current_balance, 2) }}]
                             </option>
                         @endforeach
                     </select>
-                    <button class="btn btn-outline-primary btn-sm text-nowrap" data-toggle="modal" data-target="#addCustomerModal" title="Add Customer">
+                    <button class="btn btn-outline-primary btn-sm text-nowrap" type="button" onclick="openAddCustomerModal(false)" title="Register New Customer">
                         <i class="fas fa-user-plus mr-1"></i> Add
                     </button>
-                    <div class="custom-control custom-checkbox ml-1 d-flex align-items-center bg-white px-2 py-1 border rounded shadow-xs" style="user-select: none;">
-                        <input type="checkbox" class="custom-control-input" id="distributorPriceToggle">
-                        <label class="custom-control-label font-weight-bold text-xs text-primary cursor-pointer mb-0 text-nowrap" for="distributorPriceToggle" title="Enable wholesale price for distributor">
-                            Distributor Price
-                        </label>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-warning ml-1 font-weight-bold d-flex align-items-center text-nowrap shadow-xs" id="btnDistributorToggle" onclick="handleDistributorPriceClick()" title="Click to add customer details and bill at wholesale distributor price">
+                        <input type="checkbox" id="distributorPriceToggle" class="mr-1" style="pointer-events: none;">
+                        <i class="fas fa-truck mr-1 text-warning"></i>
+                        <span class="text-dark">Distributor Price</span>
+                    </button>
                 </div>
             </div>
 
@@ -411,31 +418,42 @@
         <form id="quickCustomerForm" onsubmit="handleQuickCustomer(event)">
             @csrf
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white py-2">
-                    <h5 class="modal-title font-weight-bold"><i class="fas fa-user-plus mr-1"></i> Register New Customer</h5>
+                <div class="modal-header bg-primary text-white py-2" id="addCustomerModalHeader">
+                    <h5 class="modal-title font-weight-bold" id="addCustomerModalTitle">
+                        <i class="fas fa-user-plus mr-1"></i> Register New Customer
+                    </h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <div id="distributorNoticeAlert" class="alert alert-warning py-2 px-3 text-xs mb-3 d-none">
+                        <i class="fas fa-truck mr-1"></i> <strong>Distributor Billing:</strong> Add shop & customer details below. Wholesale pricing will apply immediately, and this customer will be saved for all future visits.
+                    </div>
+
                     <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold">Customer / Business Name *</label>
-                        <input type="text" id="qcName" class="form-control" required placeholder="Full Name or Store Name">
+                        <label class="text-xs font-weight-bold">Shop / Business Name</label>
+                        <input type="text" id="qcShopName" class="form-control font-weight-bold" placeholder="E.g. Sri Krishna Department Store">
+                        <small class="text-muted text-xs">Used on invoices and for quick search next time.</small>
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold">Customer / Owner Name *</label>
+                        <input type="text" id="qcName" class="form-control" required placeholder="E.g. K. Ramesh">
                     </div>
                     <div class="form-group mb-2">
                         <label class="text-xs font-weight-bold">Mobile Phone Number</label>
                         <input type="text" id="qcPhone" class="form-control" placeholder="10-digit mobile number">
                     </div>
                     <div class="form-group mb-2">
+                        <label class="text-xs font-weight-bold">GSTIN Number (Optional, for B2B tax invoice)</label>
+                        <input type="text" id="qcGstin" class="form-control font-weight-bold text-uppercase" maxlength="15" placeholder="15-character GSTIN Number">
+                    </div>
+                    <div class="form-group mb-2">
                         <div class="custom-control custom-checkbox p-2 bg-light border rounded">
                             <input type="checkbox" class="custom-control-input" id="qcIsDistributor" name="is_distributor" value="1">
                             <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="qcIsDistributor">
-                                <i class="fas fa-truck mr-1"></i> Distributor
+                                <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer)
                             </label>
                             <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer.</small>
                         </div>
-                    </div>
-                    <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold">GSTIN Number (Optional, for B2B tax invoice)</label>
-                        <input type="text" id="qcGstin" class="form-control" maxlength="15" placeholder="15-character GSTIN Number">
                     </div>
                     <div class="row">
                         <div class="col-4">
@@ -452,8 +470,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer py-2">
-                    <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-save mr-1"></i> Save Customer</button>
+                <div class="modal-footer py-2 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary font-weight-bold" id="btnSaveCustomer">
+                        <i class="fas fa-save mr-1"></i> Save Customer
+                    </button>
                 </div>
             </div>
         </form>
@@ -482,6 +503,17 @@
             toggle.checked = isWholesale;
         }
 
+        const btnToggle = document.getElementById('btnDistributorToggle');
+        if (btnToggle) {
+            if (isWholesale) {
+                btnToggle.classList.remove('btn-outline-warning');
+                btnToggle.classList.add('btn-warning');
+            } else {
+                btnToggle.classList.remove('btn-warning');
+                btnToggle.classList.add('btn-outline-warning');
+            }
+        }
+
         const retailRadio = document.getElementById('pricingRetail');
         const wholesaleRadio = document.getElementById('pricingWholesale');
         const retailLabel = document.getElementById('pricingRetailLabel');
@@ -503,6 +535,64 @@
 
         renderProducts(getFilteredProducts());
         recalculateCart();
+    }
+
+    function handleDistributorPriceClick() {
+        const customerSelect = document.getElementById('customerSelect');
+        const selectedOpt = customerSelect.options[customerSelect.selectedIndex];
+        const hasCustomer = selectedOpt && selectedOpt.value;
+        const isAlreadyDistributor = selectedOpt && selectedOpt.dataset.distributor === '1';
+
+        if (selectedPricingType === 'wholesale') {
+            setPricingType('retail');
+            return;
+        }
+
+        // Turning ON
+        if (!hasCustomer || !isAlreadyDistributor) {
+            openAddCustomerModal(true);
+        } else {
+            setPricingType('wholesale');
+        }
+    }
+
+    function openAddCustomerModal(isDistributor = false) {
+        const modal = $('#addCustomerModal');
+        const header = document.getElementById('addCustomerModalHeader');
+        const title = document.getElementById('addCustomerModalTitle');
+        const alertBox = document.getElementById('distributorNoticeAlert');
+        const qcIsDistributor = document.getElementById('qcIsDistributor');
+        const btnSave = document.getElementById('btnSaveCustomer');
+
+        document.getElementById('quickCustomerForm').reset();
+        document.getElementById('qcStateCode').value = '33';
+        document.getElementById('qcStateName').value = 'Tamil Nadu';
+
+        if (isDistributor) {
+            if (header) header.className = 'modal-header bg-warning text-dark py-2';
+            if (title) title.innerHTML = '<i class="fas fa-truck mr-1"></i> Add Distributor Customer Details';
+            if (alertBox) alertBox.classList.remove('d-none');
+            if (qcIsDistributor) qcIsDistributor.checked = true;
+            if (btnSave) {
+                btnSave.className = 'btn btn-warning font-weight-bold text-dark';
+                btnSave.innerHTML = '<i class="fas fa-check mr-1"></i> Save & Apply Distributor Pricing';
+            }
+        } else {
+            if (header) header.className = 'modal-header bg-primary text-white py-2';
+            if (title) title.innerHTML = '<i class="fas fa-user-plus mr-1"></i> Register New Customer';
+            if (alertBox) alertBox.classList.add('d-none');
+            if (qcIsDistributor) qcIsDistributor.checked = false;
+            if (btnSave) {
+                btnSave.className = 'btn btn-primary font-weight-bold text-white';
+                btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Save Customer';
+            }
+        }
+
+        modal.modal('show');
+        setTimeout(() => {
+            const targetFocus = isDistributor ? document.getElementById('qcShopName') : document.getElementById('qcName');
+            if (targetFocus) targetFocus.focus();
+        }, 400);
     }
 
     function getFilteredProducts() {
@@ -903,6 +993,8 @@
             .filter(option => option.value)
             .filter(option => [
                 option.dataset.name,
+                option.dataset.shop,
+                option.dataset.display,
                 option.dataset.phone,
                 option.dataset.gstin
             ].some(value => (value || '').toLocaleLowerCase().includes(normalizedQuery)))
@@ -913,21 +1005,25 @@
             return;
         }
 
-        const customerOptions = customers.map(option => `
+        const customerOptions = customers.map(option => {
+            const displayName = option.dataset.display || option.dataset.name;
+            const shopBadge = option.dataset.shop ? `<span class="badge badge-light border text-xs mr-1"><i class="fas fa-store mr-1 text-primary"></i>${escapeHtml(option.dataset.shop)}</span>` : '';
+            return `
             <button type="button" class="pos-order-search-result" role="option" data-customer-id="${escapeHtml(option.value)}" aria-selected="false">
                 <span class="d-flex justify-content-between align-items-center">
-                    <span class="font-weight-bold text-dark">${escapeHtml(option.dataset.name)}</span>
+                    <span class="font-weight-bold text-dark">${escapeHtml(displayName)}</span>
                     <span>
                         ${option.dataset.distributor === '1' ? '<span class="badge badge-warning text-xs mr-1"><i class="fas fa-truck mr-1"></i>Distributor</span>' : ''}
                         ${option.dataset.gstin ? '<span class="text-primary text-xs font-weight-bold">GST</span>' : ''}
                     </span>
                 </span>
                 <small class="d-flex justify-content-between text-muted">
-                    <span>${escapeHtml(option.dataset.phone || 'No phone number')}${option.dataset.gstin ? ` · ${escapeHtml(option.dataset.gstin)}` : ''}</span>
+                    <span>${shopBadge}${escapeHtml(option.dataset.phone || 'No phone')}${option.dataset.gstin ? ` · ${escapeHtml(option.dataset.gstin)}` : ''}</span>
                     <span>Due: ₹${Number(option.dataset.balance || 0).toFixed(2)}</span>
                 </small>
             </button>
-        `).join('');
+            `;
+        }).join('');
         const emptyMessage = customers.length === 0
             ? '<div class="px-3 py-2 text-sm text-muted">No matching customers found.</div>'
             : '';
@@ -972,8 +1068,9 @@
             return;
         }
 
+        const displayName = selectedOption.dataset.display || selectedOption.dataset.name;
         const distributorTag = selectedOption.dataset.distributor === '1' ? ' [Distributor]' : '';
-        customerSearch.value = selectedOption.dataset.name
+        customerSearch.value = displayName
             + (selectedOption.dataset.phone ? ` (${selectedOption.dataset.phone})` : '')
             + distributorTag;
     }
@@ -1464,14 +1561,24 @@
     function handleQuickCustomer(e) {
         e.preventDefault();
         const isDistributor = document.getElementById('qcIsDistributor')?.checked ? 1 : 0;
+        const shopName = document.getElementById('qcShopName')?.value.trim() || '';
+        const custName = document.getElementById('qcName').value.trim() || shopName;
+
         const payload = {
-            name: document.getElementById('qcName').value,
-            phone: document.getElementById('qcPhone').value,
-            gstin: document.getElementById('qcGstin').value,
-            state_code: document.getElementById('qcStateCode').value,
-            state_name: document.getElementById('qcStateName').value,
+            shop_name: shopName,
+            name: custName,
+            phone: document.getElementById('qcPhone').value.trim(),
+            gstin: document.getElementById('qcGstin').value.trim(),
+            state_code: document.getElementById('qcStateCode').value.trim() || '33',
+            state_name: document.getElementById('qcStateName').value.trim() || 'Tamil Nadu',
             is_distributor: isDistributor
         };
+
+        const btnSave = document.getElementById('btnSaveCustomer');
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
+        }
 
         fetch("{{ route('customers.store') }}", {
             method: 'POST',
@@ -1484,6 +1591,10 @@
         })
         .then(res => res.json())
         .then(data => {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Save Customer';
+            }
             $('#addCustomerModal').modal('hide');
             if (data.success && data.customer) {
                 const c = data.customer;
@@ -1491,21 +1602,28 @@
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.dataset.name = c.name;
+                opt.dataset.shop = c.shop_name || '';
+                const displayName = (c.shop_name && c.name && c.shop_name !== c.name) ? `${c.shop_name} (${c.name})` : (c.shop_name || c.name);
+                opt.dataset.display = displayName;
                 opt.dataset.phone = c.phone || '';
                 opt.dataset.state = c.state_code;
                 opt.dataset.gstin = c.gstin || '';
                 opt.dataset.balance = c.current_balance || '0.00';
                 opt.dataset.distributor = c.is_distributor ? '1' : '0';
-                opt.textContent = `${c.name} (${c.phone || 'No phone'}) ${c.is_distributor ? '★ Distributor' : (c.gstin ? '★ GST' : '')} [Due: ₹0.00]`;
+                opt.textContent = `${displayName} (${c.phone || 'No phone'}) ${c.is_distributor ? '★ Distributor' : (c.gstin ? '★ GST' : '')} [Due: ₹0.00]`;
                 customerSelect.appendChild(opt);
 
                 selectCustomer(c.id);
 
                 Swal.fire({
-                    title: 'Customer Added!',
-                    text: c.is_distributor ? `${c.name} registered as Distributor. Wholesale pricing activated!` : `${c.name} registered successfully.`,
+                    title: c.is_distributor ? 'Distributor Customer Saved!' : 'Customer Saved!',
+                    html: `
+                        <div class="mb-2"><strong>${escapeHtml(displayName)}</strong></div>
+                        ${c.is_distributor ? '<div class="text-success font-weight-bold"><i class="fas fa-truck mr-1"></i> Wholesale Distributor Pricing Activated!</div>' : ''}
+                        <small class="text-muted d-block mt-2">Saved to database. When this customer returns, you can search by Shop Name, Customer Name, Phone, or GSTIN to bill them immediately.</small>
+                    `,
                     icon: 'success',
-                    timer: 2000,
+                    timer: 3000,
                     showConfirmButton: false
                 });
 
@@ -1516,6 +1634,10 @@
             }
         })
         .catch(err => {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Save Customer';
+            }
             $('#addCustomerModal').modal('hide');
             Swal.fire('Customer Saved', 'Customer details saved.', 'info')
                 .then(() => window.location.reload());

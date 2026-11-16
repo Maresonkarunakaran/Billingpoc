@@ -41,7 +41,15 @@
             <div class="p-3 bg-light rounded h-100">
                 <h6 class="text-xs font-weight-bold text-uppercase text-muted mb-2">Billed To (Recipient Details)</h6>
                 @if($sale->customer)
-                    <h6 class="font-weight-bold text-dark mb-1">{{ $sale->customer->name }}</h6>
+                    <h6 class="font-weight-bold text-dark mb-1">
+                        {{ $sale->customer->shop_name ?: $sale->customer->name }}
+                        @if($sale->customer->is_distributor)
+                            <span class="badge badge-warning text-xs ml-1"><i class="fas fa-truck mr-1"></i>Distributor</span>
+                        @endif
+                    </h6>
+                    @if($sale->customer->shop_name && $sale->customer->name && $sale->customer->shop_name !== $sale->customer->name)
+                        <div class="text-sm text-muted">Contact Person: {{ $sale->customer->name }}</div>
+                    @endif
                     @if($sale->customer->address)
                         <div class="text-sm text-muted">{{ $sale->customer->address }}</div>
                     @endif

@@ -21,9 +21,12 @@ class CustomerController extends Controller
         $customers = Customer::where('business_id', Auth::user()->business_id)
             ->when($request->filled('search'), function ($q) use ($request) {
                 $s = $request->search;
-                $q->where('name', 'like', "%{$s}%")
-                    ->orWhere('phone', 'like', "%{$s}%")
-                    ->orWhere('gstin', 'like', "%{$s}%");
+                $q->where(function ($sub) use ($s) {
+                    $sub->where('name', 'like', "%{$s}%")
+                        ->orWhere('shop_name', 'like', "%{$s}%")
+                        ->orWhere('phone', 'like', "%{$s}%")
+                        ->orWhere('gstin', 'like', "%{$s}%");
+                });
             })
             ->latest()
             ->paginate(15);

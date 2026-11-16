@@ -49,7 +49,13 @@
     <div><strong>Cashier:</strong> {{ $sale->user->name }}</div>
     <div><strong>Type:</strong> {{ strtoupper($sale->pricing_type) }}</div>
     @if($sale->customer)
-        <div><strong>Customer:</strong> {{ $sale->customer->name }}</div>
+        <div><strong>Customer:</strong> {{ $sale->customer->shop_name ?: $sale->customer->name }}</div>
+        @if($sale->customer->shop_name && $sale->customer->name && $sale->customer->shop_name !== $sale->customer->name)
+            <div><strong>Contact:</strong> {{ $sale->customer->name }}</div>
+        @endif
+        @if($sale->customer->phone)
+            <div><strong>Phone:</strong> {{ $sale->customer->phone }}</div>
+        @endif
         @if($sale->customer->gstin)
             <div><strong>Cust GSTIN:</strong> {{ $sale->customer->gstin }}</div>
         @endif

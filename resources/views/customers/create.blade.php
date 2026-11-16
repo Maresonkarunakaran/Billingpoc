@@ -20,20 +20,24 @@
                     @csrf
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="font-weight-bold text-sm">Customer / Business Name *</label>
-                            <input type="text" name="name" class="form-control" value="{{ old('name') }}" required placeholder="E.g. Shri Krishna Department Store">
+                            <label class="font-weight-bold text-sm">Shop / Store / Business Name</label>
+                            <input type="text" name="shop_name" class="form-control" value="{{ old('shop_name') }}" placeholder="E.g. Shri Krishna Department Store">
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="font-weight-bold text-sm">Customer / Contact Person Name *</label>
+                            <input type="text" name="name" class="form-control" value="{{ old('name') }}" required placeholder="E.g. K. Ramesh">
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">Phone Number</label>
                             <input type="text" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="10-digit mobile number">
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">GSTIN (Optional, for B2B Tax Invoicing)</label>
                             <input type="text" name="gstin" class="form-control" value="{{ old('gstin') }}" maxlength="15" placeholder="15-character GSTIN">
                         </div>
+                    </div>
                         <div class="col-md-6 mb-3">
                             <label class="font-weight-bold text-sm">PAN Number</label>
                             <input type="text" name="pan" class="form-control" value="{{ old('pan') }}" maxlength="10" placeholder="10-character PAN">

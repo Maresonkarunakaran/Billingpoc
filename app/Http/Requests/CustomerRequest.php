@@ -18,12 +18,17 @@ class CustomerRequest extends FormRequest
                 'is_distributor' => $this->boolean('is_distributor'),
             ]);
         }
+
+        if (empty($this->name) && ! empty($this->shop_name)) {
+            $this->merge(['name' => $this->shop_name]);
+        }
     }
 
     public function rules(): array
     {
         return [
             'name' => 'required|string|max:255',
+            'shop_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'gstin' => 'nullable|string|size:15',

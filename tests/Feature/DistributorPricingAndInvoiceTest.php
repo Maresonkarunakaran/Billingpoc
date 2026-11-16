@@ -37,8 +37,9 @@ class DistributorPricingAndInvoiceTest extends TestCase
     {
         $this->actingAs($this->cashier);
 
-        // 1. Web registration with is_distributor and GSTIN
+        // 1. Web registration with shop_name, is_distributor and GSTIN
         $response = $this->post(route('customers.store'), [
+            'shop_name' => 'Metro Supermarket',
             'name' => 'Metro Distributors Ltd',
             'phone' => '9876543210',
             'gstin' => '33ABCDE1234F1Z5',
@@ -49,13 +50,15 @@ class DistributorPricingAndInvoiceTest extends TestCase
 
         $response->assertRedirect(route('customers.index'));
         $this->assertDatabaseHas('customers', [
+            'shop_name' => 'Metro Supermarket',
             'name' => 'Metro Distributors Ltd',
             'gstin' => '33ABCDE1234F1Z5',
             'is_distributor' => true,
         ]);
 
-        // 2. AJAX quick-add registration from POS modal
+        // 2. AJAX quick-add registration from POS modal with shop_name
         $ajaxResponse = $this->postJson(route('customers.store'), [
+            'shop_name' => 'Apex Provisions',
             'name' => 'Apex Wholesale Traders',
             'phone' => '9123456780',
             'gstin' => '33XYZAB9876C1Z2',
@@ -68,11 +71,16 @@ class DistributorPricingAndInvoiceTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'customer' => [
+                    'shop_name' => 'Apex Provisions',
                     'name' => 'Apex Wholesale Traders',
                     'is_distributor' => true,
                     'gstin' => '33XYZAB9876C1Z2',
                 ],
             ]);
+
+        // 3. Search customer by shop_name
+        $searchResponse = $this->get(route('customers.index', ['search' => 'Apex Provisions']));
+        $searchResponse->assertOk()->assertSee('Apex Provisions');
     }
 
     public function test_product_gst_rate_options_and_optionality(): void

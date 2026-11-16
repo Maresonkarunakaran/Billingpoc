@@ -14,6 +14,7 @@ class Customer extends Model
     protected $fillable = [
         'business_id',
         'name',
+        'shop_name',
         'phone',
         'email',
         'gstin',
@@ -27,6 +28,17 @@ class Customer extends Model
         'is_active',
         'is_distributor',
     ];
+
+    protected $appends = ['display_name'];
+
+    public function getDisplayNameAttribute(): string
+    {
+        if (! empty($this->shop_name) && ! empty($this->name) && $this->shop_name !== $this->name) {
+            return "{$this->shop_name} ({$this->name})";
+        }
+
+        return $this->shop_name ?: ($this->name ?? '');
+    }
 
     protected $casts = [
         'credit_limit' => 'decimal:2',

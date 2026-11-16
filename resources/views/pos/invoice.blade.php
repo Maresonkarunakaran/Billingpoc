@@ -188,11 +188,14 @@
                     </div>
                     @if($sale->customer)
                         <div class="font-bold text-sm" style="color: #212529;">
-                            {{ $sale->customer->name }}
+                            {{ $sale->customer->shop_name ?: $sale->customer->name }}
                             @if($sale->customer->is_distributor)
                                 <span class="badge badge-wholesale">Distributor</span>
                             @endif
                         </div>
+                        @if($sale->customer->shop_name && $sale->customer->name && $sale->customer->shop_name !== $sale->customer->name)
+                            <div class="text-xs text-muted">Contact: {{ $sale->customer->name }}</div>
+                        @endif
                         @if($sale->customer->address)
                             <div class="text-xs text-muted">{{ $sale->customer->address }}</div>
                         @endif
