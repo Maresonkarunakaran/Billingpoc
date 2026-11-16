@@ -22,16 +22,23 @@ class CustomerRequest extends FormRequest
         if (empty($this->name) && ! empty($this->shop_name)) {
             $this->merge(['name' => $this->shop_name]);
         }
+
+        if ($this->has('gstin') && is_string($this->gstin)) {
+            $cleaned = strtoupper(trim($this->gstin));
+            $this->merge(['gstin' => $cleaned !== '' ? $cleaned : null]);
+        }
     }
 
     public function rules(): array
     {
+        $isDistributor = $this->boolean('is_distributor');
+
         return [
             'name' => 'required|string|max:255',
             'shop_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-            'gstin' => 'nullable|string|size:15',
+            'gstin' => $isDistributor ? 'required|string|size:15' : 'nullable|string|size:15',
             'pan' => 'nullable|string|max:10',
             'state_code' => 'required|string|size:2',
             'state_name' => 'required|string|max:100',
@@ -39,6 +46,14 @@ class CustomerRequest extends FormRequest
             'credit_limit' => 'nullable|numeric|min:0',
             'opening_balance' => 'nullable|numeric',
             'is_distributor' => 'nullable|boolean',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'gstin.required' => 'GST number (GSTIN) is mandatory for distributor / wholesale customers.',
+            'gstin.size' => 'The GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5).',
         ];
     }
 }

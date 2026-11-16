@@ -443,16 +443,21 @@
                         <input type="text" id="qcPhone" class="form-control" placeholder="10-digit mobile number">
                     </div>
                     <div class="form-group mb-2">
-                        <label class="text-xs font-weight-bold">GSTIN Number (Optional, for B2B tax invoice)</label>
-                        <input type="text" id="qcGstin" class="form-control font-weight-bold text-uppercase" maxlength="15" placeholder="15-character GSTIN Number">
+                        <label class="text-xs font-weight-bold" id="qcGstinLabel">
+                            GSTIN / GST Number
+                            <span id="qcGstinReqBadge" class="badge badge-danger ml-1 d-none">* Mandatory for Distributor</span>
+                            <span id="qcGstinOptBadge" class="text-muted font-weight-normal">(Optional for Retail)</span>
+                        </label>
+                        <input type="text" id="qcGstin" class="form-control font-weight-bold text-uppercase" maxlength="15" placeholder="15-character GSTIN Number" oninput="handleGstinInput(this)">
+                        <small class="text-muted text-xs d-block mt-1" id="qcGstinHelp">15-character GST identification number (e.g. 33AAAAA0000A1Z5).</small>
                     </div>
                     <div class="form-group mb-2">
                         <div class="custom-control custom-checkbox p-2 bg-light border rounded">
-                            <input type="checkbox" class="custom-control-input" id="qcIsDistributor" name="is_distributor" value="1">
+                            <input type="checkbox" class="custom-control-input" id="qcIsDistributor" name="is_distributor" value="1" onchange="toggleDistributorFields(this.checked)">
                             <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="qcIsDistributor">
                                 <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer)
                             </label>
-                            <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer.</small>
+                            <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer. GST number is mandatory.</small>
                         </div>
                     </div>
                     <div class="row">
@@ -556,23 +561,51 @@
         }
     }
 
-    function openAddCustomerModal(isDistributor = false) {
-        const modal = $('#addCustomerModal');
+    const GST_STATE_MAP = {
+        '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+        '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan',
+        '09': 'Uttar Pradesh', '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh',
+        '13': 'Nagaland', '14': 'Manipur', '15': 'Mizoram', '16': 'Tripura',
+        '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal', '20': 'Jharkhand',
+        '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+        '27': 'Maharashtra', '28': 'Andhra Pradesh (Old)', '29': 'Karnataka', '30': 'Goa',
+        '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
+        '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh'
+    };
+
+    function handleGstinInput(input) {
+        if (!input) return;
+        input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (input.value.length >= 2) {
+            const code = input.value.substring(0, 2);
+            if (GST_STATE_MAP[code]) {
+                const stateCodeEl = document.getElementById('qcStateCode');
+                const stateNameEl = document.getElementById('qcStateName');
+                if (stateCodeEl) stateCodeEl.value = code;
+                if (stateNameEl) stateNameEl.value = GST_STATE_MAP[code];
+            }
+        }
+    }
+
+    function toggleDistributorFields(isDistributor) {
         const header = document.getElementById('addCustomerModalHeader');
         const title = document.getElementById('addCustomerModalTitle');
         const alertBox = document.getElementById('distributorNoticeAlert');
-        const qcIsDistributor = document.getElementById('qcIsDistributor');
         const btnSave = document.getElementById('btnSaveCustomer');
-
-        document.getElementById('quickCustomerForm').reset();
-        document.getElementById('qcStateCode').value = '33';
-        document.getElementById('qcStateName').value = 'Tamil Nadu';
+        const reqBadge = document.getElementById('qcGstinReqBadge');
+        const optBadge = document.getElementById('qcGstinOptBadge');
+        const qcGstin = document.getElementById('qcGstin');
 
         if (isDistributor) {
             if (header) header.className = 'modal-header bg-warning text-dark py-2';
             if (title) title.innerHTML = '<i class="fas fa-truck mr-1"></i> Add Distributor Customer Details';
             if (alertBox) alertBox.classList.remove('d-none');
-            if (qcIsDistributor) qcIsDistributor.checked = true;
+            if (reqBadge) reqBadge.classList.remove('d-none');
+            if (optBadge) optBadge.classList.add('d-none');
+            if (qcGstin) {
+                qcGstin.required = true;
+                qcGstin.placeholder = '15-character GSTIN Number (Mandatory)';
+            }
             if (btnSave) {
                 btnSave.className = 'btn btn-warning font-weight-bold text-dark';
                 btnSave.innerHTML = '<i class="fas fa-check mr-1"></i> Save & Apply Distributor Pricing';
@@ -581,12 +614,32 @@
             if (header) header.className = 'modal-header bg-primary text-white py-2';
             if (title) title.innerHTML = '<i class="fas fa-user-plus mr-1"></i> Register New Customer';
             if (alertBox) alertBox.classList.add('d-none');
-            if (qcIsDistributor) qcIsDistributor.checked = false;
+            if (reqBadge) reqBadge.classList.add('d-none');
+            if (optBadge) optBadge.classList.remove('d-none');
+            if (qcGstin) {
+                qcGstin.required = false;
+                qcGstin.placeholder = '15-character GSTIN Number';
+            }
             if (btnSave) {
                 btnSave.className = 'btn btn-primary font-weight-bold text-white';
                 btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Save Customer';
             }
         }
+    }
+
+    function openAddCustomerModal(isDistributor = false) {
+        const modal = $('#addCustomerModal');
+        const qcIsDistributor = document.getElementById('qcIsDistributor');
+
+        document.getElementById('quickCustomerForm').reset();
+        document.getElementById('qcStateCode').value = '33';
+        document.getElementById('qcStateName').value = 'Tamil Nadu';
+
+        if (qcIsDistributor) {
+            qcIsDistributor.checked = !!isDistributor;
+        }
+
+        toggleDistributorFields(isDistributor);
 
         modal.modal('show');
         setTimeout(() => {
@@ -1563,12 +1616,34 @@
         const isDistributor = document.getElementById('qcIsDistributor')?.checked ? 1 : 0;
         const shopName = document.getElementById('qcShopName')?.value.trim() || '';
         const custName = document.getElementById('qcName').value.trim() || shopName;
+        const gstin = (document.getElementById('qcGstin')?.value || '').trim().toUpperCase();
+
+        if (isDistributor) {
+            if (!gstin) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'GST Number Required',
+                    text: 'Please enter the 15-character GST number (GSTIN) for the distributor customer before saving.'
+                });
+                document.getElementById('qcGstin')?.focus();
+                return;
+            }
+            if (gstin.length !== 15) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid GST Number',
+                    text: `GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5). You entered ${gstin.length} characters.`
+                });
+                document.getElementById('qcGstin')?.focus();
+                return;
+            }
+        }
 
         const payload = {
             shop_name: shopName,
             name: custName,
             phone: document.getElementById('qcPhone').value.trim(),
-            gstin: document.getElementById('qcGstin').value.trim(),
+            gstin: gstin,
             state_code: document.getElementById('qcStateCode').value.trim() || '33',
             state_name: document.getElementById('qcStateName').value.trim() || 'Tamil Nadu',
             is_distributor: isDistributor
@@ -1589,7 +1664,20 @@
             },
             body: JSON.stringify(payload)
         })
-        .then(res => res.json())
+        .then(async res => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                let msg = data.message || 'Failed to save customer.';
+                if (data.errors) {
+                    const firstKey = Object.keys(data.errors)[0];
+                    if (firstKey && data.errors[firstKey].length) {
+                        msg = data.errors[firstKey][0];
+                    }
+                }
+                throw new Error(msg);
+            }
+            return data;
+        })
         .then(data => {
             if (btnSave) {
                 btnSave.disabled = false;
@@ -1638,9 +1726,11 @@
                 btnSave.disabled = false;
                 btnSave.innerHTML = '<i class="fas fa-save mr-1"></i> Save Customer';
             }
-            $('#addCustomerModal').modal('hide');
-            Swal.fire('Customer Saved', 'Customer details saved.', 'info')
-                .then(() => window.location.reload());
+            Swal.fire({
+                icon: 'error',
+                title: 'Customer Registration Error',
+                text: err.message || 'Unable to register customer. Please verify details and try again.'
+            });
         });
     }
 </script>

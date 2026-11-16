@@ -254,4 +254,87 @@ class DistributorPricingAndInvoiceTest extends TestCase
             ->assertSee('Distributor')
             ->assertSee('Print Tax Invoice (A4)');
     }
+
+    public function test_distributor_customer_requires_gstin_and_rejects_empty_or_invalid_length(): void
+    {
+        $this->actingAs($this->cashier);
+
+        // 1. Distributor registration without GSTIN fails validation
+        $responseNoGstin = $this->post(route('customers.store'), [
+            'shop_name' => 'Wholesale Depot',
+            'name' => 'Depot Owner',
+            'phone' => '9998887776',
+            'gstin' => '',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+        ]);
+        $responseNoGstin->assertSessionHasErrors(['gstin']);
+
+        // 2. Distributor registration with invalid length GSTIN fails validation
+        $responseShortGstin = $this->post(route('customers.store'), [
+            'shop_name' => 'Wholesale Depot',
+            'name' => 'Depot Owner',
+            'phone' => '9998887776',
+            'gstin' => '33ABCDE1234F', // only 12 characters instead of 15
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+        ]);
+        $responseShortGstin->assertSessionHasErrors(['gstin']);
+
+        // 3. AJAX registration from POS terminal modal without GSTIN returns 422 JSON
+        $ajaxResponseNoGstin = $this->postJson(route('customers.store'), [
+            'shop_name' => 'POS Wholesale Store',
+            'name' => 'Store Incharge',
+            'phone' => '9998887771',
+            'gstin' => '',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+        ]);
+        $ajaxResponseNoGstin->assertStatus(422)
+            ->assertJsonValidationErrors(['gstin']);
+
+        // 4. Retail customer without GSTIN succeeds
+        $retailResponse = $this->post(route('customers.store'), [
+            'shop_name' => '',
+            'name' => 'Ordinary Retail Customer',
+            'phone' => '9112233445',
+            'gstin' => '',
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 0,
+        ]);
+        $retailResponse->assertRedirect(route('customers.index'));
+        $this->assertDatabaseHas('customers', [
+            'name' => 'Ordinary Retail Customer',
+            'is_distributor' => false,
+        ]);
+
+        // 5. Distributor registration with valid 15-character GSTIN succeeds and is uppercased
+        $validResponse = $this->postJson(route('customers.store'), [
+            'shop_name' => 'Valid Wholesale Hub',
+            'name' => 'Hub Manager',
+            'phone' => '9888777665',
+            'gstin' => '33abcde5555z1z9', // lowercase
+            'state_code' => '33',
+            'state_name' => 'Tamil Nadu',
+            'is_distributor' => 1,
+        ]);
+        $validResponse->assertOk()
+            ->assertJson([
+                'success' => true,
+                'customer' => [
+                    'shop_name' => 'Valid Wholesale Hub',
+                    'gstin' => '33ABCDE5555Z1Z9', // should be uppercase
+                    'is_distributor' => true,
+                ],
+            ]);
+        $this->assertDatabaseHas('customers', [
+            'shop_name' => 'Valid Wholesale Hub',
+            'gstin' => '33ABCDE5555Z1Z9',
+            'is_distributor' => true,
+        ]);
+    }
 }
