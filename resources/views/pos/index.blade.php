@@ -240,18 +240,6 @@
                         <i class="fas fa-truck mr-1 text-warning"></i>
                         <span class="text-dark">Distributor Price</span>
                     </button>
-                    <div id="distributorGstContainer" class="d-none ml-1 d-flex align-items-center" title="Distributor GST Rate">
-                        <span class="badge badge-warning text-dark font-weight-bold mr-1 text-xs">GST:</span>
-                        <select id="posDistributorGstRate" class="form-control form-control-sm font-weight-bold border-warning text-xs py-0" style="width: auto; height: 31px;" onchange="handleDistributorGstChange(this.value)">
-                            <option value="">Product GST</option>
-                            <option value="exempted">Exempted</option>
-                            <option value="0">0%</option>
-                            <option value="5">5%</option>
-                            <option value="12">12%</option>
-                            <option value="18" selected>18%</option>
-                            <option value="28">28%</option>
-                        </select>
-                    </div>
                 </div>
             </div>
 
@@ -458,11 +446,10 @@
                     <div class="form-group mb-2">
                         <label class="text-xs font-weight-bold" id="qcGstinLabel">
                             GSTIN / GST Number
-                            <span id="qcGstinReqBadge" class="badge badge-danger ml-1 d-none">* Mandatory for Distributor</span>
-                            <span id="qcGstinOptBadge" class="text-muted font-weight-normal">(Optional for Retail)</span>
+                            <span class="text-muted font-weight-normal">(Optional)</span>
                         </label>
-                        <input type="text" id="qcGstin" class="form-control font-weight-bold text-uppercase" maxlength="15" placeholder="15-character GSTIN Number" oninput="handleGstinInput(this)">
-                        <small class="text-muted text-xs d-block mt-1" id="qcGstinHelp">15-character GST identification number (e.g. 33AAAAA0000A1Z5).</small>
+                        <input type="text" id="qcGstin" class="form-control font-weight-bold text-uppercase" maxlength="15" placeholder="15-character GSTIN Number (Optional)" oninput="handleGstinInput(this)">
+                        <small class="text-muted text-xs d-block mt-1" id="qcGstinHelp">15-character GST identification number (e.g. 33AAAAA0000A1Z5) - Optional.</small>
                     </div>
                     <div class="form-group mb-2">
                         <div class="custom-control custom-checkbox p-2 bg-light border rounded">
@@ -470,7 +457,7 @@
                             <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="qcIsDistributor">
                                 <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer)
                             </label>
-                            <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer. GST number is mandatory.</small>
+                            <small class="d-block text-muted text-xs mt-1">Wholesale pricing will be fetched automatically in POS terminal for this customer.</small>
                         </div>
                     </div>
                     <div class="form-group mb-2" id="qcGstRateGroup">
@@ -545,15 +532,6 @@
             } else {
                 btnToggle.classList.remove('btn-warning');
                 btnToggle.classList.add('btn-outline-warning');
-            }
-        }
-
-        const gstContainer = document.getElementById('distributorGstContainer');
-        if (gstContainer) {
-            if (isWholesale) {
-                gstContainer.classList.remove('d-none');
-            } else {
-                gstContainer.classList.add('d-none');
             }
         }
 
@@ -634,8 +612,6 @@
         const title = document.getElementById('addCustomerModalTitle');
         const alertBox = document.getElementById('distributorNoticeAlert');
         const btnSave = document.getElementById('btnSaveCustomer');
-        const reqBadge = document.getElementById('qcGstinReqBadge');
-        const optBadge = document.getElementById('qcGstinOptBadge');
         const qcGstin = document.getElementById('qcGstin');
         const qcGstRateBadge = document.getElementById('qcGstRateBadge');
         const qcGstRate = document.getElementById('qcGstRate');
@@ -644,13 +620,11 @@
             if (header) header.className = 'modal-header bg-warning text-dark py-2';
             if (title) title.innerHTML = '<i class="fas fa-truck mr-1"></i> Add Distributor Customer Details';
             if (alertBox) alertBox.classList.remove('d-none');
-            if (reqBadge) reqBadge.classList.remove('d-none');
-            if (optBadge) optBadge.classList.add('d-none');
             if (qcGstRateBadge) qcGstRateBadge.classList.remove('d-none');
             if (qcGstRate && !qcGstRate.value) qcGstRate.value = '18';
             if (qcGstin) {
-                qcGstin.required = true;
-                qcGstin.placeholder = '15-character GSTIN Number (Mandatory)';
+                qcGstin.required = false;
+                qcGstin.placeholder = '15-character GSTIN Number (Optional)';
             }
             if (btnSave) {
                 btnSave.className = 'btn btn-warning font-weight-bold text-dark';
@@ -660,13 +634,11 @@
             if (header) header.className = 'modal-header bg-primary text-white py-2';
             if (title) title.innerHTML = '<i class="fas fa-user-plus mr-1"></i> Register New Customer';
             if (alertBox) alertBox.classList.add('d-none');
-            if (reqBadge) reqBadge.classList.add('d-none');
-            if (optBadge) optBadge.classList.remove('d-none');
             if (qcGstRateBadge) qcGstRateBadge.classList.add('d-none');
             if (qcGstRate) qcGstRate.value = '';
             if (qcGstin) {
                 qcGstin.required = false;
-                qcGstin.placeholder = '15-character GSTIN Number';
+                qcGstin.placeholder = '15-character GSTIN Number (Optional)';
             }
             if (btnSave) {
                 btnSave.className = 'btn btn-primary font-weight-bold text-white';
@@ -1158,16 +1130,6 @@
         const selectedOption = customerSelect.options[customerSelect.selectedIndex];
         const isDistributor = selectedOption && selectedOption.dataset.distributor === '1';
 
-        const posDistGst = document.getElementById('posDistributorGstRate');
-        if (posDistGst && selectedOption) {
-            const savedRate = selectedOption.dataset.gstrate;
-            if (savedRate !== undefined && savedRate !== '') {
-                posDistGst.value = savedRate;
-            } else if (isDistributor) {
-                posDistGst.value = '18';
-            }
-        }
-
         setPricingType(isDistributor ? 'wholesale' : 'retail');
         updateCustomerSearchValue();
         closeCustomerSearchResults();
@@ -1361,10 +1323,9 @@
 
         let activeDistGstRate = null;
         if (selectedPricingType === 'wholesale') {
-            const posDistGstEl = document.getElementById('posDistributorGstRate');
-            const distVal = posDistGstEl ? posDistGstEl.value : '';
-            if (distVal !== '') {
-                activeDistGstRate = (distVal === 'exempted' || distVal === '0') ? 0 : parseFloat(distVal);
+            const custGstRate = selectedCustOpt ? selectedCustOpt.dataset.gstrate : '';
+            if (custGstRate !== undefined && custGstRate !== '') {
+                activeDistGstRate = (custGstRate === 'exempted' || custGstRate === '0') ? 0 : parseFloat(custGstRate);
             }
         }
 
@@ -1550,7 +1511,7 @@
             branch_id: {{ $branch->id }},
             customer_id: customerId,
             pricing_type: selectedPricingType,
-            distributor_gst_rate: (selectedPricingType === 'wholesale' && document.getElementById('posDistributorGstRate')) ? document.getElementById('posDistributorGstRate').value : null,
+            distributor_gst_rate: (selectedPricingType === 'wholesale' && selectedCustOpt && selectedCustOpt.dataset.gstrate !== undefined && selectedCustOpt.dataset.gstrate !== '') ? selectedCustOpt.dataset.gstrate : null,
             idempotency_key: currentIdempotencyKey,
             discount_type: document.getElementById('modalDiscountType').value,
             discount_amount: parseFloat(document.getElementById('modalDiscountVal').value) || 0,
@@ -1695,25 +1656,14 @@
         const custName = document.getElementById('qcName').value.trim() || shopName;
         const gstin = (document.getElementById('qcGstin')?.value || '').trim().toUpperCase();
 
-        if (isDistributor) {
-            if (!gstin) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'GST Number Required',
-                    text: 'Please enter the 15-character GST number (GSTIN) for the distributor customer before saving.'
-                });
-                document.getElementById('qcGstin')?.focus();
-                return;
-            }
-            if (gstin.length !== 15) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid GST Number',
-                    text: `GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5). You entered ${gstin.length} characters.`
-                });
-                document.getElementById('qcGstin')?.focus();
-                return;
-            }
+        if (gstin && gstin.length !== 15) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Invalid GST Number',
+                text: `GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5). You entered ${gstin.length} characters.`
+            });
+            document.getElementById('qcGstin')?.focus();
+            return;
         }
 
         const gstRateVal = document.getElementById('qcGstRate')?.value;
@@ -1781,11 +1731,6 @@
                 const gstRateTag = c.gst_rate !== null ? (c.gst_rate == 0 ? ' (Exempted)' : ` (${parseFloat(c.gst_rate)}% GST)`) : '';
                 opt.textContent = `${displayName} (${c.phone || 'No phone'}) ${c.is_distributor ? '★ Distributor' + gstRateTag : (c.gstin ? '★ GST' : '')} [Due: ₹0.00]`;
                 customerSelect.appendChild(opt);
-
-                const posDistGst = document.getElementById('posDistributorGstRate');
-                if (posDistGst && c.is_distributor) {
-                    posDistGst.value = (c.gst_rate !== null && c.gst_rate !== undefined) ? c.gst_rate : '18';
-                }
 
                 selectCustomer(c.id);
 

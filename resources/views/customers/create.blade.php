@@ -35,10 +35,9 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="font-weight-bold text-sm" id="gstin_label">
-                                GSTIN / GST Number
-                                <span id="gstin_required_badge" class="badge badge-danger ml-1 {{ old('is_distributor') ? '' : 'd-none' }}">* Mandatory</span>
+                                GSTIN / GST Number <span class="text-muted font-weight-normal">(Optional)</span>
                             </label>
-                            <input type="text" id="gstin_input" name="gstin" class="form-control font-weight-bold text-uppercase @error('gstin') is-invalid @enderror" value="{{ old('gstin') }}" maxlength="15" placeholder="15-character GSTIN" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')">
+                            <input type="text" id="gstin_input" name="gstin" class="form-control font-weight-bold text-uppercase @error('gstin') is-invalid @enderror" value="{{ old('gstin') }}" maxlength="15" placeholder="15-character GSTIN (Optional)" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')">
                             @error('gstin')
                                 <div class="invalid-feedback font-weight-bold">{{ $message }}</div>
                             @enderror
@@ -53,7 +52,7 @@
                         <div class="custom-control custom-checkbox mb-2">
                             <input type="checkbox" class="custom-control-input" id="is_distributor" name="is_distributor" value="1" {{ old('is_distributor') ? 'checked' : '' }}>
                             <label class="custom-control-label font-weight-bold text-sm text-primary cursor-pointer" for="is_distributor">
-                                <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer - Wholesale pricing applied by default in POS; GSTIN required)
+                                <i class="fas fa-truck mr-1"></i> Distributor (Wholesale Customer - Wholesale pricing applied by default in POS)
                             </label>
                         </div>
                         <div class="row mt-2" id="distributor_gst_rate_row">
@@ -114,32 +113,4 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const distCheckbox = document.getElementById('is_distributor');
-        const gstinInput = document.getElementById('gstin_input');
-        const gstinBadge = document.getElementById('gstin_required_badge');
-
-        function updateGstinRequirement() {
-            if (distCheckbox && distCheckbox.checked) {
-                if (gstinBadge) gstinBadge.classList.remove('d-none');
-                if (gstinInput) {
-                    gstinInput.required = true;
-                    gstinInput.placeholder = '15-character GSTIN (Mandatory)';
-                }
-            } else {
-                if (gstinBadge) gstinBadge.classList.add('d-none');
-                if (gstinInput) {
-                    gstinInput.required = false;
-                    gstinInput.placeholder = '15-character GSTIN (Optional)';
-                }
-            }
-        }
-
-        if (distCheckbox) {
-            distCheckbox.addEventListener('change', updateGstinRequirement);
-            updateGstinRequirement();
-        }
-    });
-</script>
 @endpush

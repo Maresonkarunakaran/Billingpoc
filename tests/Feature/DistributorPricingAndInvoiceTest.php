@@ -255,11 +255,11 @@ class DistributorPricingAndInvoiceTest extends TestCase
             ->assertSee('Print Tax Invoice (A4)');
     }
 
-    public function test_distributor_customer_requires_gstin_and_rejects_empty_or_invalid_length(): void
+    public function test_distributor_customer_gstin_is_optional_and_validates_length_if_provided(): void
     {
         $this->actingAs($this->cashier);
 
-        // 1. Distributor registration without GSTIN fails validation
+        // 1. Distributor registration without GSTIN succeeds (GSTIN is optional)
         $responseNoGstin = $this->post(route('customers.store'), [
             'shop_name' => 'Wholesale Depot',
             'name' => 'Depot Owner',
@@ -269,13 +269,18 @@ class DistributorPricingAndInvoiceTest extends TestCase
             'state_name' => 'Tamil Nadu',
             'is_distributor' => 1,
         ]);
-        $responseNoGstin->assertSessionHasErrors(['gstin']);
+        $responseNoGstin->assertRedirect(route('customers.index'));
+        $this->assertDatabaseHas('customers', [
+            'shop_name' => 'Wholesale Depot',
+            'is_distributor' => true,
+            'gstin' => null,
+        ]);
 
         // 2. Distributor registration with invalid length GSTIN fails validation
         $responseShortGstin = $this->post(route('customers.store'), [
-            'shop_name' => 'Wholesale Depot',
-            'name' => 'Depot Owner',
-            'phone' => '9998887776',
+            'shop_name' => 'Wholesale Short GST',
+            'name' => 'Depot Short',
+            'phone' => '9998887777',
             'gstin' => '33ABCDE1234F', // only 12 characters instead of 15
             'state_code' => '33',
             'state_name' => 'Tamil Nadu',
@@ -283,7 +288,7 @@ class DistributorPricingAndInvoiceTest extends TestCase
         ]);
         $responseShortGstin->assertSessionHasErrors(['gstin']);
 
-        // 3. AJAX registration from POS terminal modal without GSTIN returns 422 JSON
+        // 3. AJAX registration from POS terminal modal without GSTIN succeeds
         $ajaxResponseNoGstin = $this->postJson(route('customers.store'), [
             'shop_name' => 'POS Wholesale Store',
             'name' => 'Store Incharge',
@@ -293,8 +298,15 @@ class DistributorPricingAndInvoiceTest extends TestCase
             'state_name' => 'Tamil Nadu',
             'is_distributor' => 1,
         ]);
-        $ajaxResponseNoGstin->assertStatus(422)
-            ->assertJsonValidationErrors(['gstin']);
+        $ajaxResponseNoGstin->assertOk()
+            ->assertJson([
+                'success' => true,
+                'customer' => [
+                    'shop_name' => 'POS Wholesale Store',
+                    'is_distributor' => true,
+                    'gstin' => null,
+                ],
+            ]);
 
         // 4. Retail customer without GSTIN succeeds
         $retailResponse = $this->post(route('customers.store'), [

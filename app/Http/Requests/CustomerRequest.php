@@ -40,14 +40,12 @@ class CustomerRequest extends FormRequest
 
     public function rules(): array
     {
-        $isDistributor = $this->boolean('is_distributor');
-
         return [
             'name' => 'required|string|max:255',
             'shop_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-            'gstin' => $isDistributor ? 'required|string|size:15' : 'nullable|string|size:15',
+            'gstin' => 'nullable|string|size:15',
             'pan' => 'nullable|string|max:10',
             'state_code' => 'required|string|size:2',
             'state_name' => 'required|string|max:100',
@@ -62,7 +60,6 @@ class CustomerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'gstin.required' => 'GST number (GSTIN) is mandatory for distributor / wholesale customers.',
             'gstin.size' => 'The GST number must be exactly 15 characters (e.g. 33AAAAA0000A1Z5).',
             'gst_rate.in' => 'GST rate must be Exempted, 0%, 5%, 12%, 18%, or 28%.',
         ];
